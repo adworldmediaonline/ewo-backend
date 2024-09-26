@@ -38,4 +38,3 @@ module.exports.sendEmail = (body, res, message) => {
     }
   });
 };
-
