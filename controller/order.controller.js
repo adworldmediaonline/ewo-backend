@@ -1,6 +1,6 @@
-const { secret } = require("../config/secret");
-const stripe = require("stripe")(secret.stripe_key);
-const Order = require("../model/Order");
+const { secret } = require('../config/secret');
+const stripe = require('stripe')(secret.stripe_key);
+const Order = require('../model/Order');
 
 // create-payment-intent
 exports.paymentIntent = async (req, res, next) => {
@@ -10,16 +10,19 @@ exports.paymentIntent = async (req, res, next) => {
     const amount = price * 100;
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
-      currency: "usd",
+      currency: 'usd',
       amount: amount,
-      payment_method_types: ["card"],
+      payment_method_types: ['card'],
     });
+
+    console.log('payment intent', paymentIntent.client_secret);
+    // return;
     res.send({
       clientSecret: paymentIntent.client_secret,
     });
   } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
 // addOrder
@@ -29,13 +32,12 @@ exports.addOrder = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Order added successfully",
+      message: 'Order added successfully',
       order: orderItems,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
 // get Orders
@@ -46,10 +48,9 @@ exports.getOrders = async (req, res, next) => {
       success: true,
       data: orderItems,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
 // get Orders
@@ -57,10 +58,9 @@ exports.getSingleOrder = async (req, res, next) => {
   try {
     const orderItem = await Order.findById(req.params.id).populate('user');
     res.status(200).json(orderItem);
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
 
@@ -75,14 +75,15 @@ exports.updateOrderStatus = async (req, res) => {
         $set: {
           status: newStatus,
         },
-      }, { new: true })
+      },
+      { new: true }
+    );
     res.status(200).json({
       success: true,
       message: 'Status updated successfully',
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
