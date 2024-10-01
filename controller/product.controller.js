@@ -6,6 +6,7 @@ const Product = require('../model/Products');
 exports.addProduct = async (req, res, next) => {
   console.log('product--->', req.body);
   try {
+    //
     const firstItem = {
       color: {
         name: '',
