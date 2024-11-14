@@ -32,7 +32,7 @@ exports.addAllBlogService = async data => {
 
 // get blog data
 exports.getAllBlogsService = async () => {
-  const blogs = await Blog.find({}).populate('reviews');
+  const blogs = await Blog.find({});
   return blogs;
 };
 
@@ -105,10 +105,7 @@ exports.getTopRatedBlogService = async () => {
 
 // get blog data
 exports.getBlogService = async id => {
-  const blog = await Blog.findById(id).populate({
-    path: 'reviews',
-    populate: { path: 'userId', select: 'name email imageURL' },
-  });
+  const blog = await Blog.findById(id);
   return blog;
 };
 
