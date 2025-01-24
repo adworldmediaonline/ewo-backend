@@ -59,7 +59,7 @@ const productsSchema = mongoose.Schema(
     },
     children: {
       type: String,
-      required: true,
+      // required: true,
       trim: true,
     },
     price: {
