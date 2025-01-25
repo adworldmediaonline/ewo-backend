@@ -6,18 +6,11 @@ const Product = require('../model/Products');
 exports.addProduct = async (req, res, next) => {
   console.log('product--->', req.body);
   try {
-    //
-    const firstItem = {
-      color: {
-        name: '',
-        clrCode: '',
-      },
-      img: req.body.img,
-    };
-    const imageURLs = [firstItem, ...req.body.imageURLs];
     const result = await productServices.createProductService({
       ...req.body,
-      imageURLs: imageURLs,
+      imageURLs: Array.isArray(req.body.imageURLs)
+        ? req.body.imageURLs
+        : [req.body.img],
     });
 
     console.log('product-result', result);

@@ -32,24 +32,9 @@ const productsSchema = mongoose.Schema(
     },
     imageURLs: [
       {
-        color: {
-          name: {
-            type: String,
-            required: false,
-            trim: true,
-          },
-          clrCode: {
-            type: String,
-            required: false,
-            trim: true,
-          },
-        },
-        img: {
-          type: String,
-          required: false,
-          validate: [validator.isURL, 'Please provide valid url(s)'],
-        },
-        sizes: [String],
+        type: String,
+        required: false,
+        validate: [validator.isURL, 'Please provide valid url(s)'],
       },
     ],
     parent: {
