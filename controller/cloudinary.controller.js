@@ -1,8 +1,8 @@
-const fs = require("fs");
-const { cloudinaryServices } = require("../services/cloudinary.service");
+const fs = require('fs');
+const { cloudinaryServices } = require('../services/cloudinary.service');
 
 // add image
-const saveImageCloudinary = async (req, res,next) => {
+const saveImageCloudinary = async (req, res, next) => {
   // console.log(req.file)
   try {
     const result = await cloudinaryServices.cloudinaryImageUpload(
@@ -10,53 +10,40 @@ const saveImageCloudinary = async (req, res,next) => {
     );
     res.status(200).json({
       success: true,
-      message: "image uploaded successfully",
-      data:{url:result.secure_url,id:result.public_id},
+      message: 'image uploaded successfully',
+      data: { url: result.secure_url, id: result.public_id },
     });
   } catch (err) {
     console.log(err);
-    next(err)
+    next(err);
   }
 };
 
-// add image
-const addMultipleImageCloudinary = async (req, res) => {
+// add multiple images
+const addMultipleImageCloudinary = async (req, res, next) => {
   try {
-    const files = req.files;
-
-    // Array to store Cloudinary image upload responses
-    const uploadResults = [];
-
-    for (const file of files) {
-      // Upload image to Cloudinary
-      const result = await cloudinaryServices.cloudinaryImageUpload(file.path);
-
-      // Store the Cloudinary response in the array
-      uploadResults.push(result);
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No files uploaded',
+      });
     }
 
-    // Delete temporary local files
-    for (const file of files) {
-      fs.unlinkSync(file.path);
-    }
+    const results = await cloudinaryServices.cloudinaryMultipleImageUpload(
+      req.files
+    );
 
     res.status(200).json({
       success: true,
-      message: "image uploaded successfully",
-      data:
-        uploadResults.length > 0
-          ? uploadResults.map((res) => ({
-              url: res.secure_url,
-              id: res.public_id,
-            }))
-          : [],
+      message: 'Images uploaded successfully',
+      data: results.map(result => ({
+        url: result.secure_url,
+        id: result.public_id,
+      })),
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).send({
-      success: false,
-      message: "Failed to upload image",
-    });
+    console.error('Error uploading multiple images:', err);
+    next(err);
   }
 };
 
@@ -68,13 +55,13 @@ const cloudinaryDeleteController = async (req, res) => {
     const result = await cloudinaryServices.cloudinaryImageDelete(public_id);
     res.status(200).json({
       success: true,
-      message: "delete image successfully",
+      message: 'delete image successfully',
       data: result,
     });
   } catch (err) {
     res.status(500).send({
       success: false,
-      message: "Failed to delete image",
+      message: 'Failed to delete image',
     });
   }
 };

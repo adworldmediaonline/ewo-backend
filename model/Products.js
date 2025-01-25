@@ -7,130 +7,109 @@ const productsSchema = mongoose.Schema(
   {
     sku: {
       type: String,
-      required: false,
+      required: true,
     },
     img: {
       type: String,
       required: true,
-      validate: [validator.isURL, 'Please provide valid url(s)'],
+      validate: {
+        validator: function (value) {
+          return validator.isURL(value);
+        },
+        message: 'Invalid image URL',
+      },
     },
     title: {
       type: String,
-      required: [true, 'Please provide a name for this product.'],
+      required: true,
       trim: true,
-      minLength: [3, 'Name must be at least 3 characters.'],
-      maxLength: [200, 'Name is too large'],
+      minlength: [3, 'Title must be at least 3 characters long'],
+      maxlength: [150, 'Title cannot be more than 150 characters'],
     },
     slug: {
       type: String,
-      trim: true,
-      required: false,
-    },
-    unit: {
-      type: String,
       required: true,
+      unique: true,
+      lowercase: true,
     },
     imageURLs: [
       {
-        color: {
-          name: {
-            type: String,
-            required: false,
-            trim: true,
-          },
-          clrCode: {
-            type: String,
-            required: false,
-            trim: true,
-          },
-        },
-        img: {
-          type: String,
-          required: false,
-          validate: [validator.isURL, 'Please provide valid url(s)'],
-        },
-        sizes: [String],
+        type: String,
+        required: true,
       },
     ],
     parent: {
       type: String,
       required: true,
-      trim: true,
     },
-    children: {
-      type: String,
-      // required: true,
-      trim: true,
-    },
+    children: String,
     price: {
       type: Number,
       required: true,
-      min: [0, "Product price can't be negative"],
+      validate: {
+        validator: function (value) {
+          return value >= 0;
+        },
+        message: 'Price cannot be negative',
+      },
     },
     discount: {
       type: Number,
-      min: [0, "Product price can't be negative"],
+      default: 0,
+      validate: {
+        validator: function (value) {
+          return value >= 0;
+        },
+        message: 'Discount cannot be negative',
+      },
     },
     quantity: {
       type: Number,
       required: true,
-      min: [0, "Product quantity can't be negative"],
-    },
-    brand: {
-      name: {
-        type: String,
-        required: true,
-      },
-      id: {
-        type: ObjectId,
-        ref: 'Brand',
-        required: true,
+      validate: {
+        validator: function (value) {
+          return value >= 0;
+        },
+        message: 'Quantity cannot be negative',
       },
     },
     category: {
-      name: {
-        type: String,
-        required: true,
-      },
       id: {
         type: ObjectId,
         ref: 'Category',
         required: true,
       },
+      name: {
+        type: String,
+        required: true,
+      },
     },
     status: {
       type: String,
-      required: true,
-      enum: {
-        values: ['in-stock', 'out-of-stock', 'discontinued'],
-        message: "status can't be {VALUE} ",
-      },
+      enum: ['in-stock', 'out-of-stock', 'discontinued'],
       default: 'in-stock',
     },
-    reviews: [{ type: ObjectId, ref: 'Reviews' }],
-    productType: {
-      type: String,
-      required: true,
-      lowercase: true,
-    },
+    reviews: [
+      {
+        type: ObjectId,
+        ref: 'Reviews',
+      },
+    ],
     description: {
       type: String,
       required: true,
     },
-    videoId: {
-      type: String,
-      required: false,
-    },
-    additionalInformation: [{}],
+    videoId: String,
+    additionalInformation: [
+      {
+        key: String,
+        value: String,
+      },
+    ],
     tags: [String],
-    sizes: [String],
     offerDate: {
-      startDate: {
-        type: Date,
-      },
-      endDate: {
-        type: Date,
-      },
+      startDate: Date,
+      endDate: Date,
     },
     featured: {
       type: Boolean,
@@ -139,7 +118,6 @@ const productsSchema = mongoose.Schema(
     sellCount: {
       type: Number,
       default: 0,
-      min: 0,
     },
   },
   {
