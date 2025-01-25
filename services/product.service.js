@@ -2,7 +2,7 @@ const Category = require('../model/Category');
 const Product = require('../model/Products');
 
 // create product service
-const createProductService = async data => {
+exports.createProductService = async data => {
   const product = await Product.create(data);
   const { _id: productId, category } = product;
 
@@ -19,7 +19,7 @@ const createProductService = async data => {
 };
 
 // add all product service
-const addAllProductService = async data => {
+exports.addAllProductService = async data => {
   await Product.deleteMany({});
   const products = await Product.insertMany(data);
 

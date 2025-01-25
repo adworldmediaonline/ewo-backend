@@ -36,9 +36,27 @@ const cloudinaryImageUpload = imageBuffer => {
 // Handle multiple image uploads
 const cloudinaryMultipleImageUpload = async files => {
   try {
-    const uploadPromises = files.map(file =>
-      cloudinaryImageUpload(file.buffer)
-    );
+    const uploadPromises = files.map(file => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { upload_preset: secret.cloudinary_upload_preset },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        );
+
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null);
+
+        bufferStream.pipe(uploadStream);
+      });
+    });
+
     const results = await Promise.all(uploadPromises);
     return results;
   } catch (error) {
