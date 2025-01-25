@@ -1,4 +1,3 @@
-const Brand = require('../model/Brand');
 const productServices = require('../services/product.service');
 const Product = require('../model/Products');
 
@@ -53,41 +52,10 @@ exports.getAllProducts = async (req, res, next) => {
   }
 };
 
-// get all products by type
-module.exports.getProductsByType = async (req, res, next) => {
-  try {
-    const result = await productServices.getProductTypeService(req);
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    console.log(error);
-    next(error);
-  }
-};
-
 // get offer product controller
 module.exports.getOfferTimerProducts = async (req, res, next) => {
   try {
-    const result = await productServices.getOfferTimerProductService(
-      req.query.type
-    );
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// get Popular Product By Type
-module.exports.getPopularProductByType = async (req, res, next) => {
-  try {
-    const result = await productServices.getPopularProductServiceByType(
-      req.params.type
-    );
+    const result = await productServices.getOfferTimerProductService();
     res.status(200).json({
       success: true,
       data: result,

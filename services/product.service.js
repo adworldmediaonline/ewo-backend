@@ -1,41 +1,40 @@
-const Brand = require('../model/Brand');
 const Category = require('../model/Category');
 const Product = require('../model/Products');
 
 // create product service
-exports.createProductService = async data => {
-  // Ensure imageURLs is always an array of strings
-  if (data.imageURLs) {
-    data.imageURLs = data.imageURLs.map(url =>
-      typeof url === 'string' ? url : url.img || ''
-    );
-  }
-
+const createProductService = async data => {
   const product = await Product.create(data);
-  const { _id: productId, brand, category } = product;
+  const { _id: productId, category } = product;
 
-  //update Brand
-  await Brand.updateOne({ _id: brand.id }, { $push: { products: productId } });
-  //Category Brand
-  await Category.updateOne(
-    { _id: category.id },
-    { $push: { products: productId } }
+  // update category with product
+  await Category.findByIdAndUpdate(
+    category.id,
+    {
+      $push: { products: productId },
+    },
+    { new: true }
   );
+
   return product;
 };
 
-// create all product service
-exports.addAllProductService = async data => {
-  await Product.deleteMany();
+// add all product service
+const addAllProductService = async data => {
+  await Product.deleteMany({});
   const products = await Product.insertMany(data);
+
+  // Update categories with product IDs
   for (const product of products) {
-    await Brand.findByIdAndUpdate(product.brand.id, {
-      $push: { products: product._id },
-    });
-    await Category.findByIdAndUpdate(product.category.id, {
-      $push: { products: product._id },
-    });
+    const { _id: productId, category } = product;
+    await Category.findByIdAndUpdate(
+      category.id,
+      {
+        $push: { products: productId },
+      },
+      { new: true }
+    );
   }
+
   return products;
 };
 
@@ -45,47 +44,11 @@ exports.getAllProductsService = async () => {
   return products;
 };
 
-// get type of product service
-exports.getProductTypeService = async req => {
-  const type = req.params.type;
-  const query = req.query;
-  let products;
-  if (query.new === 'true') {
-    products = await Product.find({ productType: type })
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .populate('reviews');
-  } else if (query.featured === 'true') {
-    products = await Product.find({
-      productType: type,
-      featured: true,
-    }).populate('reviews');
-  } else if (query.topSellers === 'true') {
-    products = await Product.find({ productType: type })
-      .sort({ sellCount: -1 })
-      .limit(8)
-      .populate('reviews');
-  } else {
-    products = await Product.find({ productType: type }).populate('reviews');
-  }
-  return products;
-};
-
 // get offer product service
-exports.getOfferTimerProductService = async query => {
+exports.getOfferTimerProductService = async () => {
   const products = await Product.find({
-    productType: query,
     'offerDate.endDate': { $gt: new Date() },
   }).populate('reviews');
-  return products;
-};
-
-// get popular product service by type
-exports.getPopularProductServiceByType = async type => {
-  const products = await Product.find({ productType: type })
-    .sort({ 'reviews.length': -1 })
-    .limit(8)
-    .populate('reviews');
   return products;
 };
 
@@ -136,16 +99,17 @@ exports.getRelatedProductService = async productId => {
 exports.updateProductService = async (id, currProduct) => {
   const product = await Product.findById(id);
   if (product) {
+    // Store the old category ID before updating
+    const oldCategoryId = product.category.id;
+    const newCategoryId = currProduct.category.id;
+
+    // Update product fields
     product.title = currProduct.title;
-    product.brand.name = currProduct.brand.name;
-    product.brand.id = currProduct.brand.id;
     product.category.name = currProduct.category.name;
     product.category.id = currProduct.category.id;
     product.sku = currProduct.sku;
     product.img = currProduct.img;
     product.slug = currProduct.slug;
-    product.unit = currProduct.unit;
-    // Handle imageURLs as array of strings
     product.imageURLs = Array.isArray(currProduct.imageURLs)
       ? currProduct.imageURLs.map(url =>
           typeof url === 'string' ? url : url.img || ''
@@ -158,13 +122,34 @@ exports.updateProductService = async (id, currProduct) => {
     product.discount = currProduct.discount;
     product.quantity = currProduct.quantity;
     product.status = currProduct.status;
-    product.productType = currProduct.productType;
     product.description = currProduct.description;
     product.additionalInformation = currProduct.additionalInformation;
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
 
+    // Save the updated product
     await product.save();
+
+    // If category has changed, update both old and new categories
+    if (oldCategoryId.toString() !== newCategoryId.toString()) {
+      // Remove product from old category
+      await Category.findByIdAndUpdate(
+        oldCategoryId,
+        {
+          $pull: { products: id },
+        },
+        { new: true }
+      );
+
+      // Add product to new category
+      await Category.findByIdAndUpdate(
+        newCategoryId,
+        {
+          $push: { products: id },
+        },
+        { new: true }
+      );
+    }
   }
 
   return product;
