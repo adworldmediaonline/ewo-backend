@@ -3,18 +3,31 @@ const { cloudinaryServices } = require('../services/cloudinary.service');
 
 // add image
 const saveImageCloudinary = async (req, res, next) => {
-  // console.log(req.file)
   try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
     const result = await cloudinaryServices.cloudinaryImageUpload(
       req.file.buffer
     );
+
     res.status(200).json({
       success: true,
-      message: 'image uploaded successfully',
-      data: { url: result.secure_url, id: result.public_id },
+      message: 'Image uploaded and optimized successfully',
+      data: {
+        url: result.secure_url,
+        id: result.public_id,
+        format: result.format,
+        size: result.bytes,
+        original_filename: result.original_filename,
+      },
     });
   } catch (err) {
-    console.log(err);
+    console.error('Error uploading image:', err);
     next(err);
   }
 };
@@ -35,10 +48,13 @@ const addMultipleImageCloudinary = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Images uploaded successfully',
+      message: 'Images uploaded and optimized successfully',
       data: results.map(result => ({
         url: result.secure_url,
         id: result.public_id,
+        format: result.format,
+        size: result.bytes,
+        original_filename: result.original_filename,
       })),
     });
   } catch (err) {
@@ -51,17 +67,27 @@ const addMultipleImageCloudinary = async (req, res, next) => {
 const cloudinaryDeleteController = async (req, res) => {
   try {
     const { folder_name, id } = req.query;
+    if (!folder_name || !id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing folder_name or id parameter',
+      });
+    }
+
     const public_id = `${folder_name}/${id}`;
     const result = await cloudinaryServices.cloudinaryImageDelete(public_id);
+
     res.status(200).json({
       success: true,
-      message: 'delete image successfully',
+      message: 'Image deleted successfully',
       data: result,
     });
   } catch (err) {
-    res.status(500).send({
+    console.error('Error deleting image:', err);
+    res.status(500).json({
       success: false,
       message: 'Failed to delete image',
+      error: err.message,
     });
   }
 };

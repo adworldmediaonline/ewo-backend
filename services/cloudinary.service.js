@@ -14,7 +14,17 @@ const { Readable } = require('stream');
 const cloudinaryImageUpload = imageBuffer => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { upload_preset: secret.cloudinary_upload_preset },
+      {
+        upload_preset: secret.cloudinary_upload_preset,
+        transformation: [
+          {
+            quality: 'auto',
+            fetch_format: 'webp',
+            format: 'webp',
+            flags: 'lossy',
+          },
+        ],
+      },
       (error, result) => {
         if (error) {
           console.error('Error uploading to Cloudinary:', error);
@@ -39,7 +49,17 @@ const cloudinaryMultipleImageUpload = async files => {
     const uploadPromises = files.map(file => {
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { upload_preset: secret.cloudinary_upload_preset },
+          {
+            upload_preset: secret.cloudinary_upload_preset,
+            transformation: [
+              {
+                quality: 'auto',
+                fetch_format: 'webp',
+                format: 'webp',
+                flags: 'lossy',
+              },
+            ],
+          },
           (error, result) => {
             if (error) {
               reject(error);
