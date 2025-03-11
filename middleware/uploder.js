@@ -4,7 +4,7 @@ const path = require('path');
 const uploader = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    const supportedImage = /png|jpg|jpeg|webp/;
+    const supportedImage = /\.(png|jpg|jpeg|webp)$/i;
     const extension = path.extname(file.originalname);
 
     if (supportedImage.test(extension)) {
