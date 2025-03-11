@@ -6,7 +6,7 @@ const {
   getFeaturedProducts,
 } = require('../controller/product.search.controller');
 
-// Search products with filters and pagination
+// Search products with filters
 router.get('/search', searchProducts);
 
 // Get product suggestions

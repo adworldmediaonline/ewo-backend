@@ -206,16 +206,21 @@ class ProductSearchService {
       if (!searchTerm) return [];
 
       const suggestions = await Product.find(
-        { $text: { $search: searchTerm } },
+        {
+          $or: [
+            { title: { $regex: searchTerm, $options: 'i' } },
+            { sku: { $regex: searchTerm, $options: 'i' } },
+            { 'category.name': { $regex: searchTerm, $options: 'i' } },
+          ],
+        },
         {
           title: 1,
           slug: 1,
           img: 1,
           price: 1,
-          score: { $meta: 'textScore' },
         }
       )
-        .sort({ score: { $meta: 'textScore' } })
+        .sort({ createdAt: -1 })
         .limit(limit)
         .lean();
 

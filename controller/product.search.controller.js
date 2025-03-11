@@ -1,5 +1,6 @@
 const productSearchService = require('../services/productSearch.service');
 const ApiError = require('../errors/api-error');
+const Product = require('../model/Product');
 
 /**
  * Search products with filters and pagination
@@ -61,26 +62,57 @@ exports.searchProducts = async (req, res, next) => {
 /**
  * Get product suggestions based on search term
  */
-exports.getProductSuggestions = async (req, res, next) => {
-  try {
-    const { term, limit } = req.query;
+exports.getProductSuggestions = async (req, res) => {
+  const { term } = req.query;
 
-    if (!term) {
-      throw new ApiError(400, 'Search term is required');
-    }
-
-    const suggestions = await productSearchService.getProductSuggestions(
-      term,
-      limit
-    );
-
-    res.status(200).json({
+  if (!term || term.length < 2) {
+    return res.status(200).json({
       success: true,
-      message: 'Product suggestions retrieved successfully',
+      suggestions: [],
+    });
+  }
+
+  try {
+    const searchRegex = new RegExp(term, 'i');
+
+    const suggestions = await Product.aggregate([
+      {
+        $match: {
+          $or: [
+            { title: searchRegex },
+            { sku: searchRegex },
+            { 'category.name': searchRegex },
+            { description: searchRegex },
+          ],
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          slug: 1,
+          img: { $first: '$images' },
+          price: 1,
+          sku: 1,
+          _id: 0,
+        },
+      },
+      { $limit: 5 },
+      { $sort: { createdAt: -1 } },
+    ]);
+
+    console.log('Suggestions found:', suggestions.length);
+
+    return res.status(200).json({
+      success: true,
       suggestions,
     });
   } catch (error) {
-    next(error);
+    console.error('Suggestion error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching product suggestions',
+      error: error.message,
+    });
   }
 };
 

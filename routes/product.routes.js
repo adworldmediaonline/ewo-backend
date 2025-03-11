@@ -3,6 +3,10 @@ const router = express.Router();
 // internal
 const productController = require('../controller/product.controller');
 
+// search routes
+router.get('/suggestions', productController.getProductSuggestions);
+router.get('/search', productController.searchProducts);
+
 // add a product
 router.post('/add', productController.addProduct);
 // add all product

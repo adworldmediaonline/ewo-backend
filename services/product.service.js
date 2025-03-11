@@ -1,5 +1,7 @@
 const Category = require('../model/Category');
 const Product = require('../model/Products');
+const ApiError = require('../errors/api-error');
+const mongoose = require('mongoose');
 
 // create product service
 exports.createProductService = async data => {
@@ -76,12 +78,33 @@ exports.getTopRatedProductService = async () => {
 };
 
 // get product data
-exports.getProductService = async id => {
-  const product = await Product.findById(id).populate({
-    path: 'reviews',
-    populate: { path: 'userId', select: 'name email imageURL' },
-  });
-  return product;
+exports.getProductService = async idOrSlug => {
+  try {
+    let product;
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+      product = await Product.findById(idOrSlug).populate({
+        path: 'reviews',
+        populate: { path: 'userId', select: 'name email imageURL' },
+      });
+    } else {
+      product = await Product.findOne({ slug: idOrSlug }).populate({
+        path: 'reviews',
+        populate: { path: 'userId', select: 'name email imageURL' },
+      });
+    }
+
+    if (!product) {
+      throw new ApiError(404, 'Product not found');
+    }
+
+    return {
+      success: true,
+      message: 'Product fetched successfully',
+      data: product,
+    };
+  } catch (error) {
+    throw error;
+  }
 };
 
 // get product data
