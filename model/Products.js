@@ -119,6 +119,29 @@ const productsSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    options: [
+      {
+        title: {
+          type: String,
+          required: [
+            function () {
+              return this.options && this.options.length > 0;
+            },
+            'Option title is required',
+          ],
+        },
+        price: {
+          type: Number,
+          required: [
+            function () {
+              return this.options && this.options.length > 0;
+            },
+            'Option price is required',
+          ],
+          min: [0, 'Option price cannot be negative'],
+        },
+      },
+    ],
   },
   {
     timestamps: true,
