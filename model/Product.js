@@ -85,8 +85,8 @@ const productSchema = mongoose.Schema(
     },
     sku: {
       type: String,
-      required: true,
-      unique: true,
+      required: [true, 'Please provide a product sku'],
+      trim: true,
       index: true,
     },
     discount: {
