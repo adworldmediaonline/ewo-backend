@@ -149,7 +149,10 @@ exports.updateProductService = async (id, currProduct) => {
     product.additionalInformation = currProduct.additionalInformation;
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
-
+    product.options = currProduct.options;
+    console.log('product.options', product.options);
+    console.log(typeof product.options);
+    console.log('product.sku', product.sku);
     // Save the updated product
     await product.save();
 

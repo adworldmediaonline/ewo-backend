@@ -83,6 +83,29 @@ const productSchema = mongoose.Schema(
       type: [String],
       index: true,
     },
+    options: [
+      {
+        title: {
+          type: String,
+          required: [
+            function () {
+              return this.options && this.options.length > 0;
+            },
+            'Option title is required',
+          ],
+        },
+        price: {
+          type: Number,
+          required: [
+            function () {
+              return this.options && this.options.length > 0;
+            },
+            'Option price is required',
+          ],
+          min: [0, 'Option price cannot be negative'],
+        },
+      },
+    ],
     sku: {
       type: String,
       required: [true, 'Please provide a product sku'],
