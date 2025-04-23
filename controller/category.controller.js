@@ -89,6 +89,7 @@ exports.updateCategory = async (req, res, next) => {
       req.params.id,
       req.body
     );
+
     res.status(200).json({
       status: 'success',
       message: 'Category update successfully',

@@ -17,7 +17,9 @@ exports.addAllCategoryService = async data => {
 
 // get all show category service
 exports.getShowCategoryServices = async () => {
-  const category = await Category.find({ status: 'Show' }).populate('products');
+  const category = await Category.find({ status: 'Show' })
+    .populate('products')
+    .sort({ updatedAt: -1 });
   return category;
 };
 
@@ -52,6 +54,26 @@ exports.updateCategoryService = async (id, payload) => {
   const result = await Category.findOneAndUpdate({ _id: id }, payload, {
     new: true,
   });
+
+  // If category name has changed, update all products with this category
+
+  const parent = payload.parent.toLowerCase();
+  const isParent = isExist.parent.toLowerCase();
+
+  if (parent && isParent !== parent) {
+    console.log('yes');
+    // const products = await Products.find({ 'category.id': id });
+    // console.log(products);
+    await Products.updateMany(
+      { 'category.id': id },
+      {
+        'category.name': payload.parent,
+        parent: payload.parent,
+      }
+    );
+  }
+  console.log('end');
+
   return result;
 };
 
