@@ -1,24 +1,24 @@
-const express = require("express");
+const express = require('express');
 const {
   paymentIntent,
   addOrder,
   getOrders,
   updateOrderStatus,
   getSingleOrder,
-} = require("../controller/order.controller");
+} = require('../controller/order.controller');
 
 // router
 const router = express.Router();
 
 // get orders
-router.get("/orders", getOrders);
+router.get('/orders', getOrders);
 // single order
-router.get("/:id", getSingleOrder);
+router.get('/:id', getSingleOrder);
 // add a create payment intent
-router.post("/create-payment-intent", paymentIntent);
+router.post('/create-payment-intent', paymentIntent);
 // save Order
-router.post("/saveOrder", addOrder);
+router.post('/saveOrder', addOrder);
 // update status
-router.patch("/update-status/:id", updateOrderStatus);
+router.patch('/update-status/:id', updateOrderStatus);
 
 module.exports = router;

@@ -1,10 +1,10 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     cart: [{}],
@@ -80,8 +80,12 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "processing", "delivered",'cancel'],
+      enum: ['pending', 'processing', 'delivered', 'cancel'],
       lowercase: true,
+    },
+    emailSent: {
+      type: Boolean,
+      default: false,
     },
   },
   {
@@ -92,7 +96,8 @@ const orderSchema = new mongoose.Schema(
 // define pre-save middleware to generate the invoice number
 orderSchema.pre('save', async function (next) {
   const order = this;
-  if (!order.invoice) { // check if the order already has an invoice number
+  if (!order.invoice) {
+    // check if the order already has an invoice number
     try {
       // find the highest invoice number in the orders collection
       const highestInvoice = await mongoose
@@ -102,7 +107,8 @@ orderSchema.pre('save', async function (next) {
         .limit(1)
         .select({ invoice: 1 });
       // if there are no orders in the collection, start at 1000
-      const startingInvoice = highestInvoice.length === 0 ? 1000 : highestInvoice[0].invoice + 1;
+      const startingInvoice =
+        highestInvoice.length === 0 ? 1000 : highestInvoice[0].invoice + 1;
       // set the invoice number for the new order
       order.invoice = startingInvoice;
       next();
@@ -114,5 +120,5 @@ orderSchema.pre('save', async function (next) {
   }
 });
 
-const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
+const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 module.exports = Order;
