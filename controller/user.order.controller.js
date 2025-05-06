@@ -1,11 +1,11 @@
-const mongoose = require("mongoose");
-const Order = require("../model/Order");
-const dayjs = require("dayjs");
-const customParseFormat = require("dayjs/plugin/customParseFormat");
-const isToday = require("dayjs/plugin/isToday");
-const isYesterday = require("dayjs/plugin/isYesterday");
-const isSameOrBefore = require("dayjs/plugin/isSameOrBefore");
-const isSameOrAfter = require("dayjs/plugin/isSameOrAfter");
+const mongoose = require('mongoose');
+const Order = require('../model/Order');
+const dayjs = require('dayjs');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
+const isToday = require('dayjs/plugin/isToday');
+const isYesterday = require('dayjs/plugin/isYesterday');
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
 
 // Apply necessary plugins to dayjs
 dayjs.extend(customParseFormat);
@@ -15,7 +15,7 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 // get all orders user
-module.exports.getOrderByUser = async (req, res,next) => {
+module.exports.getOrderByUser = async (req, res, next) => {
   // console.log(req.user)
   try {
     const { page, limit } = req.query;
@@ -30,14 +30,14 @@ module.exports.getOrderByUser = async (req, res,next) => {
     const totalPendingOrder = await Order.aggregate([
       {
         $match: {
-          status: "pending",
+          status: 'pending',
           user: new mongoose.Types.ObjectId(req.user._id),
         },
       },
       {
         $group: {
           _id: null,
-          total: { $sum: "$totalAmount" },
+          total: { $sum: '$totalAmount' },
           count: {
             $sum: 1,
           },
@@ -49,14 +49,14 @@ module.exports.getOrderByUser = async (req, res,next) => {
     const totalProcessingOrder = await Order.aggregate([
       {
         $match: {
-          status: "processing",
+          status: 'processing',
           user: new mongoose.Types.ObjectId(req.user._id),
         },
       },
       {
         $group: {
           _id: null,
-          total: { $sum: "$totalAmount" },
+          total: { $sum: '$totalAmount' },
           count: {
             $sum: 1,
           },
@@ -67,14 +67,14 @@ module.exports.getOrderByUser = async (req, res,next) => {
     const totalDeliveredOrder = await Order.aggregate([
       {
         $match: {
-          status: "delivered",
+          status: 'delivered',
           user: new mongoose.Types.ObjectId(req.user._id),
         },
       },
       {
         $group: {
           _id: null,
-          total: { $sum: "$totalAmount" },
+          total: { $sum: '$totalAmount' },
           count: {
             $sum: 1,
           },
@@ -98,12 +98,12 @@ module.exports.getOrderByUser = async (req, res,next) => {
       totalDoc,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
 // getOrderById
-module.exports.getOrderById = async (req, res,next) => {
+module.exports.getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     res.status(200).json({
@@ -111,21 +111,21 @@ module.exports.getOrderById = async (req, res,next) => {
       order,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
 // getDashboardAmount
-exports.getDashboardAmount = async (req, res,next) => {
+exports.getDashboardAmount = async (req, res, next) => {
   try {
-    const todayStart = dayjs().startOf("day");
-    const todayEnd = dayjs().endOf("day");
+    const todayStart = dayjs().startOf('day');
+    const todayEnd = dayjs().endOf('day');
 
-    const yesterdayStart = dayjs().subtract(1, "day").startOf("day");
-    const yesterdayEnd = dayjs().subtract(1, "day").endOf("day");
+    const yesterdayStart = dayjs().subtract(1, 'day').startOf('day');
+    const yesterdayEnd = dayjs().subtract(1, 'day').endOf('day');
 
-    const monthStart = dayjs().startOf("month");
-    const monthEnd = dayjs().endOf("month");
+    const monthStart = dayjs().startOf('month');
+    const monthEnd = dayjs().endOf('month');
 
     const todayOrders = await Order.find({
       createdAt: { $gte: todayStart.toDate(), $lte: todayEnd.toDate() },
@@ -134,10 +134,10 @@ exports.getDashboardAmount = async (req, res,next) => {
     let todayCashPaymentAmount = 0;
     let todayCardPaymentAmount = 0;
 
-    todayOrders.forEach((order) => {
-      if (order.paymentMethod === "COD") {
+    todayOrders.forEach(order => {
+      if (order.paymentMethod === 'COD') {
         todayCashPaymentAmount += order.totalAmount;
-      } else if (order.paymentMethod === "Card") {
+      } else if (order.paymentMethod === 'Card') {
         todayCardPaymentAmount += order.totalAmount;
       }
     });
@@ -149,10 +149,10 @@ exports.getDashboardAmount = async (req, res,next) => {
     let yesterDayCashPaymentAmount = 0;
     let yesterDayCardPaymentAmount = 0;
 
-    yesterdayOrders.forEach((order) => {
-      if (order.paymentMethod === "COD") {
+    yesterdayOrders.forEach(order => {
+      if (order.paymentMethod === 'COD') {
         yesterDayCashPaymentAmount += order.totalAmount;
-      } else if (order.paymentMethod === "Card") {
+      } else if (order.paymentMethod === 'Card') {
         yesterDayCardPaymentAmount += order.totalAmount;
       }
     });
@@ -190,11 +190,11 @@ exports.getDashboardAmount = async (req, res,next) => {
       yesterDayCashPaymentAmount,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 // get sales report
-exports.getSalesReport = async (req, res,next) => {
+exports.getSalesReport = async (req, res, next) => {
   try {
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - 7);
@@ -207,7 +207,7 @@ exports.getSalesReport = async (req, res,next) => {
     });
 
     const salesReport = salesOrderChartData.reduce((res, value) => {
-      const onlyDate = value.updatedAt.toISOString().split("T")[0];
+      const onlyDate = value.updatedAt.toISOString().split('T')[0];
 
       if (!res[onlyDate]) {
         res[onlyDate] = { date: onlyDate, total: 0, order: 0 };
@@ -223,21 +223,21 @@ exports.getSalesReport = async (req, res,next) => {
     res.status(200).json({ salesReport: salesReportData });
   } catch (error) {
     // Handle error if any
-    next(error)
+    next(error);
   }
 };
 
 // Most Selling Category
-exports.mostSellingCategory = async (req, res,next) => {
+exports.mostSellingCategory = async (req, res, next) => {
   try {
     const categoryData = await Order.aggregate([
       {
-        $unwind: "$cart", // Deconstruct the cart array
+        $unwind: '$cart', // Deconstruct the cart array
       },
       {
         $group: {
-          _id: "$cart.productType",
-          count: { $sum: "$cart.orderQuantity" },
+          _id: '$cart.productType',
+          count: { $sum: '$cart.orderQuantity' },
         },
       },
       {
@@ -250,12 +250,12 @@ exports.mostSellingCategory = async (req, res,next) => {
 
     res.status(200).json({ categoryData });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
 // dashboard recent order
-exports.getDashboardRecentOrder = async (req, res,next) => {
+exports.getDashboardRecentOrder = async (req, res, next) => {
   try {
     const { page, limit } = req.query;
 
@@ -264,7 +264,7 @@ exports.getDashboardRecentOrder = async (req, res,next) => {
     const skip = (pages - 1) * limits;
 
     const queryObject = {
-      status: { $in: ["pending", "processing", "delivered", "cancel"] },
+      status: { $in: ['pending', 'processing', 'delivered', 'cancel'] },
     };
 
     const totalDoc = await Order.countDocuments(queryObject);
@@ -281,7 +281,7 @@ exports.getDashboardRecentOrder = async (req, res,next) => {
           name: 1,
           user: 1,
           totalAmount: 1,
-          status:1,
+          status: 1,
         },
       },
     ]);
@@ -293,6 +293,6 @@ exports.getDashboardRecentOrder = async (req, res,next) => {
       totalOrder: totalDoc,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
