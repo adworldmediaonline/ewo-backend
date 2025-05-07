@@ -101,7 +101,14 @@ exports.paymentIntent = async (req, res, next) => {
 // addOrder
 exports.addOrder = async (req, res, next) => {
   try {
-    const orderItems = await Order.create(req.body);
+    const orderData = req.body;
+
+    // If this is a guest checkout (no user ID), ensure the field is set properly
+    if (!orderData.user) {
+      orderData.isGuestOrder = true;
+    }
+
+    const orderItems = await Order.create(orderData);
 
     res.status(200).json({
       success: true,
@@ -294,7 +301,8 @@ exports.handleStripeWebhook = async (req, res) => {
             amount: paymentIntent.amount,
             status: paymentIntent.status,
           },
-          user: metadata.order_user || '645f748c1e46a19cbbe3b7c8', // Default user ID, replace with a valid one
+          isGuestOrder: !metadata.order_user,
+          user: metadata.order_user || undefined, // Make it undefined for guest checkout
         };
 
         try {
