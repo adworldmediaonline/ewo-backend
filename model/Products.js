@@ -63,6 +63,22 @@ const productsSchema = mongoose.Schema(
         message: 'Discount cannot be negative',
       },
     },
+    shipping: {
+      price: {
+        type: Number,
+        default: 0,
+        validate: {
+          validator: function (value) {
+            return value >= 0;
+          },
+          message: 'Shipping price cannot be negative',
+        },
+      },
+      description: {
+        type: String,
+        default: '',
+      },
+    },
     quantity: {
       type: Number,
       required: true,
