@@ -150,6 +150,8 @@ exports.updateProductService = async (id, currProduct) => {
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
     product.options = currProduct.options;
+    product.shipping.price = currProduct.shipping.price;
+    product.shipping.description = currProduct.shipping.description;
     console.log('product.options', product.options);
     console.log(typeof product.options);
     console.log('product.sku', product.sku);
