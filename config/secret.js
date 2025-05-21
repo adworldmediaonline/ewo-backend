@@ -25,4 +25,7 @@ module.exports.secret = {
   stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
   client_url: process.env.STORE_URL,
   admin_url: process.env.ADMIN_URL,
+
+  store_name: process.env.STORE_NAME,
+  support_email: process.env.SUPPORT_EMAIL,
 };

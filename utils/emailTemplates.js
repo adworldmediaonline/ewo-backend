@@ -3,6 +3,8 @@
  * Provides reusable email templates for different types of emails
  */
 
+const { secret } = require('../config/secret');
+
 // Format currency helper function
 const formatPrice = amount => `$${parseFloat(amount || 0).toFixed(2)}`;
 
@@ -33,10 +35,11 @@ const baseTemplate = ({ content, storeName, supportEmail }) => {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Email Notification</title>
   </head>
-  <body style="font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse: collapse;">
+  <body style="font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse: collapse; background-color: #ffffff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
       <!-- Header -->
       <tr>
         <td style="padding: 20px 0; text-align: center; background-color: #f8f9fa; border-radius: 6px 6px 0 0;">
@@ -59,6 +62,10 @@ const baseTemplate = ({ content, storeName, supportEmail }) => {
         </td>
       </tr>
     </table>
+    <!-- Anti-spam footer -->
+    <div style="font-size: 11px; color: #999; margin-top: 20px; text-align: center;">
+      <p>This email was sent to you as a registered user of ${storeName}. To update your preferences or unsubscribe, visit your account settings.</p>
+    </div>
   </body>
   </html>
   `;
@@ -83,9 +90,9 @@ const orderConfirmationTemplate = (order, config) => {
   } = order;
 
   const {
-    storeName = 'Our Store',
-    supportEmail = 'support@example.com',
-    clientUrl = 'https://example.com',
+    storeName = secret.store_name,
+    supportEmail = secret.support_email,
+    clientUrl = secret.client_url,
   } = config;
 
   // Generate items HTML
