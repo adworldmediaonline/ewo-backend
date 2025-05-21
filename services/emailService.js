@@ -10,11 +10,19 @@ const transporter = nodemailer.createTransport({
   service: secret.email_service,
   host: secret.email_host,
   port: secret.email_port,
-  // secure: secret.email_secure,
+  secure: true,
   auth: {
     user: secret.email_user,
     pass: secret.email_pass,
   },
+  // Add DKIM if available
+  ...(secret.dkim_private_key && {
+    dkim: {
+      domainName: secret.email_domain || secret.email_user.split('@')[1],
+      keySelector: 'default',
+      privateKey: secret.dkim_private_key,
+    },
+  }),
   tls: {
     rejectUnauthorized: false,
   },
@@ -39,6 +47,13 @@ const sendEmail = async ({ to, subject, html }) => {
       to,
       subject,
       html,
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        Importance: 'High',
+        'X-Mailer': 'EWO Mailer',
+        'X-Auto-Response-Suppress': 'OOF, AutoReply',
+      },
     });
 
     console.log(`Email sent to ${to}`);

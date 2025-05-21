@@ -13,32 +13,58 @@ exports.signup = async (req, res, next) => {
     if (user) {
       res.send({ status: 'failed', message: 'Email already exists' });
     } else {
+      console.log('req.body', req.body);
       const saved_user = await User.create(req.body);
       const token = saved_user.generateConfirmationToken();
 
       await saved_user.save({ validateBeforeSave: false });
 
       const mailData = {
-        from: secret.email_user,
+        from: {
+          name: 'EWO Support',
+          address: secret.email_user,
+        },
         to: `${req.body.email}`,
-        subject: 'Email Activation',
-        subject: 'Verify Your Email',
-        html: `<h2>Hello ${req.body.name}</h2>
-        <p>Verify your email address to complete the signup and login into your <strong>ewo</strong> account.</p>
-
-          <p>This link will expire in <strong> 10 minute</strong>.</p>
-
-          <p style="margin-bottom:20px;">Click this link for active your account</p>
-
-          <a href="${secret.client_url}/email-verify/${token}" style="background:#0989FF;color:white;border:1px solid #0989FF; padding: 10px 15px; border-radius: 4px; text-decoration:none;">Verify Account</a>
-
-          <p style="margin-top: 35px;">If you did not initiate this request, please contact us immediately at support@ewo.com</p>
-
-          <p style="margin-bottom:0px;">Thank you</p>
-          <strong>ewo Team</strong>
-           `,
+        subject: 'EWO Account Verification',
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Verify Your Account</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding: 20px; background-color: #f7f7f7; text-align: center;">
+                <h2 style="margin: 0; color: #0989FF;">Hello ${req.body.name}</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px;">
+                <p>Thank you for creating your account with us. Please verify your email address to access your EWO account.</p>
+                <p>This verification link will expire in <strong>10 minutes</strong>.</p>
+                <p style="text-align: center; margin: 30px 0;">
+                  <a href="${secret.client_url}/email-verify/${token}" style="background-color: #0989FF; color: white; text-decoration: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; display: inline-block;">Verify My Account</a>
+                </p>
+                <p style="font-size: 13px; color: #666;">If you did not create this account, please disregard this email.</p>
+                <p style="font-size: 13px; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
+                <p style="font-size: 13px; word-break: break-all;"><a href="${secret.client_url}/email-verify/${token}" style="color: #0989FF;">${secret.client_url}/email-verify/${token}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; background-color: #f7f7f7; text-align: center; font-size: 13px;">
+                <p style="margin-bottom: 5px;">Thank you for choosing EWO</p>
+                <p style="margin-top: 0; font-weight: bold;">The EWO Team</p>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        `,
       };
-      const message = 'Please check your email to verify!';
+      const message = 'Please check your email to verify your account!';
       sendEmail(mailData, res, message);
     }
   } catch (error) {
@@ -167,22 +193,48 @@ exports.forgetPassword = async (req, res, next) => {
     } else {
       const token = tokenForVerify(user);
       const body = {
-        from: secret.email_user,
+        from: {
+          name: 'EWO Support',
+          address: secret.email_user,
+        },
         to: `${verifyEmail}`,
-        subject: 'Password Reset',
-        html: `<h2>Hello ${verifyEmail}</h2>
-        <p>A request has been received to change the password for your <strong>ewo</strong> account </p>
-
-        <p>This link will expire in <strong> 10 minute</strong>.</p>
-
-        <p style="margin-bottom:20px;">Click this link for reset your password</p>
-
-        <a href=${secret.client_url}/forget-password/${token} style="background:#0989FF;color:white;border:1px solid #0989FF; padding: 10px 15px; border-radius: 4px; text-decoration:none;">Reset Password</a>
-
-        <p style="margin-top: 35px;">If you did not initiate this request, please contact us immediately at support@ewo.com</p>
-
-        <p style="margin-bottom:0px;">Thank you</p>
-        <strong>ewo Team</strong>
+        subject: 'EWO Password Reset',
+        html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding: 20px; background-color: #f7f7f7; text-align: center;">
+                <h2 style="margin: 0; color: #0989FF;">Password Reset</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px;">
+                <p>We received a request to reset the password for your EWO account.</p>
+                <p>This reset link will expire in <strong>10 minutes</strong>.</p>
+                <p style="text-align: center; margin: 30px 0;">
+                  <a href="${secret.client_url}/forget-password/${token}" style="background-color: #0989FF; color: white; text-decoration: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+                </p>
+                <p style="font-size: 13px; color: #666;">If you did not request a password reset, please disregard this email.</p>
+                <p style="font-size: 13px; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
+                <p style="font-size: 13px; word-break: break-all;"><a href="${secret.client_url}/forget-password/${token}" style="color: #0989FF;">${secret.client_url}/forget-password/${token}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; background-color: #f7f7f7; text-align: center; font-size: 13px;">
+                <p style="margin-bottom: 5px;">Thank you for choosing EWO</p>
+                <p style="margin-top: 0; font-weight: bold;">The EWO Team</p>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
         `,
       };
       user.confirmationToken = token;
