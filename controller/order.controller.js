@@ -174,11 +174,14 @@ exports.handleStripeWebhook = async (req, res) => {
       secret.stripe_webhook_secret
       // process.env.STRIPE_WEBHOOK_SECRET
     );
+    console.log('event');
+    console.log('signature', signature);
   } catch (err) {
     console.log('err', err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  console.log('event successfully verified');
   // Handle the event asynchronously
   try {
     switch (event.type) {
@@ -257,6 +260,7 @@ exports.handleStripeWebhook = async (req, res) => {
           shippingCost: Number(metadata.order_shippingCost || 0),
           discount: Number(metadata.order_discount || 0),
           totalAmount: paymentIntent.amount / 100,
+          state: metadata.order_state || 'pending',
           paymentIntent: {
             id: paymentIntent.id,
             amount: paymentIntent.amount,
@@ -275,7 +279,7 @@ exports.handleStripeWebhook = async (req, res) => {
 
           // Update product quantities
           await updateProductQuantities(order.cart);
-
+          console.log('order', order);
           // Send confirmation email using email service
           const emailSent = await sendOrderConfirmation(order);
 
