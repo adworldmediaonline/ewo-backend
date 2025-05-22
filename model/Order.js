@@ -11,12 +11,6 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    orderReferenceId: {
-      type: String,
-      required: true,
-      index: true, // Add index for faster lookups
-      unique: true, // Ensure uniqueness at the database level
-    },
     cart: [{}],
     name: {
       type: String,
@@ -80,13 +74,6 @@ const orderSchema = new mongoose.Schema(
       type: Object,
       required: false,
     },
-    isPaid: {
-      type: Boolean,
-      default: false,
-    },
-    paidAt: {
-      type: Date,
-    },
     paymentMethod: {
       type: String,
       required: true,
@@ -104,6 +91,7 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'delivered', 'cancel'],
       lowercase: true,
     },
+
     emailSent: {
       type: Boolean,
       default: false,

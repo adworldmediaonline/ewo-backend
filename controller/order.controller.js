@@ -9,45 +9,21 @@ exports.paymentIntent = async (req, res, next) => {
   try {
     const product = req.body;
     const price = Number(product.price);
-    const amount = price * 100;
-
+    console.log(product);
+    const amount = product.orderData.totalAmount * 100;
+    console.log('amount', amount);
     // Prepare metadata
     const metadata = {};
 
     // Add basic fields directly
     metadata.email = product.email || '';
 
-    // IMPORTANT: Store the orderReferenceId for duplicate prevention
-    if (product.orderData?.orderReferenceId) {
-      metadata.orderReferenceId = product.orderData.orderReferenceId;
-      console.log(
-        'Setting orderReferenceId in payment intent metadata:',
-        metadata.orderReferenceId
-      );
-    }
-
     // Add orderData fields with prefix
     if (product.orderData) {
       Object.keys(product.orderData).forEach(key => {
         const value = product.orderData[key];
         if (value !== undefined && value !== null) {
-          // Directly add common fields that Stripe might use
-          if (
-            [
-              'email',
-              'name',
-              'address',
-              'city',
-              'state',
-              'country',
-              'zipCode',
-            ].includes(key)
-          ) {
-            metadata[key] = String(value).substring(0, 500);
-          } else {
-            // Add other fields with prefix
-            metadata[`order_${key}`] = String(value).substring(0, 500);
-          }
+          metadata[`order_${key}`] = String(value).substring(0, 500);
         }
       });
     }
@@ -91,11 +67,6 @@ exports.paymentIntent = async (req, res, next) => {
       console.error('⚠️ NO CART DATA FOUND IN REQUEST:');
     }
 
-    console.log(
-      'Creating payment intent with metadata:',
-      JSON.stringify(metadata)
-    );
-
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
       currency: 'usd',
@@ -109,7 +80,7 @@ exports.paymentIntent = async (req, res, next) => {
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error('Payment intent error:', error);
+    console.log(error);
     next(error);
   }
 };
@@ -118,81 +89,32 @@ exports.paymentIntent = async (req, res, next) => {
 exports.addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
-    console.log(
-      'Received order creation request with reference ID:',
-      orderData.orderReferenceId
-    );
-
-    // Check if we have a reference ID
-    if (orderData.orderReferenceId) {
-      // Look for an existing order with this reference ID
-      const existingOrder = await Order.findOne({
-        orderReferenceId: orderData.orderReferenceId,
-      });
-
-      if (existingOrder) {
-        console.log(
-          `Order with reference ID ${orderData.orderReferenceId} already exists. Returning existing order.`
-        );
-        // Return the existing order if found
-        return res.status(200).json({
-          success: true,
-          message: 'Order already exists',
-          order: existingOrder,
-        });
-      }
-
-      // Also check for orders created in the last minute with the same email and amount
-      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-      const recentOrders = await Order.find({
-        createdAt: { $gte: oneMinuteAgo },
-        email: orderData.email,
-      });
-
-      const matchingOrder = recentOrders.find(order => {
-        return Math.abs(order.totalAmount - orderData.totalAmount) < 1;
-      });
-
-      if (matchingOrder) {
-        console.log(
-          `Found matching recent order with ID ${matchingOrder._id}. Returning existing order.`
-        );
-        return res.status(200).json({
-          success: true,
-          message: 'Order already exists',
-          order: matchingOrder,
-        });
-      }
-    }
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
       orderData.isGuestOrder = true;
     }
 
-    console.log(
-      'Creating new order with reference ID:',
-      orderData.orderReferenceId
-    );
-    const orderItems = await Order.create(orderData);
+    const order = await Order.create(orderData);
 
-    // Check if we should update product quantities immediately
-    // This happens for non-Stripe payments like COD
-    if (
-      orderData.paymentMethod !== 'Card' ||
-      (orderData.isPaid && orderData.paymentIntent)
-    ) {
-      console.log('Updating product quantities for completed order');
-      await updateProductQuantities(orderData.cart);
+    // Update product quantities
+    await updateProductQuantities(order.cart);
+
+    // Send confirmation email using email service
+    const emailSent = await sendOrderConfirmation(order);
+
+    // Update order to mark email as sent
+    if (emailSent) {
+      await Order.findByIdAndUpdate(order._id, { emailSent: true });
     }
 
     res.status(200).json({
       success: true,
       message: 'Order added successfully',
-      order: orderItems,
+      order: order,
     });
   } catch (error) {
-    console.error('Add order error:', error);
+    console.log(error);
     next(error);
   }
 };
@@ -206,7 +128,7 @@ exports.getOrders = async (req, res, next) => {
       data: orderItems,
     });
   } catch (error) {
-    console.error('Get orders error:', error);
+    console.log(error);
     next(error);
   }
 };
@@ -217,12 +139,12 @@ exports.getSingleOrder = async (req, res, next) => {
     const orderItem = await Order.findById(req.params.id).populate('user');
     res.status(200).json(orderItem);
   } catch (error) {
-    console.error('Get single order error:', error);
+    console.log(error);
     next(error);
   }
 };
 
-exports.updateOrderStatus = async (req, res, next) => {
+exports.updateOrderStatus = async (req, res) => {
   const newStatus = req.body.status;
   try {
     await Order.updateOne(
@@ -241,150 +163,9 @@ exports.updateOrderStatus = async (req, res, next) => {
       message: 'Status updated successfully',
     });
   } catch (error) {
-    console.error('Update order status error:', error);
+    console.log(error);
     next(error);
   }
-};
-
-// Handle Stripe webhook events
-exports.handleStripeWebhook = async (req, res) => {
-  console.log('Stripe webhook received');
-  const signature = req.headers['stripe-signature'];
-  let event;
-
-  try {
-    // Verify the event came from Stripe
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      signature,
-      secret.stripe_webhook_secret
-    );
-  } catch (err) {
-    console.log('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log(`Event type: ${event.type}`);
-
-  // Handle the event asynchronously
-  try {
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
-
-        // Extract order data from metadata
-        const metadata = paymentIntent.metadata || {};
-        console.log('Payment intent metadata:', JSON.stringify(metadata));
-
-        // Check if we have a reference ID from the frontend
-        const orderReferenceId = metadata.orderReferenceId;
-        console.log('Order reference ID from webhook:', orderReferenceId);
-
-        if (!orderReferenceId) {
-          console.log(
-            'No order reference ID found in webhook, skipping order update'
-          );
-          return res.status(200).json({ received: true, noReference: true });
-        }
-
-        // Try to find the order by reference ID
-        let existingOrder = await Order.findOne({
-          orderReferenceId: orderReferenceId,
-        });
-
-        // If no order found by reference ID, try to find by other means
-        if (!existingOrder) {
-          console.log(
-            `No order found with reference ID ${orderReferenceId}, checking recent orders`
-          );
-
-          // Check for orders created in the last 5 minutes with matching email
-          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-          const recentOrders = await Order.find({
-            createdAt: { $gte: fiveMinutesAgo },
-          });
-
-          console.log(`Found ${recentOrders.length} recent orders`);
-
-          // Check if any recent order matches the email and amount
-          const matchingOrder = recentOrders.find(order => {
-            const sameEmail =
-              order.email === (metadata.email || metadata.order_email);
-            const sameAmount =
-              Math.abs(order.totalAmount - paymentIntent.amount / 100) < 1;
-            return sameEmail && sameAmount;
-          });
-
-          if (matchingOrder) {
-            console.log(
-              `Found matching recent order with ID ${matchingOrder._id}`
-            );
-            existingOrder = matchingOrder;
-          } else {
-            console.log(
-              'No matching order found, webhook will not create a new order'
-            );
-            return res
-              .status(200)
-              .json({ received: true, noMatchingOrder: true });
-          }
-        }
-
-        // Update the existing order with payment information
-        console.log(
-          `Updating order ${existingOrder._id} with payment information`
-        );
-
-        const updatedOrder = await Order.findByIdAndUpdate(
-          existingOrder._id,
-          {
-            $set: {
-              paymentIntent: {
-                id: paymentIntent.id,
-                amount: paymentIntent.amount,
-                status: paymentIntent.status,
-              },
-              isPaid: true,
-              paidAt: new Date(),
-              status: 'processing',
-            },
-          },
-          { new: true }
-        );
-
-        // Update product quantities based on the order
-        if (updatedOrder && updatedOrder.cart && updatedOrder.cart.length > 0) {
-          await updateProductQuantities(updatedOrder.cart);
-        }
-
-        // Send confirmation email
-        const emailSent = await sendOrderConfirmation(updatedOrder);
-
-        // Update order to mark email as sent
-        if (emailSent) {
-          await Order.findByIdAndUpdate(updatedOrder._id, { emailSent: true });
-        }
-
-        console.log(
-          `Order ${updatedOrder._id} successfully updated by webhook`
-        );
-        break;
-
-      case 'payment_intent.payment_failed':
-        const failedPaymentIntent = event.data.object;
-        // You can handle failed payments here
-        console.log(`Payment failed for intent ${failedPaymentIntent.id}`);
-        break;
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
-    }
-  } catch (error) {
-    console.error(`Error processing webhook: ${error.message}`);
-    console.error(error.stack);
-  }
-
-  res.status(200).json({ received: true });
 };
 
 /**
@@ -396,8 +177,6 @@ async function updateProductQuantities(cartItems) {
     console.log('No cart items to update quantities for');
     return;
   }
-
-  console.log(`Updating quantities for ${cartItems.length} products`);
 
   // Process each item in cart
   for (const item of cartItems) {
@@ -411,7 +190,6 @@ async function updateProductQuantities(cartItems) {
       }
 
       if (!productId) {
-        console.log('No product ID found for item:', item.title);
         continue;
       }
 
@@ -420,40 +198,196 @@ async function updateProductQuantities(cartItems) {
 
       const orderQuantity = parseInt(item.orderQuantity || 1, 10);
 
-      console.log(
-        `Updating product ${productId} (${item.title}): reducing quantity by ${orderQuantity}`
-      );
-
-      // Find the product first to get current quantities
+      // First check if product exists with direct find
+      console.log(`Finding product with ID: "${productId}"`);
       const product = await Products.findById(productId);
 
       if (!product) {
-        console.log(`Product with ID ${productId} not found`);
         continue;
       }
 
-      // Calculate new quantity, ensuring it doesn't go below 0
-      const newQuantity = Math.max(0, product.quantity - orderQuantity);
-      const newSellCount = product.sellCount + orderQuantity;
-
-      // Update both quantity and sellCount in one operation
-      const updateResult = await Products.findByIdAndUpdate(
-        productId,
-        {
-          quantity: newQuantity,
-          sellCount: newSellCount,
-          // Update status if needed
-          ...(newQuantity <= 0 ? { status: 'out-of-stock' } : {}),
-        },
-        { new: true }
+      // First update quantity
+      const quantityResult = await Products.updateOne(
+        { _id: productId },
+        { $inc: { quantity: -orderQuantity } }
       );
 
-      console.log(
-        `Updated product ${productId}: new quantity = ${updateResult.quantity}, sellCount = ${updateResult.sellCount}`
+      // Then update sellCount
+      const sellCountResult = await Products.updateOne(
+        { _id: productId },
+        { $inc: { sellCount: orderQuantity } }
       );
+
+      // Verify the updates
+      const updatedProduct = await Products.findById(productId);
+
+      if (!updatedProduct) {
+        continue;
+      }
+
+      // Update status if needed
+      if (
+        updatedProduct.quantity <= 0 &&
+        updatedProduct.status !== 'out-of-stock'
+      ) {
+        const statusResult = await Products.updateOne(
+          { _id: productId },
+          { $set: { status: 'out-of-stock' } }
+        );
+      }
     } catch (error) {
       console.error(`Error updating product inventory:`, error);
-      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
     }
   }
 }
+
+// later user
+// Handle Stripe webhook events
+exports.handleStripeWebhook = async (req, res) => {
+  // console.log('Stripe signature header:', req.headers['stripe-signature']);
+  // console.log('Stripe webhook secret:', secret.stripe_webhook_secret);
+  // console.log('Raw body (length):', req.body.length);
+  // console.log('Webhook body (should be Buffer):', Buffer.isBuffer(req.body));
+  // res.status(200).json({ received: true });
+  const signature = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    // Verify the event came from Stripe
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      secret.stripe_webhook_secret
+      // process.env.STRIPE_WEBHOOK_SECRET
+    );
+    console.log('event');
+    console.log('signature', signature);
+  } catch (err) {
+    console.log('err', err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log('event successfully verified');
+  // Handle the event asynchronously
+  try {
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+
+        // Extract order data from metadata
+        const metadata = paymentIntent.metadata || {};
+
+        // Parse cart data if available in metadata
+        let cartItems = [];
+        if (metadata.order_cart) {
+          try {
+            cartItems = JSON.parse(metadata.order_cart);
+
+            // Ensure product IDs are correctly formatted
+            cartItems = cartItems.map(item => {
+              // If ID is present, ensure it's a string
+              if (item._id) {
+                item._id = item._id.toString();
+              }
+              return item;
+            });
+          } catch (error) {
+            console.error('Failed to parse cart data:', error);
+          }
+        } else {
+          // If we have a product name but no cart data, try to find the product by name/title
+          if (metadata.order_product) {
+            try {
+              const product = await Products.findOne({
+                title: { $regex: new RegExp(metadata.order_product, 'i') },
+              });
+
+              if (product) {
+                cartItems = [
+                  {
+                    _id: product._id.toString(),
+                    title: product.title,
+                    price: paymentIntent.amount / 100,
+                    orderQuantity: 1,
+                  },
+                ];
+              } else {
+              }
+            } catch (error) {
+              console.error('Error finding product by title:', error);
+            }
+          }
+        }
+
+        // For dev/testing: Create a minimal order if metadata is insufficient
+        // This ensures at least something is saved when a payment succeeds
+        const minimalOrder = {
+          name: metadata.order_name || metadata.email || 'Customer',
+          email:
+            metadata.order_email || metadata.email || 'customer@example.com',
+          contact: metadata.order_contact || '1234567890',
+          address: metadata.order_address || 'Address from payment',
+          city: metadata.order_city || 'City',
+          country: metadata.order_country || 'Country',
+          zipCode: metadata.order_zipCode || '12345',
+          status: 'pending',
+          paymentMethod: 'Card',
+          cart:
+            cartItems.length > 0
+              ? cartItems
+              : [
+                  {
+                    title: metadata.order_product,
+                    price: paymentIntent.amount / 100,
+                    orderQuantity: 1,
+                  },
+                ],
+          subTotal: paymentIntent.amount / 100,
+          shippingCost: Number(metadata.order_shippingCost || 0),
+          discount: Number(metadata.order_discount || 0),
+          totalAmount: paymentIntent.amount / 100,
+          state: metadata.order_state || 'pending',
+          paymentIntent: {
+            id: paymentIntent.id,
+            amount: paymentIntent.amount,
+            status: paymentIntent.status,
+          },
+          isGuestOrder: !metadata.order_user,
+          user: metadata.order_user || undefined, // Make it undefined for guest checkout
+        };
+
+        try {
+          // Create the order with minimal data
+          const order = await Order.create(minimalOrder);
+
+          // Check product IDs in cart
+          const productIds = order.cart.map(item => item._id).filter(Boolean);
+
+          // Update product quantities
+          await updateProductQuantities(order.cart);
+          console.log('order', order);
+          // Send confirmation email using email service
+          const emailSent = await sendOrderConfirmation(order);
+
+          // Update order to mark email as sent
+          if (emailSent) {
+            await Order.findByIdAndUpdate(order._id, { emailSent: true });
+          }
+        } catch (error) {
+          console.log(error);
+        }
+        break;
+
+      case 'payment_intent.payment_failed':
+        const failedPaymentIntent = event.data.object;
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+  } catch (error) {
+    console.error(`Error processing webhook: ${error.message}`);
+  }
+  res.status(200).json({ received: true });
+};
