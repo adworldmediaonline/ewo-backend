@@ -91,6 +91,7 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'delivered', 'cancel'],
       lowercase: true,
     },
+
     emailSent: {
       type: Boolean,
       default: false,

@@ -9,8 +9,9 @@ exports.paymentIntent = async (req, res, next) => {
   try {
     const product = req.body;
     const price = Number(product.price);
-    const amount = price * 100;
-
+    console.log(product);
+    const amount = product.orderData.totalAmount * 100;
+    console.log('amount', amount);
     // Prepare metadata
     const metadata = {};
 
@@ -94,12 +95,23 @@ exports.addOrder = async (req, res, next) => {
       orderData.isGuestOrder = true;
     }
 
-    const orderItems = await Order.create(orderData);
+    const order = await Order.create(orderData);
+
+    // Update product quantities
+    await updateProductQuantities(order.cart);
+
+    // Send confirmation email using email service
+    const emailSent = await sendOrderConfirmation(order);
+
+    // Update order to mark email as sent
+    if (emailSent) {
+      await Order.findByIdAndUpdate(order._id, { emailSent: true });
+    }
 
     res.status(200).json({
       success: true,
       message: 'Order added successfully',
-      order: orderItems,
+      order: order,
     });
   } catch (error) {
     console.log(error);
@@ -156,12 +168,87 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+/**
+ * Update product quantities after successful order
+ * @param {Array} cartItems - Array of cart items with product info
+ */
+async function updateProductQuantities(cartItems) {
+  if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+    console.log('No cart items to update quantities for');
+    return;
+  }
+
+  // Process each item in cart
+  for (const item of cartItems) {
+    try {
+      // Get product ID - could be stored directly or as a string property
+      let productId = item._id || item.productId || null;
+
+      // If the item has a nested product object, try to get ID from there
+      if (!productId && item.product && item.product._id) {
+        productId = item.product._id;
+      }
+
+      if (!productId) {
+        continue;
+      }
+
+      // Ensure productId is a string
+      productId = productId.toString();
+
+      const orderQuantity = parseInt(item.orderQuantity || 1, 10);
+
+      // First check if product exists with direct find
+      console.log(`Finding product with ID: "${productId}"`);
+      const product = await Products.findById(productId);
+
+      if (!product) {
+        continue;
+      }
+
+      // First update quantity
+      const quantityResult = await Products.updateOne(
+        { _id: productId },
+        { $inc: { quantity: -orderQuantity } }
+      );
+
+      // Then update sellCount
+      const sellCountResult = await Products.updateOne(
+        { _id: productId },
+        { $inc: { sellCount: orderQuantity } }
+      );
+
+      // Verify the updates
+      const updatedProduct = await Products.findById(productId);
+
+      if (!updatedProduct) {
+        continue;
+      }
+
+      // Update status if needed
+      if (
+        updatedProduct.quantity <= 0 &&
+        updatedProduct.status !== 'out-of-stock'
+      ) {
+        const statusResult = await Products.updateOne(
+          { _id: productId },
+          { $set: { status: 'out-of-stock' } }
+        );
+      }
+    } catch (error) {
+      console.error(`Error updating product inventory:`, error);
+      console.error('Error stack:', error.stack);
+    }
+  }
+}
+
+// later user
 // Handle Stripe webhook events
 exports.handleStripeWebhook = async (req, res) => {
-  console.log('Stripe signature header:', req.headers['stripe-signature']);
-  console.log('Stripe webhook secret:', secret.stripe_webhook_secret);
-  console.log('Raw body (length):', req.body.length);
-  console.log('Webhook body (should be Buffer):', Buffer.isBuffer(req.body));
+  // console.log('Stripe signature header:', req.headers['stripe-signature']);
+  // console.log('Stripe webhook secret:', secret.stripe_webhook_secret);
+  // console.log('Raw body (length):', req.body.length);
+  // console.log('Webhook body (should be Buffer):', Buffer.isBuffer(req.body));
   // res.status(200).json({ received: true });
   const signature = req.headers['stripe-signature'];
   let event;
@@ -251,7 +338,7 @@ exports.handleStripeWebhook = async (req, res) => {
               ? cartItems
               : [
                   {
-                    title: metadata.order_product || 'Product Purchase',
+                    title: metadata.order_product,
                     price: paymentIntent.amount / 100,
                     orderQuantity: 1,
                   },
@@ -304,77 +391,3 @@ exports.handleStripeWebhook = async (req, res) => {
   }
   res.status(200).json({ received: true });
 };
-
-/**
- * Update product quantities after successful order
- * @param {Array} cartItems - Array of cart items with product info
- */
-async function updateProductQuantities(cartItems) {
-  if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-    console.log('No cart items to update quantities for');
-    return;
-  }
-
-  // Process each item in cart
-  for (const item of cartItems) {
-    try {
-      // Get product ID - could be stored directly or as a string property
-      let productId = item._id || item.productId || null;
-
-      // If the item has a nested product object, try to get ID from there
-      if (!productId && item.product && item.product._id) {
-        productId = item.product._id;
-      }
-
-      if (!productId) {
-        continue;
-      }
-
-      // Ensure productId is a string
-      productId = productId.toString();
-
-      const orderQuantity = parseInt(item.orderQuantity || 1, 10);
-
-      // First check if product exists with direct find
-      console.log(`Finding product with ID: "${productId}"`);
-      const product = await Products.findById(productId);
-
-      if (!product) {
-        continue;
-      }
-
-      // First update quantity
-      const quantityResult = await Products.updateOne(
-        { _id: productId },
-        { $inc: { quantity: -orderQuantity } }
-      );
-
-      // Then update sellCount
-      const sellCountResult = await Products.updateOne(
-        { _id: productId },
-        { $inc: { sellCount: orderQuantity } }
-      );
-
-      // Verify the updates
-      const updatedProduct = await Products.findById(productId);
-
-      if (!updatedProduct) {
-        continue;
-      }
-
-      // Update status if needed
-      if (
-        updatedProduct.quantity <= 0 &&
-        updatedProduct.status !== 'out-of-stock'
-      ) {
-        const statusResult = await Products.updateOne(
-          { _id: productId },
-          { $set: { status: 'out-of-stock' } }
-        );
-      }
-    } catch (error) {
-      console.error(`Error updating product inventory:`, error);
-      console.error('Error stack:', error.stack);
-    }
-  }
-}
