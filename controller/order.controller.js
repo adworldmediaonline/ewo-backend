@@ -8,10 +8,28 @@ const { sendOrderConfirmation } = require('../services/emailService');
 exports.paymentIntent = async (req, res, next) => {
   try {
     const product = req.body;
+
+    // Get price from request
     const price = Number(product.price);
-    console.log(product);
-    const amount = product.orderData.totalAmount * 100;
-    console.log('amount', amount);
+
+    // Try to get totalAmount directly from orderData if available
+    let amount;
+    if (product.orderData && product.orderData.totalAmount) {
+      const totalAmount = Number(product.orderData.totalAmount);
+      amount = Math.round(totalAmount * 100);
+      console.log(
+        'Using orderData.totalAmount for Stripe payment:',
+        totalAmount
+      );
+    } else {
+      // Fallback to price
+      amount = Math.round(price * 100);
+      console.log('Using price for Stripe payment:', price);
+    }
+
+    console.log('Request body:', product);
+    console.log('Final amount in cents for Stripe:', amount);
+
     // Prepare metadata
     const metadata = {};
 
@@ -75,12 +93,14 @@ exports.paymentIntent = async (req, res, next) => {
       metadata: metadata,
     });
 
+    console.log('Payment intent created successfully:', paymentIntent.id);
+
     res.send({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.log(error);
+    console.error('Error creating payment intent:', error);
     next(error);
   }
 };
