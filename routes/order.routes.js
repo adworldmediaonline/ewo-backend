@@ -5,6 +5,7 @@ const {
   getOrders,
   updateOrderStatus,
   getSingleOrder,
+  checkAddressDiscount,
 } = require('../controller/order.controller');
 
 // router
@@ -20,5 +21,7 @@ router.post('/create-payment-intent', paymentIntent);
 router.post('/saveOrder', addOrder);
 // update status
 router.patch('/update-status/:id', updateOrderStatus);
+// check address discount eligibility
+router.post('/check-address-discount', checkAddressDiscount);
 
 module.exports = router;
