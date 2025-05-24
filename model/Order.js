@@ -96,6 +96,14 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    firstTimeShippingDiscount: {
+      type: Boolean,
+      default: false,
+    },
+    firstTimeShippingDiscountAmount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

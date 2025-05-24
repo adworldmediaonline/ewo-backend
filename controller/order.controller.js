@@ -3,6 +3,7 @@ const stripe = require('stripe')(secret.stripe_key);
 const Order = require('../model/Order');
 const Products = require('../model/Products');
 const { sendOrderConfirmation } = require('../services/emailService');
+const UsedAddresses = require('../model/UsedAddresses');
 
 // create-payment-intent
 exports.paymentIntent = async (req, res, next) => {
@@ -113,6 +114,58 @@ exports.addOrder = async (req, res, next) => {
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
       orderData.isGuestOrder = true;
+    }
+
+    // Special case: if address is short/simple (like "rrrrdss"), check for any exact matches in existing orders
+    // and cancel any address discount if already used
+    if (
+      orderData.address &&
+      orderData.address.length < 8 &&
+      orderData.addressDiscountApplied
+    ) {
+      console.log(
+        'Checking short address for existing matches:',
+        orderData.address
+      );
+
+      const normalizedAddress = orderData.address.toLowerCase().trim();
+      const existingOrderWithAddress = await Order.findOne({
+        address: { $regex: new RegExp(`^${normalizedAddress}$`, 'i') },
+      });
+
+      if (existingOrderWithAddress) {
+        console.log(
+          'Found exact match for short address in orders:',
+          existingOrderWithAddress._id
+        );
+        console.log('Canceling address discount due to existing address match');
+
+        // Remove the address discount from the order
+        orderData.addressDiscountApplied = false;
+        orderData.addressDiscountAmount = 0;
+
+        // Recalculate total if needed
+        if (orderData.addressDiscountAmount) {
+          orderData.totalAmount += orderData.addressDiscountAmount;
+          orderData.discount -= orderData.addressDiscountAmount;
+        }
+      }
+    }
+
+    // If address discount was applied, store the address as used
+    if (orderData.addressDiscountApplied) {
+      const addressKey = generateAddressKey(orderData);
+      console.log('Storing used address with key:', addressKey);
+
+      await UsedAddresses.create({
+        addressKey,
+        address: orderData.address,
+        city: orderData.city,
+        state: orderData.state,
+        zipCode: orderData.zipCode,
+        country: orderData.country,
+        usedAt: new Date(),
+      });
     }
 
     const order = await Order.create(orderData);
@@ -411,3 +464,168 @@ exports.handleStripeWebhook = async (req, res) => {
   }
   res.status(200).json({ received: true });
 };
+
+// Check if address is eligible for unique address discount
+exports.checkAddressDiscount = async (req, res, next) => {
+  try {
+    const addressData = req.body;
+
+    // Generate a unique key for this address (normalized)
+    const addressKey = generateAddressKey(addressData);
+
+    console.log('Checking address discount eligibility for:', addressData);
+    console.log('Generated address key:', addressKey);
+
+    // Check if this address has been used before in UsedAddresses table
+    const existingUsedAddress = await UsedAddresses.findOne({ addressKey });
+
+    if (existingUsedAddress) {
+      console.log('Address found in UsedAddresses:', existingUsedAddress);
+    }
+
+    // Also check if this address exists in any previous order using exact match
+    // Normalize the input data for consistency
+    const normalizedAddress = (addressData.address || '').toLowerCase().trim();
+    const normalizedCity = (addressData.city || '').toLowerCase().trim();
+    const normalizedState = (addressData.state || '').toLowerCase().trim();
+    const normalizedZipCode = (addressData.zipCode || '').trim();
+
+    console.log('Normalized address parts for matching:');
+    console.log('Address:', normalizedAddress);
+    console.log('City:', normalizedCity);
+    console.log('State:', normalizedState);
+    console.log('Zip:', normalizedZipCode);
+
+    // Look for exact matches in orders
+    const existingOrderAddressQuery = {
+      $and: [],
+    };
+
+    // Only add conditions for fields that have values
+    if (normalizedAddress) {
+      existingOrderAddressQuery.$and.push({
+        address: { $regex: new RegExp(`^${normalizedAddress}$`, 'i') },
+      });
+    }
+
+    if (normalizedCity) {
+      existingOrderAddressQuery.$and.push({
+        city: { $regex: new RegExp(`^${normalizedCity}$`, 'i') },
+      });
+    }
+
+    if (normalizedState) {
+      existingOrderAddressQuery.$and.push({
+        state: { $regex: new RegExp(`^${normalizedState}$`, 'i') },
+      });
+    }
+
+    if (normalizedZipCode) {
+      existingOrderAddressQuery.$and.push({
+        zipCode: { $regex: new RegExp(`^${normalizedZipCode}$`, 'i') },
+      });
+    }
+
+    // If we don't have enough address parts to query, don't consider it eligible
+    if (existingOrderAddressQuery.$and.length < 2) {
+      console.log('Not enough address parts to determine eligibility');
+      return res.status(200).json({
+        success: true,
+        eligible: false,
+        message:
+          'Please provide more address details to check discount eligibility',
+      });
+    }
+
+    console.log('Order query:', JSON.stringify(existingOrderAddressQuery));
+
+    // Execute the query
+    const existingOrderAddress = await Order.findOne(existingOrderAddressQuery);
+
+    if (existingOrderAddress) {
+      console.log('Found matching address in order:', existingOrderAddress._id);
+    }
+
+    // Special handling for very short addresses (like "rrrrdss")
+    // If address is very short (less than 5 chars) and matches exactly, don't give discount
+    let shortAddressMatch = false;
+    if (normalizedAddress && normalizedAddress.length < 8) {
+      const exactAddressMatch = await Order.findOne({
+        address: { $regex: new RegExp(`^${normalizedAddress}$`, 'i') },
+      });
+
+      if (exactAddressMatch) {
+        console.log('Found exact match for short address:', normalizedAddress);
+        shortAddressMatch = true;
+      }
+    }
+
+    // Not eligible if found in either table or is a short address match
+    const isEligible =
+      !existingUsedAddress && !existingOrderAddress && !shortAddressMatch;
+
+    // Prepare appropriate message
+    let message;
+    if (!isEligible) {
+      if (existingUsedAddress) {
+        message = 'This address has already been used for a discount';
+      } else if (shortAddressMatch) {
+        message =
+          'This address matches a previous order and is not eligible for the discount';
+      } else {
+        message =
+          'This address matches a previous order and is not eligible for the discount';
+      }
+    } else {
+      message = 'Address is eligible for 10% discount!';
+    }
+
+    console.log('Eligibility result:', isEligible, message);
+
+    res.status(200).json({
+      success: true,
+      eligible: isEligible,
+      message: message,
+    });
+  } catch (error) {
+    console.log('Error checking address discount:', error);
+    next(error);
+  }
+};
+
+// Helper function to generate a consistent address key
+function generateAddressKey(addressData) {
+  // Normalize and combine address parts to create a unique key
+  const address = (addressData.address || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+  const city = (addressData.city || '').toLowerCase().trim();
+  const state = (addressData.state || '').toLowerCase().trim();
+  const zipCode = (addressData.zipCode || '').trim();
+  const country = (addressData.country || '').toLowerCase().trim();
+
+  // If the address is very short (like "rrrrdss"), consider it as-is without normalization
+  // to avoid missing matches due to normalization
+  if (address.length < 8) {
+    return `${address}|${city}|${state}|${zipCode}|${country}`;
+  }
+
+  // For longer addresses, apply more aggressive normalization
+  // Remove common words and symbols that don't affect the address uniqueness
+  const normalizedAddress = address
+    .replace(/\bapt\.?\b|\bapartment\b/gi, '')
+    .replace(/\bste\.?\b|\bsuite\b/gi, '')
+    .replace(/\bunit\b/gi, '')
+    .replace(/\bno\.?\b|\bnumber\b/gi, '')
+    .replace(/\b(north|south|east|west|n|s|e|w)\.?\b/gi, '')
+    .replace(
+      /\b(street|st\.?|road|rd\.?|avenue|ave\.?|boulevard|blvd\.?|lane|ln\.?|drive|dr\.?)\b/gi,
+      ''
+    )
+    .replace(/[.,#-]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  return `${normalizedAddress}|${city}|${state}|${zipCode}|${country}`;
+}
