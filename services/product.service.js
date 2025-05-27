@@ -42,7 +42,7 @@ exports.addAllProductService = async data => {
 
 // get product data
 exports.getAllProductsService = async () => {
-  const products = await Product.find({}).populate('reviews');
+  const products = await Product.find({}).populate('reviews').sort({ sku: 1 });
   return products;
 };
 
