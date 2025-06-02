@@ -11,7 +11,10 @@ exports.signup = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
-      res.send({ status: 'failed', message: 'Email already exists' });
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Email already exists',
+      });
     } else {
       console.log('req.body', req.body);
       const saved_user = await User.create(req.body);
