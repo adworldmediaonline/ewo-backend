@@ -53,6 +53,26 @@ const productsSchema = mongoose.Schema(
         message: 'Price cannot be negative',
       },
     },
+    increasePriceWithInPercent: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: function (value) {
+          return value >= 0;
+        },
+        message: 'Price increase percentage cannot be negative',
+      },
+    },
+    discountOnPrice: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: function (value) {
+          return value >= 0;
+        },
+        message: 'Price discount cannot be negative',
+      },
+    },
     discount: {
       type: Number,
       default: 0,
