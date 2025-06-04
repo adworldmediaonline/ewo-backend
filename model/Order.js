@@ -109,6 +109,20 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    firstTimeDiscount: {
+      isApplied: {
+        type: Boolean,
+        default: false,
+      },
+      percentage: {
+        type: Number,
+        default: 0,
+      },
+      amount: {
+        type: Number,
+        default: 0,
+      },
+    },
   },
   {
     timestamps: true,
