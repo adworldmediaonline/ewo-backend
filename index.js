@@ -23,6 +23,7 @@ const couponRoutes = require('./routes/coupon.routes');
 const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
 const cloudinaryRoutes = require('./routes/cloudinary.routes');
+const cartRoutes = require('./routes/cart.routes');
 const { handleStripeWebhook } = require('./controller/order.controller');
 
 // IMPORTANT: Stripe webhook route must be defined before other middleware
@@ -55,6 +56,7 @@ app.use('/api/user-order', userOrderRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cart', cartRoutes);
 
 // root route
 app.get('/', (req, res) => res.send('Apps worked successfully'));
