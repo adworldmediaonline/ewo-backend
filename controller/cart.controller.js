@@ -146,3 +146,101 @@ exports.updateGuestCart = async (req, res, next) => {
     next(error);
   }
 };
+
+// Admin: Get all carts
+exports.getAllCarts = async (req, res, next) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      isActive = '',
+    } = req.query;
+
+    // Build query filters
+    const filters = {};
+
+    if (search) {
+      filters.email = { $regex: search, $options: 'i' };
+    }
+
+    if (isActive !== '') {
+      filters.isActive = isActive === 'true';
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    // Get carts with pagination
+    const carts = await Cart.find(filters)
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get total count for pagination
+    const totalCarts = await Cart.countDocuments(filters);
+
+    // Calculate cart statistics
+    const cartStats = carts.map(cart => {
+      const totalItems = cart.cartItems.reduce(
+        (sum, item) => sum + item.orderQuantity,
+        0
+      );
+      const totalValue = cart.cartItems.reduce(
+        (sum, item) => sum + item.price * item.orderQuantity,
+        0
+      );
+
+      return {
+        ...cart,
+        totalItems,
+        totalValue: parseFloat(totalValue.toFixed(2)),
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: cartStats,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCarts / parseInt(limit)),
+        totalCarts,
+        limit: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching carts:', error);
+    next(error);
+  }
+};
+
+// Admin: Delete cart by ID
+exports.deleteCart = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const cart = await Cart.findByIdAndDelete(id);
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cart not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Cart deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting cart:', error);
+    next(error);
+  }
+};
