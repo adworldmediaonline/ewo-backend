@@ -12,6 +12,7 @@
     "start-dev": "nodemon index.js",
     "update:quantities": "node scripts/update-quantities.js",
     "update-price-percentage": "node scripts/update-price-percentage.js",
+    "update:sku-arrangement": "node scripts/update-sku-arrangement.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

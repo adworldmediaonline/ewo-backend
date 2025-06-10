@@ -9,6 +9,7 @@ const productsSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    skuArrangementOrderNo: String,
     img: {
       type: String,
       required: true,

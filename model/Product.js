@@ -112,6 +112,7 @@ const productSchema = mongoose.Schema(
       trim: true,
       index: true,
     },
+    skuArrangementOrderNo: String,
     discount: {
       type: Number,
       min: [0, 'Discount cannot be negative'],
