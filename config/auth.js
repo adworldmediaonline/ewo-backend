@@ -1,9 +1,9 @@
-require("dotenv").config();
-const jwt = require("jsonwebtoken");
-const Admin = require("../model/Admin");
-const { secret } = require("./secret");
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const Admin = require('../model/Admin');
+const { secret } = require('./secret');
 
-const signInToken = (user) => {
+const signInToken = user => {
   return jwt.sign(
     {
       _id: user._id,
@@ -15,12 +15,12 @@ const signInToken = (user) => {
     },
     secret.token_secret,
     {
-      expiresIn: "2d",
+      expiresIn: '2d',
     }
   );
 };
 
-const tokenForVerify = (user) => {
+const tokenForVerify = user => {
   return jwt.sign(
     {
       _id: user._id,
@@ -29,16 +29,32 @@ const tokenForVerify = (user) => {
       password: user.password,
     },
     secret.jwt_secret_for_verify,
-    { expiresIn: "10m" }
+    { expiresIn: '10m' }
   );
 };
 
 const isAuth = async (req, res, next) => {
   const { authorization } = req.headers;
   try {
-    const token = authorization.split(" ")[1];
+    const token = authorization.split(' ')[1];
     const decoded = jwt.verify(token, secret.token_secret);
-    req.user = decoded;
+
+    // For admin routes, get the full admin info including role
+    if (req.baseUrl && req.baseUrl.includes('/admin')) {
+      const admin = await Admin.findById(decoded._id).select('-password');
+      if (!admin) {
+        return res.status(401).send({
+          message: 'Admin not found',
+        });
+      }
+      req.user = {
+        ...decoded,
+        role: admin.role,
+      };
+    } else {
+      req.user = decoded;
+    }
+
     next();
   } catch (err) {
     res.status(401).send({
@@ -48,12 +64,12 @@ const isAuth = async (req, res, next) => {
 };
 
 const isAdmin = async (req, res, next) => {
-  const admin = await Admin.findOne({ role: "Admin" });
+  const admin = await Admin.findOne({ role: 'Admin' });
   if (admin) {
     next();
   } else {
     res.status(401).send({
-      message: "User is not Admin",
+      message: 'User is not Admin',
     });
   }
 };
