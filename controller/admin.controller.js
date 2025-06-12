@@ -48,16 +48,23 @@ const loginAdmin = async (req, res, next) => {
     if (admin && bcrypt.compareSync(req.body.password, admin.password)) {
       const token = generateToken(admin);
       res.send({
-        token,
-        _id: admin._id,
-        name: admin.name,
-        phone: admin.phone,
-        email: admin.email,
-        image: admin.image,
-        role: admin.role,
+        success: true,
+        message: 'Login successful',
+        data: {
+          token,
+          user: {
+            _id: admin._id,
+            name: admin.name,
+            phone: admin.phone,
+            email: admin.email,
+            image: admin.image,
+            role: admin.role,
+          },
+        },
       });
     } else {
       res.status(401).send({
+        success: false,
         message: 'Invalid Email or password!',
       });
     }

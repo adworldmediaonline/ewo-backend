@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 const {
   registerAdmin,
@@ -12,39 +12,41 @@ const {
   forgetPassword,
   confirmAdminEmail,
   confirmAdminForgetPass,
-} = require("../controller/admin.controller");
+} = require('../controller/admin.controller');
+const { isAuth } = require('../config/auth');
+const roleAuth = require('../middleware/roleAuth');
 
 //register a staff
-router.post("/register", registerAdmin);
+router.post('/register', registerAdmin);
 
 //login a admin
-router.post("/login", loginAdmin);
+router.post('/login', loginAdmin);
 
 //login a admin
-router.patch("/change-password", changePassword);
+router.patch('/change-password', changePassword);
 
-//login a admin
-router.post("/add", addStaff);
+//add a staff - Only Admin can add staff
+router.post('/add', isAuth, roleAuth('Admin'), addStaff);
 
-//login a admin
-router.get("/all", getAllStaff);
+//get all staff - Only Admin can view all staff
+router.get('/all', isAuth, roleAuth('Admin'), getAllStaff);
 
 //forget-password
-router.patch("/forget-password", forgetPassword);
+router.patch('/forget-password', forgetPassword);
 
 //forget-password
-router.patch("/confirm-forget-password", confirmAdminForgetPass);
+router.patch('/confirm-forget-password', confirmAdminForgetPass);
 
-//get a staff
-router.get("/get/:id", getStaffById);
+//get a staff - Only Admin can view staff details
+router.get('/get/:id', isAuth, roleAuth('Admin'), getStaffById);
 
-// update a staff
-router.patch("/update-stuff/:id", updateStaff);
+// update a staff - Only Admin can update staff
+router.patch('/update-stuff/:id', isAuth, roleAuth('Admin'), updateStaff);
 
 //update staf status
 // router.put("/update-status/:id", updatedStatus);
 
-//delete a staff
-router.delete("/:id", deleteStaff);
+//delete a staff - Only Admin can delete staff
+router.delete('/:id', isAuth, roleAuth('Admin'), deleteStaff);
 
 module.exports = router;
