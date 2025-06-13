@@ -399,3 +399,44 @@ exports.signUpWithProvider = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get all users (for admin panel)
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    // Exclude password and sensitive fields
+    const users = await User.find(
+      {},
+      '-password -confirmationToken -confirmationTokenExpires'
+    ).sort({ createdAt: -1 });
+    res.status(200).json({
+      status: 'success',
+      data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get a single user by ID
+exports.getUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    // Exclude password and sensitive fields
+    const user = await User.findById(
+      userId,
+      '-password -confirmationToken -confirmationTokenExpires'
+    );
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found',
+      });
+    }
+    res.status(200).json({
+      status: 'success',
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
