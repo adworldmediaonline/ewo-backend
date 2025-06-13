@@ -22,10 +22,18 @@ class ShippingService {
       } = shippingData;
 
       // Validate order exists
-      const order = await Order.findById(orderId);
+      const order = await Order.findById(orderId).populate('user');
       if (!order) {
         throw new Error('Order not found');
       }
+
+      console.log('Order found for shipping:', {
+        id: order._id,
+        orderId: order.orderId,
+        name: order.name,
+        email: order.email,
+        status: order.status,
+      });
 
       // Prepare shipping details with separate tracking ID
       const shippingDetails = {

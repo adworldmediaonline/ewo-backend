@@ -104,25 +104,32 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
   }
 
   try {
+    // Extract clean order data from Mongoose document
+    const cleanOrderData = order.toObject ? order.toObject() : order;
+
+    console.log('Clean order data:', cleanOrderData);
+
     // Combine order and shipping info, with shippingInfo taking precedence
     const orderWithShipping = {
-      ...order,
+      ...cleanOrderData,
       shippingDetails: {
-        ...order.shippingDetails,
+        ...cleanOrderData.shippingDetails,
         ...shippingInfo,
       },
     };
+
+    console.log('Order with shipping for email:', orderWithShipping);
 
     // Generate email HTML from template
     const html = shippingConfirmationTemplate(orderWithShipping, emailConfig);
 
     // Create subject line with order ID for better tracking
-    const orderNumber = order.orderId || order._id;
+    const orderNumber = cleanOrderData.orderId || cleanOrderData._id;
     const subject = `📦 Your Order #${orderNumber} Has Shipped! - ${emailConfig.storeName}`;
 
     // Send the email
     return await sendEmail({
-      to: order.email,
+      to: cleanOrderData.email,
       subject,
       html,
     });
@@ -176,8 +183,14 @@ const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
 
     await Order.findByIdAndUpdate(orderId, updateData);
 
+    // Get the updated order with clean data for email
+    const updatedOrderForEmail = await Order.findById(orderId).populate('user');
+
     // Send the shipping confirmation email
-    const emailSent = await sendShippingConfirmation(order, shippingDetails);
+    const emailSent = await sendShippingConfirmation(
+      updatedOrderForEmail,
+      shippingDetails
+    );
 
     if (!emailSent) {
       // Rollback the shippingNotificationSent flag if email failed

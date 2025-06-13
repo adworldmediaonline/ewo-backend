@@ -216,7 +216,17 @@ const shippingConfirmationTemplate = (order, config) => {
     shippingCost = 0,
     discount = 0,
     shippingDetails = {},
-  } = order;
+  } = order || {};
+
+  // Safety check for required fields
+  if (!_id || !name || !address) {
+    console.error('Missing required order fields for email template:', {
+      _id,
+      name,
+      address,
+    });
+    console.error('Full order object:', order);
+  }
 
   const {
     trackingNumber,
@@ -258,32 +268,33 @@ const shippingConfirmationTemplate = (order, config) => {
     });
   };
 
-  // Generate items HTML
+  // Generate items HTML with safety checks
   const itemsHtml =
-    cart && cart.length > 0
+    cart && Array.isArray(cart) && cart.length > 0
       ? cart
-          .map(
-            item => `
+          .map((item, index) => {
+            console.log(`Cart item ${index}:`, item);
+            return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
           <div style="font-weight: bold; color: #2d3748;">${
-            item.title || 'Product'
+            item?.title || 'Product'
           }</div>
           ${
-            item.variant
+            item?.variant
               ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
               : ''
           }
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
-          item.orderQuantity || 1
+          item?.orderQuantity || item?.quantity || 1
         }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-          item.price
+          item?.price || 0
         )}</td>
       </tr>
-    `
-          )
+    `;
+          })
           .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
@@ -299,7 +310,9 @@ const shippingConfirmationTemplate = (order, config) => {
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your package is on its way to you</p>
     </div>
 
-    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${
+      name || 'Valued Customer'
+    }</strong>,</p>
     <p style="font-size: 16px; line-height: 1.6;">Exciting news! Your order has been shipped and is now on its way to you. Here are all the details:</p>
 
     <!-- Order & Shipping Information -->
@@ -308,7 +321,9 @@ const shippingConfirmationTemplate = (order, config) => {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">#${orderId || _id}</td>
+          <td style="padding: 8px 0; text-align: right;">#${
+            orderId || _id || 'N/A'
+          }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Shipped Date:</strong></td>
@@ -316,7 +331,9 @@ const shippingConfirmationTemplate = (order, config) => {
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Carrier:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${carrier}</td>
+          <td style="padding: 8px 0; text-align: right;">${
+            carrier || 'Standard Shipping'
+          }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
@@ -335,10 +352,10 @@ const shippingConfirmationTemplate = (order, config) => {
     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0;">
       <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 20px; font-size: 18px;">🏠 Shipping Address</h3>
       <div style="font-size: 15px; line-height: 1.6; color: #4a5568;">
-        <strong>${name}</strong><br>
-        ${address}<br>
-        ${city}, ${state} ${zipCode}<br>
-        ${country}
+        <strong>${name || 'Customer'}</strong><br>
+        ${address || 'Address not provided'}<br>
+        ${[city, state, zipCode].filter(Boolean).join(', ')}<br>
+        ${country || ''}
       </div>
     </div>
 

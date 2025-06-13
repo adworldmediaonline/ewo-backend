@@ -173,7 +173,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 
   try {
     // Get the current order to check previous status
-    const currentOrder = await Order.findById(orderId);
+    const currentOrder = await Order.findById(orderId).populate('user');
 
     if (!currentOrder) {
       return res.status(404).json({
@@ -187,7 +187,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       orderId,
       { $set: { status: newStatus } },
       { new: true }
-    );
+    ).populate('user');
 
     let emailResult = null;
 
