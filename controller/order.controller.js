@@ -2,7 +2,10 @@ const { secret } = require('../config/secret');
 const stripe = require('stripe')(secret.stripe_key);
 const Order = require('../model/Order');
 const Products = require('../model/Products');
-const { sendOrderConfirmation } = require('../services/emailService');
+const {
+  sendOrderConfirmation,
+  sendShippingNotificationWithTracking,
+} = require('../services/emailService');
 
 // create-payment-intent
 exports.paymentIntent = async (req, res, next) => {
@@ -164,26 +167,194 @@ exports.getSingleOrder = async (req, res, next) => {
   }
 };
 
-exports.updateOrderStatus = async (req, res) => {
-  const newStatus = req.body.status;
+exports.updateOrderStatus = async (req, res, next) => {
+  const { status: newStatus } = req.body;
+  const orderId = req.params.id;
+
   try {
-    await Order.updateOne(
-      {
-        _id: req.params.id,
-      },
+    // Get the current order to check previous status
+    const currentOrder = await Order.findById(orderId);
+
+    if (!currentOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Update the order status
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { $set: { status: newStatus } },
+      { new: true }
+    );
+
+    let emailResult = null;
+
+    // If status changed to 'shipped' and shipping notification hasn't been sent
+    if (newStatus === 'shipped' && !currentOrder.shippingNotificationSent) {
+      // Prepare basic shipping data (can be enhanced with tracking info later)
+      const basicShippingData = {
+        shippedDate: new Date(),
+        carrier: 'Standard Shipping',
+        trackingNumber: 'Processing',
+      };
+
+      // Send shipping notification
+      emailResult = await sendShippingNotificationWithTracking(
+        orderId,
+        basicShippingData
+      );
+
+      if (!emailResult.success) {
+        console.warn(
+          'Failed to send shipping notification:',
+          emailResult.message
+        );
+        // Don't fail the status update if email fails
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Status updated successfully',
+      emailSent: emailResult ? emailResult.success : false,
+      emailMessage: emailResult ? emailResult.message : null,
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    next(error);
+  }
+};
+
+/**
+ * Send shipping notification with tracking details
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.sendShippingNotification = async (req, res, next) => {
+  const orderId = req.params.id; // Order ID from URL parameter
+  const { trackingNumber, carrier, estimatedDelivery } = req.body; // Admin provides tracking info
+
+  try {
+    // Validate required fields
+    if (!carrier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Carrier is required',
+      });
+    }
+
+    // Prepare shipping data
+    const shippingData = {
+      trackingNumber: trackingNumber || null, // Tracking number from carrier (separate from order ID)
+      carrier,
+      estimatedDelivery: estimatedDelivery || null,
+    };
+
+    // Send shipping notification with tracking
+    const result = await sendShippingNotificationWithTracking(
+      orderId,
+      shippingData
+    );
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          trackingNumber: result.trackingNumber,
+          carrier: result.carrier,
+        },
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+  } catch (error) {
+    console.error('Error in sendShippingNotification controller:', error);
+    next(error);
+  }
+};
+
+/**
+ * Update order with shipping details and send notification
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.updateShippingDetails = async (req, res, next) => {
+  const orderId = req.params.id;
+  const {
+    trackingNumber,
+    carrier,
+    trackingUrl,
+    estimatedDelivery,
+    sendEmail = true,
+  } = req.body;
+
+  try {
+    // Validate order exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Prepare shipping details
+    const shippingDetails = {
+      trackingNumber:
+        trackingNumber || order.shippingDetails?.trackingNumber || 'Processing',
+      carrier: carrier || order.shippingDetails?.carrier || 'Standard Shipping',
+      trackingUrl: trackingUrl || order.shippingDetails?.trackingUrl || null,
+      estimatedDelivery: estimatedDelivery
+        ? new Date(estimatedDelivery)
+        : order.shippingDetails?.estimatedDelivery || null,
+      shippedDate: order.shippingDetails?.shippedDate || new Date(),
+    };
+
+    // Update order with shipping details
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
       {
         $set: {
-          status: newStatus,
+          status: 'shipped',
+          shippingDetails: shippingDetails,
         },
       },
       { new: true }
     );
+
+    let emailResult = null;
+
+    // Send email if requested and not already sent
+    if (sendEmail && !order.shippingNotificationSent) {
+      emailResult = await sendShippingNotificationWithTracking(
+        orderId,
+        shippingDetails
+      );
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Status updated successfully',
+      message: 'Shipping details updated successfully',
+      data: {
+        orderId: updatedOrder._id,
+        status: updatedOrder.status,
+        shippingDetails: updatedOrder.shippingDetails,
+        emailSent: emailResult ? emailResult.success : false,
+        emailMessage: emailResult
+          ? emailResult.message
+          : 'Email not requested or already sent',
+      },
     });
   } catch (error) {
-    console.log(error);
+    console.error('Error updating shipping details:', error);
     next(error);
   }
 };

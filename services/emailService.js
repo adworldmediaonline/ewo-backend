@@ -92,9 +92,9 @@ const sendOrderConfirmation = async order => {
 };
 
 /**
- * Send shipping confirmation email
+ * Send enhanced shipping confirmation email
  * @param {Object} order - Order data
- * @param {Object} shippingInfo - Shipping information
+ * @param {Object} shippingInfo - Optional additional shipping information
  * @returns {Promise<boolean>} - Success status
  */
 const sendShippingConfirmation = async (order, shippingInfo = {}) => {
@@ -104,19 +104,26 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
   }
 
   try {
-    // Combine order and shipping info
+    // Combine order and shipping info, with shippingInfo taking precedence
     const orderWithShipping = {
       ...order,
-      ...shippingInfo,
+      shippingDetails: {
+        ...order.shippingDetails,
+        ...shippingInfo,
+      },
     };
 
     // Generate email HTML from template
     const html = shippingConfirmationTemplate(orderWithShipping, emailConfig);
 
+    // Create subject line with order ID for better tracking
+    const orderNumber = order.orderId || order._id;
+    const subject = `📦 Your Order #${orderNumber} Has Shipped! - ${emailConfig.storeName}`;
+
     // Send the email
     return await sendEmail({
       to: order.email,
-      subject: `Your Order #${order._id} Has Shipped!`,
+      subject,
       html,
     });
   } catch (error) {
@@ -125,7 +132,80 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
   }
 };
 
+/**
+ * Send shipping notification with detailed tracking information
+ * @param {string} orderId - Order ID
+ * @param {Object} shippingData - Detailed shipping information
+ * @returns {Promise<Object>} - Result with success status and message
+ */
+const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
+  try {
+    // Import Order model here to avoid circular dependency
+    const Order = require('../model/Order');
+
+    // Find the order and populate user if available
+    const order = await Order.findById(orderId).populate('user');
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (!order.email) {
+      throw new Error('Order has no email address');
+    }
+
+    // Prepare shipping details with validation
+    const shippingDetails = {
+      trackingNumber: shippingData.trackingNumber || 'Processing',
+      carrier: shippingData.carrier || 'Standard Shipping',
+      trackingUrl: shippingData.trackingUrl || null,
+      estimatedDelivery: shippingData.estimatedDelivery
+        ? new Date(shippingData.estimatedDelivery)
+        : null,
+      shippedDate: shippingData.shippedDate
+        ? new Date(shippingData.shippedDate)
+        : new Date(),
+    };
+
+    // Update order with shipping details and set shipped status
+    const updateData = {
+      status: 'shipped',
+      shippingDetails: shippingDetails,
+      shippingNotificationSent: true,
+    };
+
+    await Order.findByIdAndUpdate(orderId, updateData);
+
+    // Send the shipping confirmation email
+    const emailSent = await sendShippingConfirmation(order, shippingDetails);
+
+    if (!emailSent) {
+      // Rollback the shippingNotificationSent flag if email failed
+      await Order.findByIdAndUpdate(orderId, {
+        shippingNotificationSent: false,
+      });
+      throw new Error('Failed to send shipping notification email');
+    }
+
+    console.log(`Shipping notification sent successfully for order ${orderId}`);
+
+    return {
+      success: true,
+      message: 'Shipping notification sent successfully',
+      trackingNumber: shippingDetails.trackingNumber,
+      carrier: shippingDetails.carrier,
+    };
+  } catch (error) {
+    console.error('Error sending shipping notification with tracking:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to send shipping notification',
+    };
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
+  sendShippingNotificationWithTracking,
 };

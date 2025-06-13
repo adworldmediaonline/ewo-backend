@@ -195,7 +195,7 @@ const orderConfirmationTemplate = (order, config) => {
 };
 
 /**
- * Shipping confirmation email template
+ * Enhanced shipping confirmation email template
  * @param {Object} order - Order data
  * @param {Object} config - Configuration
  * @returns {string} - Complete HTML template
@@ -203,41 +203,215 @@ const orderConfirmationTemplate = (order, config) => {
 const shippingConfirmationTemplate = (order, config) => {
   const {
     _id,
+    orderId,
     name,
-    trackingNumber = 'N/A',
-    estimatedDelivery = 'In 3-5 business days',
+    address,
+    city,
+    state,
+    zipCode,
+    country,
+    cart = [],
+    totalAmount = 0,
+    subTotal = 0,
+    shippingCost = 0,
+    discount = 0,
+    shippingDetails = {},
   } = order;
 
   const {
-    storeName = 'Our Store',
-    supportEmail = 'support@example.com',
-    clientUrl = 'https://example.com',
+    trackingNumber,
+    carrier = 'Standard Shipping',
+    trackingUrl,
+    estimatedDelivery,
+    shippedDate = new Date(),
+  } = shippingDetails;
+
+  const {
+    storeName = secret.store_name || 'EWO Store',
+    supportEmail = secret.support_email || 'support@example.com',
+    clientUrl = secret.client_url || 'https://example.com',
   } = config;
 
-  const content = `
-    <h2 style="color: #2d3748; margin-top: 0; margin-bottom: 20px;">Your Order Has Shipped!</h2>
-    <p>Hello ${name},</p>
-    <p>Great news! Your order #${_id} has been shipped and is on its way to you.</p>
+  // Format dates
+  const formatShippedDate = () => {
+    const date =
+      shippedDate instanceof Date ? shippedDate : new Date(shippedDate);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
 
-    <!-- Shipping Details -->
-    <table style="width: 100%; margin: 30px 0; border-collapse: collapse;">
+  const formatEstimatedDelivery = () => {
+    if (!estimatedDelivery) return 'Within 3-7 business days';
+    const date =
+      estimatedDelivery instanceof Date
+        ? estimatedDelivery
+        : new Date(estimatedDelivery);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  // Generate items HTML
+  const itemsHtml =
+    cart && cart.length > 0
+      ? cart
+          .map(
+            item => `
       <tr>
-        <td style="padding: 8px 0;"><strong>Order Number:</strong></td>
-        <td style="padding: 8px 0; text-align: right;">#${_id}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">
+          <div style="font-weight: bold; color: #2d3748;">${
+            item.title || 'Product'
+          }</div>
+          ${
+            item.variant
+              ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
+              : ''
+          }
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
+          item.orderQuantity || 1
+        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
+          item.price
+        )}</td>
       </tr>
-      <tr>
-        <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
-        <td style="padding: 8px 0; text-align: right;">${trackingNumber}</td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;"><strong>Estimated Delivery:</strong></td>
-        <td style="padding: 8px 0; text-align: right;">${estimatedDelivery}</td>
-      </tr>
+    `
+          )
+          .join('')
+      : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
+
+  // Create tracking button HTML
+  const trackingButtonHtml =
+    trackingUrl && trackingNumber
+      ? `<a href="${trackingUrl}" style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin-right: 15px;">Track Package</a>`
+      : '';
+
+  const content = `
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 30px;">
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">📦 Your Order Has Shipped!</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your package is on its way to you</p>
+    </div>
+
+    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Exciting news! Your order has been shipped and is now on its way to you. Here are all the details:</p>
+
+    <!-- Order & Shipping Information -->
+    <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0;">
+      <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 20px; font-size: 18px;">📋 Order & Shipping Information</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
+          <td style="padding: 8px 0; text-align: right;">#${orderId || _id}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Shipped Date:</strong></td>
+          <td style="padding: 8px 0; text-align: right;">${formatShippedDate()}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Carrier:</strong></td>
+          <td style="padding: 8px 0; text-align: right;">${carrier}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
+          <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
+            ${trackingNumber || 'Will be provided when available'}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Estimated Delivery:</strong></td>
+          <td style="padding: 8px 0; text-align: right; color: #48bb78; font-weight: bold;">${formatEstimatedDelivery()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Shipping Address -->
+    <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0;">
+      <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 20px; font-size: 18px;">🏠 Shipping Address</h3>
+      <div style="font-size: 15px; line-height: 1.6; color: #4a5568;">
+        <strong>${name}</strong><br>
+        ${address}<br>
+        ${city}, ${state} ${zipCode}<br>
+        ${country}
+      </div>
+    </div>
+
+    <!-- Order Items -->
+    <h3 style="color: #2d3748; border-bottom: 2px solid #4299e1; padding-bottom: 10px; margin-top: 40px; font-size: 18px;">🛍️ Items in Your Order</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+      <thead>
+        <tr style="background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);">
+          <th style="padding: 15px 12px; text-align: left; color: white; font-weight: bold;">Item</th>
+          <th style="padding: 15px 12px; text-align: center; color: white; font-weight: bold;">Quantity</th>
+          <th style="padding: 15px 12px; text-align: right; color: white; font-weight: bold;">Price</th>
+        </tr>
+      </thead>
+      <tbody style="background-color: white;">
+        ${itemsHtml}
+      </tbody>
+      <tfoot style="background-color: #f8f9fa;">
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
+          <td style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;">${formatPrice(
+            subTotal
+          )}</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Shipping:</strong></td>
+          <td style="padding: 12px; text-align: right;">${formatPrice(
+            shippingCost
+          )}</td>
+        </tr>
+        ${
+          discount > 0
+            ? `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Discount:</strong></td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">-${formatPrice(
+            discount
+          )}</td>
+        </tr>
+        `
+            : ''
+        }
+        <tr>
+          <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total Paid:</strong></td>
+          <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
+            totalAmount
+          )}</td>
+        </tr>
+      </tfoot>
     </table>
 
-    <div style="margin: 40px 0; text-align: center;">
-      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Track Your Order</a>
+    <!-- Action Buttons -->
+    <div style="margin: 40px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px;">
+      <p style="margin-bottom: 20px; font-size: 16px; color: #4a5568;">Keep track of your package and manage your order:</p>
+      ${trackingButtonHtml}
+      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">View Order Details</a>
     </div>
+
+    <!-- Delivery Information -->
+    <div style="background-color: #e6fffa; border-left: 4px solid #38b2ac; padding: 20px; margin: 30px 0; border-radius: 4px;">
+      <h4 style="color: #2d3748; margin-top: 0; margin-bottom: 10px;">📅 Important Delivery Information</h4>
+      <ul style="margin: 0; padding-left: 20px; color: #4a5568;">
+        <li style="margin-bottom: 8px;">Your package will be delivered to the address provided above</li>
+        <li style="margin-bottom: 8px;">Please ensure someone is available to receive the package</li>
+        <li style="margin-bottom: 8px;">If you're not available, the carrier will leave a delivery notice</li>
+        ${
+          trackingUrl
+            ? '<li style="margin-bottom: 8px;">Track your package in real-time using the tracking button above</li>'
+            : ''
+        }
+      </ul>
+    </div>
+
+    <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">Thank you for choosing <strong>${storeName}</strong>! We hope you love your purchase. If you have any questions about your order or delivery, please don't hesitate to contact our customer service team.</p>
   `;
 
   return baseTemplate({
