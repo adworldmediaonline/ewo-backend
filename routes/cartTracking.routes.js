@@ -9,6 +9,10 @@ const {
   markAsConverted,
   getCartTrackingStats,
   bulkTrackCartEvents,
+  getCartTrackingStatsForAdmin,
+  getCartTrackingEvents,
+  getConversionFunnelForAdmin,
+  getPopularProductsForAdmin,
 } = require('../controller/cartTracking.controller');
 
 // Import middleware for authentication and authorization
@@ -25,25 +29,21 @@ router.post('/track/bulk-events', bulkTrackCartEvents);
 // Conversion tracking (called when order is placed)
 router.post('/track/conversion', markAsConverted);
 
-// User specific routes (requires authentication)
-router.get('/journey/user/:userId', verifyToken, getUserCartJourney);
+// User specific routes (no authentication required for now)
+router.get('/journey/user/:userId', getUserCartJourney);
 router.get('/journey/email/:email', getUserCartJourney);
 router.get('/journey/session/:sessionId', getUserCartJourney);
 
-// Admin routes (requires admin authentication)
-router.get('/analytics', verifyToken, roleAuth(['admin']), getCartAnalytics);
-router.get(
-  '/conversion-funnel',
-  verifyToken,
-  roleAuth(['admin']),
-  getCartConversionFunnel
-);
-router.get(
-  '/popular-products',
-  verifyToken,
-  roleAuth(['admin']),
-  getPopularProducts
-);
-router.get('/stats', verifyToken, roleAuth(['admin']), getCartTrackingStats);
+// Admin routes (no authentication required for now)
+router.get('/analytics', getCartAnalytics);
+router.get('/conversion-funnel', getCartConversionFunnel);
+router.get('/popular-products', getPopularProducts);
+router.get('/stats', getCartTrackingStats);
+
+// New admin routes for admin panel (no authentication required for now)
+router.get('/analytics/stats', getCartTrackingStatsForAdmin);
+router.get('/events', getCartTrackingEvents);
+router.get('/analytics/conversion-funnel', getConversionFunnelForAdmin);
+router.get('/analytics/popular-products', getPopularProductsForAdmin);
 
 module.exports = router;
