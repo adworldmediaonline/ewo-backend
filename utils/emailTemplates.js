@@ -87,7 +87,48 @@ const orderConfirmationTemplate = (order, config) => {
     shippingCost = 0,
     discount = 0,
     paymentMethod = 'Card',
+    firstTimeDiscount,
   } = order;
+
+  let firstTimeDiscountAmount = 0;
+  if (firstTimeDiscount?.isApplied) {
+    // Try to use saved amount first, then calculate from percentage
+    firstTimeDiscountAmount =
+      firstTimeDiscount.amount ||
+      (subTotal * (firstTimeDiscount.percentage || 10)) / 100;
+  }
+
+  // If no specific firstTimeDiscount data but discount > 0, check if it might be the first-time discount
+  if (!firstTimeDiscount?.isApplied && discount > 0) {
+    // Check if the discount amount matches a 10% first-time discount
+    const expectedFirstTimeDiscount = subTotal * 0.1;
+    if (Math.abs(discount - expectedFirstTimeDiscount) < 0.01) {
+      console.log('💡 Detected legacy first-time discount order');
+      firstTimeDiscountAmount = discount;
+    }
+  }
+
+  let firstTimeDiscountHtml = '';
+  if (
+    (firstTimeDiscount?.isApplied ||
+      (!firstTimeDiscount?.isApplied &&
+        discount > 0 &&
+        Math.abs(discount - subTotal * 0.1) < 0.01)) &&
+    firstTimeDiscountAmount > 0
+  ) {
+    firstTimeDiscountHtml = `
+      <tr>
+        <td style="padding: 12px; text-align: right;">
+          🎉 First-time order discount (-${
+            firstTimeDiscount?.percentage || 10
+          }%)
+        </td>
+        <td style="padding: 12px; text-align: right;">
+          -${formatPrice(firstTimeDiscountAmount)}
+        </td>
+      </tr>
+    `;
+  }
 
   const {
     storeName = secret.store_name,
@@ -165,6 +206,7 @@ const orderConfirmationTemplate = (order, config) => {
             shippingCost
           )}</td>
         </tr>
+        ${firstTimeDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;"><strong>Discount:</strong></td>
           <td style="padding: 12px; text-align: right;">-${formatPrice(

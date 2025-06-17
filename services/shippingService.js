@@ -27,14 +27,6 @@ class ShippingService {
         throw new Error('Order not found');
       }
 
-      console.log('Order found for shipping:', {
-        id: order._id,
-        orderId: order.orderId,
-        name: order.name,
-        email: order.email,
-        status: order.status,
-      });
-
       // Prepare shipping details with separate tracking ID
       const shippingDetails = {
         trackingNumber: trackingNumber || null, // Keep separate from order ID

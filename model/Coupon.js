@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const couponSchema = new mongoose.Schema(
   {
@@ -16,7 +16,7 @@ const couponSchema = new mongoose.Schema(
     },
     startTime: {
       type: Date,
-      required: false
+      required: false,
     },
     endTime: {
       type: Date,
@@ -36,8 +36,8 @@ const couponSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
-      default: "active"
+      enum: ['active', 'inactive'],
+      default: 'active',
     },
   },
   {
@@ -45,5 +45,5 @@ const couponSchema = new mongoose.Schema(
   }
 );
 
-const Coupon = mongoose.models.Coupon || mongoose.model("Coupon", couponSchema);
+const Coupon = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);
 module.exports = Coupon;

@@ -24,6 +24,7 @@ const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
 const cloudinaryRoutes = require('./routes/cloudinary.routes');
 const cartRoutes = require('./routes/cart.routes');
+const cartTrackingRoutes = require('./routes/cartTracking.routes');
 const shippingRoutes = require('./routes/shipping.routes');
 const { handleStripeWebhook } = require('./controller/order.controller');
 
@@ -58,6 +59,7 @@ app.use('/api/review', reviewRoutes);
 app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/cart-tracking', cartTrackingRoutes);
 app.use('/api/shipping', shippingRoutes);
 
 // root route
