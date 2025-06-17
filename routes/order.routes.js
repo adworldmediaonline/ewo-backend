@@ -5,6 +5,8 @@ const {
   getOrders,
   updateOrderStatus,
   getSingleOrder,
+  sendShippingNotification,
+  updateShippingDetails,
 } = require('../controller/order.controller');
 
 // router
@@ -20,5 +22,9 @@ router.post('/create-payment-intent', paymentIntent);
 router.post('/saveOrder', addOrder);
 // update status
 router.patch('/update-status/:id', updateOrderStatus);
+// send shipping notification with tracking
+router.post('/send-shipping-notification/:id', sendShippingNotification);
+// update shipping details and optionally send notification
+router.patch('/update-shipping/:id', updateShippingDetails);
 
 module.exports = router;

@@ -92,7 +92,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'delivered', 'cancel'],
+      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancel'],
       default: 'pending',
       lowercase: true,
     },
@@ -100,6 +100,32 @@ const orderSchema = new mongoose.Schema(
     emailSent: {
       type: Boolean,
       default: false,
+    },
+    shippingNotificationSent: {
+      type: Boolean,
+      default: false,
+    },
+    shippingDetails: {
+      trackingNumber: {
+        type: String,
+        required: false,
+      },
+      carrier: {
+        type: String,
+        required: false,
+      },
+      trackingUrl: {
+        type: String,
+        required: false,
+      },
+      estimatedDelivery: {
+        type: Date,
+        required: false,
+      },
+      shippedDate: {
+        type: Date,
+        required: false,
+      },
     },
     firstTimeShippingDiscount: {
       type: Boolean,
