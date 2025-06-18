@@ -6,6 +6,7 @@ const {
   updateOrderStatus,
   getSingleOrder,
   sendShippingNotification,
+  sendDeliveryNotification,
   updateShippingDetails,
 } = require('../controller/order.controller');
 
@@ -24,6 +25,8 @@ router.post('/saveOrder', addOrder);
 router.patch('/update-status/:id', updateOrderStatus);
 // send shipping notification with tracking
 router.post('/send-shipping-notification/:id', sendShippingNotification);
+// send delivery notification
+router.post('/send-delivery-notification/:id', sendDeliveryNotification);
 // update shipping details and optionally send notification
 router.patch('/update-shipping/:id', updateShippingDetails);
 

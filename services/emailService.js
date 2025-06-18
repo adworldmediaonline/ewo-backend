@@ -3,6 +3,7 @@ const { secret } = require('../config/secret');
 const {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
+  deliveryConfirmationTemplate,
 } = require('../utils/emailTemplates');
 
 // Create nodemailer transporter
@@ -217,8 +218,143 @@ const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
   }
 };
 
+/**
+ * Send delivery confirmation email
+ * @param {Object} order - Order data
+ * @param {Object} deliveryInfo - Optional additional delivery information
+ * @returns {Promise<boolean>} - Success status
+ */
+const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
+  if (!order || !order.email) {
+    console.error('Missing required order data for delivery email');
+    return false;
+  }
+
+  try {
+    // Extract clean order data from Mongoose document
+    const cleanOrderData = order.toObject ? order.toObject() : order;
+
+    console.log('Clean order data for delivery email:', cleanOrderData);
+
+    // Combine order and delivery info
+    const orderWithDelivery = {
+      ...cleanOrderData,
+      shippingDetails: {
+        ...cleanOrderData.shippingDetails,
+        ...deliveryInfo,
+        deliveredDate: deliveryInfo.deliveredDate || new Date(),
+      },
+    };
+
+    console.log('Order with delivery info for email:', orderWithDelivery);
+
+    // Generate email HTML from template
+    const html = deliveryConfirmationTemplate(orderWithDelivery, emailConfig);
+
+    // Create subject line with order ID for better tracking
+    const orderNumber = cleanOrderData.orderId || cleanOrderData._id;
+    const subject = `🎉 Your Order #${orderNumber} Has Been Delivered! - ${emailConfig.storeName}`;
+
+    // Send the email
+    return await sendEmail({
+      to: cleanOrderData.email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending delivery confirmation email:', error);
+    return false;
+  }
+};
+
+/**
+ * Send delivery notification with detailed information
+ * @param {string} orderId - Order ID
+ * @param {Object} deliveryData - Optional delivery information
+ * @returns {Promise<Object>} - Result with success status and message
+ */
+const sendDeliveryNotificationWithTracking = async (
+  orderId,
+  deliveryData = {}
+) => {
+  try {
+    // Import Order model here to avoid circular dependency
+    const Order = require('../model/Order');
+
+    // Find the order
+    const order = await Order.findById(orderId).populate('user');
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (!order.email) {
+      throw new Error('Order has no email address');
+    }
+
+    // Prepare delivery details
+    const deliveryDetails = {
+      deliveredDate: deliveryData.deliveredDate || new Date(),
+      trackingNumber:
+        order.shippingDetails?.trackingNumber || deliveryData.trackingNumber,
+      carrier:
+        order.shippingDetails?.carrier ||
+        deliveryData.carrier ||
+        'Standard Shipping',
+      trackingUrl:
+        order.shippingDetails?.trackingUrl || deliveryData.trackingUrl,
+    };
+
+    // Update order with delivery status
+    const updateData = {
+      status: 'delivered',
+      shippingDetails: {
+        ...order.shippingDetails,
+        ...deliveryDetails,
+      },
+      deliveryNotificationSent: true,
+    };
+
+    await Order.findByIdAndUpdate(orderId, updateData);
+
+    // Get the updated order for email
+    const updatedOrderForEmail = await Order.findById(orderId).populate('user');
+
+    // Send the delivery confirmation email
+    const emailSent = await sendDeliveryConfirmation(
+      updatedOrderForEmail,
+      deliveryDetails
+    );
+
+    if (!emailSent) {
+      // Rollback the deliveryNotificationSent flag if email failed
+      await Order.findByIdAndUpdate(orderId, {
+        deliveryNotificationSent: false,
+      });
+      throw new Error('Failed to send delivery notification email');
+    }
+
+    console.log(`Delivery notification sent successfully for order ${orderId}`);
+
+    return {
+      success: true,
+      message: 'Delivery notification sent successfully',
+      deliveredDate: deliveryDetails.deliveredDate,
+      trackingNumber: deliveryDetails.trackingNumber,
+    };
+  } catch (error) {
+    console.error('Error sending delivery notification with tracking:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to send delivery notification',
+    };
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
   sendShippingNotificationWithTracking,
+  sendDeliveryConfirmation,
+  sendDeliveryNotificationWithTracking,
 };
