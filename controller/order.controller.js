@@ -5,6 +5,7 @@ const Products = require('../model/Products');
 const {
   sendOrderConfirmation,
   sendShippingNotificationWithTracking,
+  sendDeliveryNotificationWithTracking,
 } = require('../services/emailService');
 
 // create-payment-intent
@@ -215,6 +216,31 @@ exports.updateOrderStatus = async (req, res, next) => {
       }
     }
 
+    // If status changed to 'delivered' and delivery notification hasn't been sent
+    if (newStatus === 'delivered' && !currentOrder.deliveryNotificationSent) {
+      // Prepare delivery data using existing shipping details
+      const deliveryData = {
+        deliveredDate: new Date(),
+        trackingNumber: currentOrder.shippingDetails?.trackingNumber,
+        carrier: currentOrder.shippingDetails?.carrier || 'Standard Shipping',
+        trackingUrl: currentOrder.shippingDetails?.trackingUrl,
+      };
+
+      // Send delivery notification
+      emailResult = await sendDeliveryNotificationWithTracking(
+        orderId,
+        deliveryData
+      );
+
+      if (!emailResult.success) {
+        console.warn(
+          'Failed to send delivery notification:',
+          emailResult.message
+        );
+        // Don't fail the status update if email fails
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Status updated successfully',
@@ -276,6 +302,68 @@ exports.sendShippingNotification = async (req, res, next) => {
     }
   } catch (error) {
     console.error('Error in sendShippingNotification controller:', error);
+    next(error);
+  }
+};
+
+/**
+ * Send delivery notification for completed order
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.sendDeliveryNotification = async (req, res, next) => {
+  const orderId = req.params.id; // Order ID from URL parameter
+  const { deliveredDate } = req.body; // Optional delivery date from admin
+
+  try {
+    // Validate order exists and is shipped
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.status !== 'shipped') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order must be shipped before it can be marked as delivered',
+      });
+    }
+
+    // Prepare delivery data
+    const deliveryData = {
+      deliveredDate: deliveredDate ? new Date(deliveredDate) : new Date(),
+      trackingNumber: order.shippingDetails?.trackingNumber,
+      carrier: order.shippingDetails?.carrier || 'Standard Shipping',
+      trackingUrl: order.shippingDetails?.trackingUrl,
+    };
+
+    // Send delivery notification with tracking
+    const result = await sendDeliveryNotificationWithTracking(
+      orderId,
+      deliveryData
+    );
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          deliveredDate: result.deliveredDate,
+          trackingNumber: result.trackingNumber,
+        },
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+  } catch (error) {
+    console.error('Error in sendDeliveryNotification controller:', error);
     next(error);
   }
 };
