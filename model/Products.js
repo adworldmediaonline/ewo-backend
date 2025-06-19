@@ -179,6 +179,15 @@ const productsSchema = mongoose.Schema(
         },
       },
     ],
+    // this twoo field is based on the client pricing instruction 20% increase and 15% discount
+    updatedPrice: {
+      type: Number,
+      default: 0,
+    },
+    finalPriceDiscount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
