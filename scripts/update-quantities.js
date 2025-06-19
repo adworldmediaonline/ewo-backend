@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
-const Product = require('../model/Product');
+const Products = require('../model/Products');
 
 const updateAllQuantities = async () => {
   try {
@@ -11,7 +11,7 @@ const updateAllQuantities = async () => {
 
     console.log('🔄 Starting quantity update for all products...');
 
-    const result = await Product.updateMany({}, { $set: { quantity: 1000 } });
+    const result = await Products.updateMany({}, { $set: { quantity: 1000 } });
 
     console.log(`✅ Successfully updated quantities!`);
     console.log(`📊 Products matched: ${result.matchedCount}`);
