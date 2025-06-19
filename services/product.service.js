@@ -5,6 +5,12 @@ const mongoose = require('mongoose');
 
 // create product service
 exports.createProductService = async data => {
+  // Calculate updated pricing fields
+  if (data.price) {
+    data.updatedPrice = Math.round(data.price * 1.2 * 100) / 100;
+    data.finalPriceDiscount = Math.round(data.updatedPrice * 0.85 * 100) / 100;
+  }
+
   const product = await Product.create(data);
   const { _id: productId, category } = product;
 
@@ -154,6 +160,14 @@ exports.updateProductService = async (id, currProduct) => {
     product.options = currProduct.options;
     product.shipping.price = currProduct.shipping.price;
     product.shipping.description = currProduct.shipping.description;
+
+    // Calculate updated pricing fields when price is updated
+    if (currProduct.price) {
+      product.updatedPrice = Math.round(currProduct.price * 1.2 * 100) / 100;
+      product.finalPriceDiscount =
+        Math.round(product.updatedPrice * 0.85 * 100) / 100;
+    }
+
     console.log('product.options', product.options);
     console.log(typeof product.options);
     console.log('product.sku', product.sku);
