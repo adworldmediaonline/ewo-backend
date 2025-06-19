@@ -248,6 +248,7 @@ const shippingConfirmationTemplate = (order, config) => {
     shippingCost = 0,
     discount = 0,
     shippingDetails = {},
+    firstTimeDiscount,
   } = order || {};
 
   // Safety check for required fields
@@ -329,6 +330,38 @@ const shippingConfirmationTemplate = (order, config) => {
           })
           .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
+
+  // Handle first-time discount display for shipping email
+  let firstTimeDiscountHtml = '';
+  if (firstTimeDiscount?.isApplied && firstTimeDiscount?.amount > 0) {
+    firstTimeDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          🎉 First-time order discount (-${
+            firstTimeDiscount?.percentage || 10
+          }%)
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(firstTimeDiscount.amount)}
+        </td>
+      </tr>
+    `;
+  }
+
+  // Handle regular coupon discount for shipping email
+  let couponDiscountHtml = '';
+  if (discount > 0) {
+    couponDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          💰 Coupon discount
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(discount)}
+        </td>
+      </tr>
+    `;
+  }
 
   // Create tracking button HTML
   const trackingButtonHtml =
@@ -417,18 +450,8 @@ const shippingConfirmationTemplate = (order, config) => {
             shippingCost
           )}</td>
         </tr>
-        ${
-          discount > 0
-            ? `
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Discount:</strong></td>
-          <td style="padding: 12px; text-align: right; color: #48bb78;">-${formatPrice(
-            discount
-          )}</td>
-        </tr>
-        `
-            : ''
-        }
+        ${firstTimeDiscountHtml}
+        ${couponDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
@@ -493,6 +516,7 @@ const deliveryConfirmationTemplate = (order, config) => {
     shippingCost = 0,
     discount = 0,
     shippingDetails = {},
+    firstTimeDiscount,
   } = order || {};
 
   // Safety check for required fields
@@ -533,6 +557,38 @@ const deliveryConfirmationTemplate = (order, config) => {
       minute: '2-digit',
     });
   };
+
+  // Handle first-time discount display for delivery email
+  let firstTimeDiscountHtml = '';
+  if (firstTimeDiscount?.isApplied && firstTimeDiscount?.amount > 0) {
+    firstTimeDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          🎉 First-time order discount (-${
+            firstTimeDiscount?.percentage || 10
+          }%)
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(firstTimeDiscount.amount)}
+        </td>
+      </tr>
+    `;
+  }
+
+  // Handle regular coupon discount for delivery email
+  let couponDiscountHtml = '';
+  if (discount > 0) {
+    couponDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          💰 Coupon discount
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(discount)}
+        </td>
+      </tr>
+    `;
+  }
 
   // Generate items HTML with safety checks
   const itemsHtml =
@@ -646,18 +702,8 @@ const deliveryConfirmationTemplate = (order, config) => {
             shippingCost
           )}</td>
         </tr>
-        ${
-          discount > 0
-            ? `
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Discount:</strong></td>
-          <td style="padding: 12px; text-align: right;">-${formatPrice(
-            discount
-          )}</td>
-        </tr>
-        `
-            : ''
-        }
+        ${firstTimeDiscountHtml}
+        ${couponDiscountHtml}
         <tr style="background-color: #f0fff4;">
           <td colspan="2" style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #2d3748;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #48bb78;">${formatPrice(

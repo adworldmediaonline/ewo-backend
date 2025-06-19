@@ -118,7 +118,14 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
-    console.log('Clean order data:', cleanOrderData);
+    console.log('📧 Shipping email order data:', {
+      _id: cleanOrderData._id,
+      subTotal: cleanOrderData.subTotal,
+      shippingCost: cleanOrderData.shippingCost,
+      discount: cleanOrderData.discount,
+      firstTimeDiscount: cleanOrderData.firstTimeDiscount,
+      totalAmount: cleanOrderData.totalAmount,
+    });
 
     // Combine order and shipping info, with shippingInfo taking precedence
     const orderWithShipping = {
@@ -244,7 +251,14 @@ const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
-    console.log('Clean order data for delivery email:', cleanOrderData);
+    console.log('📧 Delivery email order data:', {
+      _id: cleanOrderData._id,
+      subTotal: cleanOrderData.subTotal,
+      shippingCost: cleanOrderData.shippingCost,
+      discount: cleanOrderData.discount,
+      firstTimeDiscount: cleanOrderData.firstTimeDiscount,
+      totalAmount: cleanOrderData.totalAmount,
+    });
 
     // Combine order and delivery info
     const orderWithDelivery = {
