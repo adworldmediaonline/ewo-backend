@@ -77,6 +77,16 @@ const sendOrderConfirmation = async order => {
   }
 
   try {
+    // Log order data being sent to email template
+    console.log('📧 Order data for email template:', {
+      _id: order._id,
+      subTotal: order.subTotal,
+      shippingCost: order.shippingCost,
+      discount: order.discount,
+      firstTimeDiscount: order.firstTimeDiscount,
+      totalAmount: order.totalAmount,
+    });
+
     // Generate email HTML from template
     const html = orderConfirmationTemplate(order, emailConfig);
 

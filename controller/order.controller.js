@@ -114,12 +114,30 @@ exports.addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
 
+    // Log the incoming order data for debugging
+    console.log('📋 Incoming Order Data:', {
+      subTotal: orderData.subTotal,
+      shippingCost: orderData.shippingCost,
+      discount: orderData.discount,
+      firstTimeDiscount: orderData.firstTimeDiscount,
+      totalAmount: orderData.totalAmount,
+    });
+
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
       orderData.isGuestOrder = true;
     }
 
     const order = await Order.create(orderData);
+
+    console.log('✅ Order Created in Database:', {
+      _id: order._id,
+      subTotal: order.subTotal,
+      shippingCost: order.shippingCost,
+      discount: order.discount,
+      firstTimeDiscount: order.firstTimeDiscount,
+      totalAmount: order.totalAmount,
+    });
 
     // Update product quantities
     await updateProductQuantities(order.cart);

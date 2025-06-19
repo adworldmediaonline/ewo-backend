@@ -90,32 +90,12 @@ const orderConfirmationTemplate = (order, config) => {
     firstTimeDiscount,
   } = order;
 
+  // Handle first-time discount display
   let firstTimeDiscountAmount = 0;
-  if (firstTimeDiscount?.isApplied) {
-    // Try to use saved amount first, then calculate from percentage
-    firstTimeDiscountAmount =
-      firstTimeDiscount.amount ||
-      (subTotal * (firstTimeDiscount.percentage || 10)) / 100;
-  }
-
-  // If no specific firstTimeDiscount data but discount > 0, check if it might be the first-time discount
-  if (!firstTimeDiscount?.isApplied && discount > 0) {
-    // Check if the discount amount matches a 10% first-time discount
-    const expectedFirstTimeDiscount = subTotal * 0.1;
-    if (Math.abs(discount - expectedFirstTimeDiscount) < 0.01) {
-      console.log('💡 Detected legacy first-time discount order');
-      firstTimeDiscountAmount = discount;
-    }
-  }
-
   let firstTimeDiscountHtml = '';
-  if (
-    (firstTimeDiscount?.isApplied ||
-      (!firstTimeDiscount?.isApplied &&
-        discount > 0 &&
-        Math.abs(discount - subTotal * 0.1) < 0.01)) &&
-    firstTimeDiscountAmount > 0
-  ) {
+
+  if (firstTimeDiscount?.isApplied && firstTimeDiscount?.amount > 0) {
+    firstTimeDiscountAmount = firstTimeDiscount.amount;
     firstTimeDiscountHtml = `
       <tr>
         <td style="padding: 12px; text-align: right;">
@@ -123,8 +103,23 @@ const orderConfirmationTemplate = (order, config) => {
             firstTimeDiscount?.percentage || 10
           }%)
         </td>
-        <td style="padding: 12px; text-align: right;">
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(firstTimeDiscountAmount)}
+        </td>
+      </tr>
+    `;
+  }
+
+  // Handle regular coupon discount
+  let couponDiscountHtml = '';
+  if (discount > 0) {
+    couponDiscountHtml = `
+      <tr>
+        <td style="padding: 12px; text-align: right;">
+          💰 Coupon discount
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(discount)}
         </td>
       </tr>
     `;
@@ -207,12 +202,7 @@ const orderConfirmationTemplate = (order, config) => {
           )}</td>
         </tr>
         ${firstTimeDiscountHtml}
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Discount:</strong></td>
-          <td style="padding: 12px; text-align: right;">-${formatPrice(
-            discount
-          )}</td>
-        </tr>
+        ${couponDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right; border-top: 2px solid #eee;"><strong>Total:</strong></td>
           <td style="padding: 12px; text-align: right; border-top: 2px solid #eee; font-weight: bold; font-size: 16px;">${formatPrice(
