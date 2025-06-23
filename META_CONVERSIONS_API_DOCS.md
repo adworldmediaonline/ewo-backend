@@ -24,6 +24,10 @@ META_PIXEL_ID=your-meta-pixel-id-here
 META_ACCESS_TOKEN=your-system-user-access-token-here
 META_API_VERSION=v23.0
 
+# Store Configuration
+STORE_URL=https://yourstore.com
+FRONTEND_URL=https://yourstore.com  # Fallback for legacy support
+
 # Other configurations...
 PORT=8000
 NODE_ENV=development
