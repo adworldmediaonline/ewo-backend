@@ -7,6 +7,7 @@ const {
   sendShippingNotificationWithTracking,
   sendDeliveryNotificationWithTracking,
 } = require('../services/emailService');
+const CartTrackingService = require('../services/cartTracking.service');
 
 // create-payment-intent
 exports.paymentIntent = async (req, res, next) => {
@@ -145,10 +146,17 @@ exports.addOrder = async (req, res, next) => {
     // Send confirmation email using email service
     const emailSent = await sendOrderConfirmation(order);
 
-    // Update order to mark email as sent
-    if (emailSent) {
-      await Order.findByIdAndUpdate(order._id, { emailSent: true });
-    }
+              // Update order to mark email as sent
+          if (emailSent) {
+            await Order.findByIdAndUpdate(order._id, { emailSent: true });
+          }
+
+          // Send purchase event to Meta Conversions API asynchronously
+          setImmediate(() => {
+            cartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+              console.error('Meta Purchase API call failed (non-blocking):', error.message);
+            });
+          });
 
     res.status(200).json({
       success: true,
@@ -671,6 +679,13 @@ exports.handleStripeWebhook = async (req, res) => {
           if (emailSent) {
             await Order.findByIdAndUpdate(order._id, { emailSent: true });
           }
+
+          // Send purchase event to Meta Conversions API asynchronously
+          setImmediate(() => {
+            cartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+              console.error('Meta Purchase API call failed (non-blocking):', error.message);
+            });
+          });
         } catch (error) {
           console.log(error);
         }
@@ -687,4 +702,15 @@ exports.handleStripeWebhook = async (req, res) => {
     console.error(`Error processing webhook: ${error.message}`);
   }
   res.status(200).json({ received: true });
+};
+
+// Add helper function for extracting client information
+const extractClientInfo = (req) => {
+  return {
+    clientIpAddress: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
+    clientUserAgent: req.headers['user-agent'],
+    eventSourceUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+    fbp: req.headers['fbp'] || req.body.fbp,
+    fbc: req.headers['fbc'] || req.body.fbc
+  };
 };

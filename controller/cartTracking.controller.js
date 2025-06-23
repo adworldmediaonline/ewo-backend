@@ -3,59 +3,29 @@ const CartTrackingService = require('../services/cartTracking.service');
 // Track add to cart event
 exports.trackAddToCart = async (req, res, next) => {
   try {
-    const {
-      productId,
-      quantity,
-      sessionId,
-      userId,
-      email,
-      source,
-      pageUrl,
-      referrer,
-      cartTotalValue,
-      cartItemsCount,
-      timeOnProductPage,
-    } = req.body;
-
-    // Validation
-    if (!productId || !sessionId) {
-      return res.status(400).json({
+    const cartTrackingService = new CartTrackingService();
+    const result = await cartTrackingService.trackEvent('add_to_cart', req.body, req);
+    
+    if (result.success) {
+      res.status(201).json({
+        success: true,
+        message: 'Add to cart event tracked successfully',
+        data: result
+      });
+    } else {
+      res.status(400).json({
         success: false,
-        message: 'Product ID and Session ID are required',
+        message: 'Failed to track add to cart event',
+        error: result.error
       });
     }
-
-    // Extract tracking metadata from request
-    const trackingData = {
-      productId,
-      quantity: quantity || 1,
-      sessionId,
-      userId: userId || null,
-      userEmail: email || null,
-      source: source || 'product-page',
-      referrer: referrer || req.get('Referer'),
-      userAgent: req.get('User-Agent'),
-      ipAddress:
-        req.ip ||
-        req.connection.remoteAddress ||
-        req.headers['x-forwarded-for'],
-      cartTotalValue,
-      cartItemsCount,
-      timeOnProductPage,
-    };
-
-    const trackingResult = await CartTrackingService.trackAddToCart(
-      trackingData
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Add to cart tracked successfully',
-      data: trackingResult,
-    });
   } catch (error) {
-    console.error('Error tracking add to cart:', error);
-    next(error);
+    console.error('Add to cart tracking error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
   }
 };
 
