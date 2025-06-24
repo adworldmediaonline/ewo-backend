@@ -2,6 +2,7 @@ const CartTracking = require('../model/CartTracking');
 const User = require('../model/User');
 const Product = require('../model/Products');
 const metaConversionsApi = require('./metaConversionsApi.service');
+const { secret } = require('../config/secret');
 
 class CartTrackingService {
   /**
@@ -641,7 +642,7 @@ class CartTrackingService {
       const clientInfo = {
         ip: requestData.clientIpAddress || trackingRecord.ipAddress,
         userAgent: requestData.clientUserAgent || trackingRecord.userAgent,
-        eventSourceUrl: requestData.eventSourceUrl || process.env.STORE_URL || 'https://yourstore.com'
+        eventSourceUrl: requestData.eventSourceUrl || secret.store_name
       };
 
       let result;
@@ -701,7 +702,7 @@ class CartTrackingService {
       const clientInfo = {
         ip: requestData.clientIpAddress,
         userAgent: requestData.clientUserAgent,
-        eventSourceUrl: requestData.eventSourceUrl || `${process.env.STORE_URL || 'https://yourstore.com'}/checkout/success`
+        eventSourceUrl: requestData.eventSourceUrl || `${secret.store_name}/checkout/success`
       };
 
       const result = await metaConversionsApi.sendPurchase(userData, purchaseData, clientInfo);
@@ -811,7 +812,7 @@ class CartTrackingService {
           CartTrackingService.sendToMetaAsync(cartTrackingData, 'AddToCart', {
             clientIpAddress: clientIP,
             clientUserAgent: userAgent,
-            eventSourceUrl: req?.headers['referer'] || process.env.STORE_URL || 'https://yourstore.com'
+            eventSourceUrl: req?.headers['referer'] || secret.store_name
           }).catch(error => {
             console.error('Meta API call failed (non-blocking):', error.message);
           });

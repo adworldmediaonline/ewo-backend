@@ -1,3 +1,4 @@
+const { secret } = require('../config/secret');
 const metaService = require('../services/metaConversionsApi.service');
 
 // Track Add to Cart event
@@ -36,7 +37,7 @@ exports.trackMetaAddToCart = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -102,7 +103,7 @@ exports.trackMetaPurchase = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -159,7 +160,7 @@ exports.trackMetaViewContent = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -211,7 +212,7 @@ exports.trackMetaPageView = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -267,7 +268,7 @@ exports.trackMetaInitiateCheckout = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -320,7 +321,7 @@ exports.trackMetaLead = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
@@ -378,7 +379,7 @@ exports.trackMetaCustomEvent = async (req, res, next) => {
     const clientInfo = {
       ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1',
       userAgent: req.headers['user-agent'] || 'Unknown',
-      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || process.env.STORE_URL || process.env.FRONTEND_URL || 'https://yourstore.com',
+      eventSourceUrl: eventSourceUrl || req.headers['referer'] || req.headers['origin'] || secret.store_name,
       sessionId: req.sessionID || req.session?.id
     };
 
