@@ -532,6 +532,13 @@ class MetaConversionsApiService {
         serverEvent.setEventSourceUrl(clientInfo.eventSourceUrl);
       }
 
+      // Add test event code for Meta testing (only in development/testing)
+      if (process.env.NODE_ENV !== 'production' || process.env.META_TEST_EVENT_CODE) {
+        const testEventCode = process.env.META_TEST_EVENT_CODE || 'TEST75064';
+        serverEvent.setTestEventCode(testEventCode);
+        console.log(`🧪 [META CORE] Added test event code: ${testEventCode}`);
+      }
+
       console.log(`📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`);
       console.log(`🔑 [META CORE] Using access token: ${this.accessToken ? '[REDACTED]' : 'MISSING'}`);
       
