@@ -3,16 +3,29 @@ const CartTrackingService = require('../services/cartTracking.service');
 // Track add to cart event
 exports.trackAddToCart = async (req, res, next) => {
   try {
+    console.log(`🎯 [CONTROLLER] trackAddToCart endpoint called`);
+    console.log(`📥 [CONTROLLER] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`🌐 [CONTROLLER] Request headers:`, {
+      'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
+      'referer': req.headers['referer'],
+      'x-forwarded-for': req.headers['x-forwarded-for'],
+      'origin': req.headers['origin']
+    });
+    
     const cartTrackingService = new CartTrackingService();
     const result = await cartTrackingService.trackEvent('add_to_cart', req.body, req);
     
+    console.log(`📊 [CONTROLLER] Service result:`, result);
+    
     if (result.success) {
+      console.log(`✅ [CONTROLLER] Tracking successful, sending 201 response`);
       res.status(201).json({
         success: true,
         message: 'Add to cart event tracked successfully',
         data: result
       });
     } else {
+      console.log(`❌ [CONTROLLER] Tracking failed:`, result.error);
       res.status(400).json({
         success: false,
         message: 'Failed to track add to cart event',

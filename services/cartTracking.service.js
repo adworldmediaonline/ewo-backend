@@ -609,9 +609,19 @@ class CartTrackingService {
    */
   static async sendToMetaAsync(trackingRecord, eventName, requestData = {}) {
     try {
+      console.log(`🔄 [META API] sendToMetaAsync called for event: ${eventName}`);
+      console.log(`🔧 [META API] Request data:`, {
+        clientIpAddress: requestData.clientIpAddress,
+        clientUserAgent: requestData.clientUserAgent?.substring(0, 50) + '...',
+        eventSourceUrl: requestData.eventSourceUrl
+      });
+      
       // Check if Meta service is configured
-      if (!metaConversionsApi.getStatus().configured) {
-        console.log('Meta Conversions API not configured, skipping event');
+      const metaStatus = metaConversionsApi.getStatus();
+      console.log(`⚙️ [META API] Configuration status:`, metaStatus);
+      
+      if (!metaStatus.configured) {
+        console.log('❌ [META API] Meta Conversions API not configured, skipping event');
         return { success: false, error: 'Not configured' };
       }
 
@@ -645,18 +655,28 @@ class CartTrackingService {
         eventSourceUrl: requestData.eventSourceUrl || secret.store_name
       };
 
+      console.log(`📤 [META API] Sending ${eventName} event with:`, {
+        userData: { ...userData, email: userData.email ? '[REDACTED]' : null },
+        productData,
+        clientInfo: { ...clientInfo, ip: '[REDACTED]' }
+      });
+
       let result;
       if (eventName === 'AddToCart') {
+        console.log(`🛒 [META API] Calling sendAddToCart...`);
         result = await metaConversionsApi.sendAddToCart(userData, productData, clientInfo);
       } else {
+        console.log(`📡 [META API] Calling sendEvent for ${eventName}...`);
         result = await metaConversionsApi.sendEvent(eventName, userData, productData, clientInfo);
       }
 
-      console.log(`✅ Meta ${eventName} sent via static method:`, result.success);
+      console.log(`✅ [META API] Meta ${eventName} sent via static method:`, result.success);
+      console.log(`📋 [META API] Full result:`, result);
       return result;
 
     } catch (error) {
-      console.error('❌ Meta API static call failed:', error.message);
+      console.error('❌ [META API] Meta API static call failed:', error.message);
+      console.error('❌ [META API] Full error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -718,12 +738,17 @@ class CartTrackingService {
 
   async trackEvent(eventType, data, req = null) {
     try {
+      console.log(`🚀 [CART TRACKING] Starting trackEvent for: ${eventType}`);
+      console.log(`📊 [CART TRACKING] Received data:`, JSON.stringify(data, null, 2));
+      
       // Generate session ID if not provided (for guest users)
       const sessionId = data.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Extract client information
       const clientIP = req?.ip || req?.connection?.remoteAddress || req?.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1';
       const userAgent = req?.headers['user-agent'] || 'Unknown';
+      
+      console.log(`🌐 [CART TRACKING] Client info - IP: ${clientIP}, User-Agent: ${userAgent}`);
       
       // Create cart tracking record with all required fields
       const cartTrackingData = {
@@ -802,19 +827,29 @@ class CartTrackingService {
       if (data.lastName) cartTrackingData.lastName = data.lastName;
       if (data.phone) cartTrackingData.phone = data.phone;
 
+      console.log(`💾 [CART TRACKING] Saving to database with data:`, {
+        productId: cartTrackingData.productId,
+        productTitle: cartTrackingData.productTitle,
+        eventType: cartTrackingData.eventType,
+        userId: cartTrackingData.userId,
+        sessionId: cartTrackingData.sessionId
+      });
+
       // Save to database
       const cartTracking = new CartTracking(cartTrackingData);
       await cartTracking.save();
+      console.log(`✅ [CART TRACKING] Database save successful, ID: ${cartTracking._id}`);
 
       // Send to Meta Conversions API asynchronously (fire-and-forget)
       if (eventType === 'add_to_cart') {
+        console.log(`🎯 [META API] Triggering Meta AddToCart event...`);
         setImmediate(() => {
           CartTrackingService.sendToMetaAsync(cartTrackingData, 'AddToCart', {
             clientIpAddress: clientIP,
             clientUserAgent: userAgent,
             eventSourceUrl: req?.headers['referer'] || secret.store_name
           }).catch(error => {
-            console.error('Meta API call failed (non-blocking):', error.message);
+            console.error('❌ [META API] Meta API call failed (non-blocking):', error.message);
           });
         });
       }

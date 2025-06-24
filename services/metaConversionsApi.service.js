@@ -386,14 +386,21 @@ class MetaConversionsApiService {
    * @returns {Promise<Object>} - API response
    */
   async sendEvent(eventName, userData = {}, customData = {}, clientInfo = {}) {
+    console.log(`🚀 [META CORE] sendEvent called for: ${eventName}`);
+    console.log(`👤 [META CORE] Input userData:`, { ...userData, email: userData.email ? '[REDACTED]' : null });
+    console.log(`📊 [META CORE] Input customData:`, customData);
+    console.log(`🌐 [META CORE] Input clientInfo:`, { ...clientInfo, ip: '[REDACTED]' });
+    
     if (!this.isConfigured) {
-      console.log('⚠️ Meta Conversions API not configured, skipping event');
+      console.log('⚠️ [META CORE] Meta Conversions API not configured, skipping event');
       return { success: false, error: 'Not configured' };
     }
 
     try {
+      console.log(`🔧 [META CORE] Enhancing user data...`);
       // Enhance userData with fallback strategies for guest users
       const enhancedUserData = this.enhanceUserData(userData, clientInfo);
+      console.log(`✨ [META CORE] Enhanced userData:`, { ...enhancedUserData, email: enhancedUserData.email ? '[REDACTED]' : null });
       
       // Validate customer data quality
       const validation = this.validateCustomerData(enhancedUserData);
@@ -525,12 +532,20 @@ class MetaConversionsApiService {
         serverEvent.setEventSourceUrl(clientInfo.eventSourceUrl);
       }
 
+      console.log(`📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`);
+      console.log(`🔑 [META CORE] Using access token: ${this.accessToken ? '[REDACTED]' : 'MISSING'}`);
+      
       // Create and execute EventRequest (following official example structure)
       const eventsData = [serverEvent];
+      console.log(`🎯 [META CORE] Created ${eventsData.length} server events`);
+      
       const eventRequest = new EventRequest(this.accessToken, this.pixelId)
         .setEvents(eventsData);
+      console.log(`📤 [META CORE] EventRequest created, executing...`);
 
       const response = await eventRequest.execute();
+      console.log(`📨 [META CORE] EventRequest executed successfully`);
+      console.log(`📋 [META CORE] Response:`, response);
       
       console.log(`✅ Meta ${eventName} sent for ${enhancedUserData.externalId || 'guest'}:`, { 
         success: true, 
@@ -778,6 +793,11 @@ class MetaConversionsApiService {
   }
 
   async sendAddToCart(userData, productData, clientInfo = {}) {
+    console.log(`🛒 [META SERVICE] sendAddToCart called`);
+    console.log(`👤 [META SERVICE] User data:`, { ...userData, email: userData.email ? '[REDACTED]' : null });
+    console.log(`📦 [META SERVICE] Product data:`, productData);
+    console.log(`🌐 [META SERVICE] Client info:`, { ...clientInfo, ip: '[REDACTED]' });
+    
     const customData = {
       currency: productData.currency || 'USD',
       value: productData.value || productData.price || 0,
@@ -785,7 +805,13 @@ class MetaConversionsApiService {
       contentIds: [productData.productId || productData.id]
     };
 
-    return this.sendEvent('AddToCart', userData, customData, clientInfo);
+    console.log(`📊 [META SERVICE] Custom data prepared:`, customData);
+    console.log(`📡 [META SERVICE] Calling sendEvent with AddToCart...`);
+    
+    const result = await this.sendEvent('AddToCart', userData, customData, clientInfo);
+    console.log(`📋 [META SERVICE] sendEvent result:`, result);
+    
+    return result;
   }
 
   async sendViewContent(userData, contentData, clientInfo = {}) {

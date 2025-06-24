@@ -146,10 +146,10 @@ exports.addOrder = async (req, res, next) => {
     // Send confirmation email using email service
     const emailSent = await sendOrderConfirmation(order);
 
-              // Update order to mark email as sent
-          if (emailSent) {
-            await Order.findByIdAndUpdate(order._id, { emailSent: true });
-          }
+    // Update order to mark email as sent
+    if (emailSent) {
+      await Order.findByIdAndUpdate(order._id, { emailSent: true });
+    }
 
           // Send purchase event to Meta Conversions API asynchronously
           setImmediate(() => {
