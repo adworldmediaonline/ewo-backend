@@ -709,11 +709,12 @@ class CartTrackingService {
         clientUserAgent: requestData.clientUserAgent
       };
 
-      // Prepare purchase data
+      // Prepare purchase data - ensure value is never negative for Meta API
+      const purchaseValue = Math.max(0, orderData.totalAmount || 0);
       const purchaseData = {
         orderId: orderData.orderId,
-        value: orderData.totalAmount,
-        total: orderData.totalAmount,
+        value: purchaseValue,
+        total: purchaseValue,
         currency: orderData.currency || 'USD',
         productIds: orderData.items?.map(item => item.productId) || []
       };

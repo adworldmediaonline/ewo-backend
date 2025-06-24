@@ -58,6 +58,39 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    // Enhanced coupon information
+    appliedCoupon: {
+      couponId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Coupon',
+        required: false,
+      },
+      couponCode: {
+        type: String,
+        required: false,
+      },
+      title: {
+        type: String,
+        required: false,
+      },
+      discountType: {
+        type: String,
+        enum: ['percentage', 'fixed'],
+        required: false,
+      },
+      originalDiscount: {
+        type: Number,
+        required: false,
+      },
+      discountAmount: {
+        type: Number,
+        required: false,
+      },
+      appliedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
     totalAmount: {
       type: Number,
       required: true,
@@ -154,6 +187,35 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Pre-save hook to handle negative totals and ensure data integrity
+orderSchema.pre('save', function(next) {
+  // Ensure totalAmount doesn't go negative for free orders
+  if (this.totalAmount < 0) {
+    console.log('⚠️ Negative total detected, setting to 0 for free order:', this.totalAmount);
+    this.totalAmount = 0;
+    
+    // Update payment method if it's a free order
+    if (this.paymentMethod === 'Card' && this.totalAmount === 0) {
+      this.paymentMethod = 'Free Order (100% Discount)';
+    }
+  }
+  
+  // Ensure discount amounts are not negative
+  if (this.discount < 0) {
+    this.discount = 0;
+  }
+  
+  if (this.firstTimeDiscount && this.firstTimeDiscount.amount < 0) {
+    this.firstTimeDiscount.amount = 0;
+  }
+  
+  if (this.appliedCoupon && this.appliedCoupon.discountAmount < 0) {
+    this.appliedCoupon.discountAmount = 0;
+  }
+  
+  next();
+});
 
 // Function to generate unique order ID in format ORD-YYYYMMDD-XXXXXX
 const generateOrderId = async () => {
