@@ -193,7 +193,7 @@ exports.addOrder = async (req, res, next) => {
 // get Orders
 exports.getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({}).populate('user');
+    const orderItems = await Order.find({}).populate('user').sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       data: orderItems,
