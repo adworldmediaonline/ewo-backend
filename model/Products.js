@@ -188,6 +188,24 @@ const productsSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // SEO metadata fields
+    seo: {
+      metaTitle: {
+        type: String,
+        trim: true,
+        maxlength: [60, 'Meta title cannot be more than 60 characters'],
+      },
+      metaDescription: {
+        type: String,
+        trim: true,
+        maxlength: [160, 'Meta description cannot be more than 160 characters'],
+      },
+      metaKeywords: {
+        type: String,
+        trim: true,
+        maxlength: [255, 'Meta keywords cannot be more than 255 characters'],
+      },
+    },
   },
   {
     timestamps: true,

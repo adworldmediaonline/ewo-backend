@@ -160,6 +160,9 @@ exports.updateProductService = async (id, currProduct) => {
     product.options = currProduct.options;
     product.shipping.price = currProduct.shipping.price;
     product.shipping.description = currProduct.shipping.description;
+    product.seo.metaTitle = currProduct.seo.metaTitle;
+    product.seo.metaDescription = currProduct.seo.metaDescription;
+    product.seo.metaKeywords = currProduct.seo.metaKeywords;
 
     // Calculate updated pricing fields when price is updated
     if (currProduct.price) {
