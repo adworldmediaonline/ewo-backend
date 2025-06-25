@@ -509,8 +509,11 @@ class MetaConversionsApiService {
         custom.setCurrency(customData.currency.toLowerCase()); // Currency should be lowercase
       }
       
-      if (customData.value) {
-        custom.setValue(parseFloat(customData.value));
+      if (customData.value !== undefined && customData.value !== null) {
+        const numericValue = parseFloat(customData.value);
+        // Ensure value is never negative or NaN for Meta API
+        const safeValue = isNaN(numericValue) ? 0 : Math.max(0, numericValue);
+        custom.setValue(safeValue);
       }
 
       // Set additional custom data fields
@@ -535,8 +538,16 @@ class MetaConversionsApiService {
       // Add test event code for Meta testing (only in development/testing)
       if (process.env.NODE_ENV !== 'production' || process.env.META_TEST_EVENT_CODE) {
         const testEventCode = process.env.META_TEST_EVENT_CODE || 'TEST75064';
-        serverEvent.setTestEventCode(testEventCode);
-        console.log(`🧪 [META CORE] Added test event code: ${testEventCode}`);
+        try {
+          if (typeof serverEvent.setTestEventCode === 'function') {
+            serverEvent.setTestEventCode(testEventCode);
+            console.log(`🧪 [META CORE] Added test event code: ${testEventCode}`);
+          } else {
+            console.log(`⚠️ [META CORE] setTestEventCode method not available in this SDK version`);
+          }
+        } catch (error) {
+          console.log(`⚠️ [META CORE] Could not set test event code: ${error.message}`);
+        }
       }
 
       console.log(`📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`);

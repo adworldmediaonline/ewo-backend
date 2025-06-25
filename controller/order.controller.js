@@ -35,6 +35,27 @@ exports.paymentIntent = async (req, res, next) => {
     console.log('Request body:', product);
     console.log('Final amount in cents for Stripe:', amount);
 
+    // Handle zero or negative amounts (free orders due to 100% discounts)
+    if (amount <= 0) {
+      console.log('🎁 Free order detected - amount is $0 or negative:', amount / 100);
+      return res.status(200).json({
+        success: true,
+        isFreeOrder: true,
+        message: 'This is a free order - no payment required',
+        totalAmount: amount / 100
+      });
+    }
+
+    // Stripe requires minimum $0.50 USD (50 cents)
+    if (amount < 50) {
+      console.log('⚠️ Amount too low for Stripe processing:', amount / 100);
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount must be at least $0.50',
+        totalAmount: amount / 100
+      });
+    }
+
     // Prepare metadata
     const metadata = {};
 
@@ -153,7 +174,7 @@ exports.addOrder = async (req, res, next) => {
 
           // Send purchase event to Meta Conversions API asynchronously
           setImmediate(() => {
-            cartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
               console.error('Meta Purchase API call failed (non-blocking):', error.message);
             });
           });
@@ -682,7 +703,7 @@ exports.handleStripeWebhook = async (req, res) => {
 
           // Send purchase event to Meta Conversions API asynchronously
           setImmediate(() => {
-            cartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
               console.error('Meta Purchase API call failed (non-blocking):', error.message);
             });
           });

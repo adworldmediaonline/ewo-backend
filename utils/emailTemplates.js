@@ -88,6 +88,7 @@ const orderConfirmationTemplate = (order, config) => {
     discount = 0,
     paymentMethod = 'Card',
     firstTimeDiscount,
+    appliedCoupon, // Enhanced coupon information
   } = order;
 
   // Handle first-time discount display
@@ -110,9 +111,27 @@ const orderConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle regular coupon discount
+  // Handle enhanced coupon discount
   let couponDiscountHtml = '';
-  if (discount > 0) {
+  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    // Enhanced coupon display with more details
+    const discountText = appliedCoupon.discountType === 'percentage' 
+      ? `${appliedCoupon.originalDiscount}% off`
+      : `$${appliedCoupon.originalDiscount} off`;
+      
+    couponDiscountHtml = `
+      <tr>
+        <td style="padding: 12px; text-align: right;">
+          🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(appliedCoupon.discountAmount)}
+        </td>
+      </tr>
+    `;
+  } else if (discount > 0) {
+    // Fallback to legacy coupon display
     couponDiscountHtml = `
       <tr>
         <td style="padding: 12px; text-align: right;">
@@ -153,6 +172,21 @@ const orderConfirmationTemplate = (order, config) => {
           .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
+  // Add coupon success message if enhanced coupon was applied
+  let couponSuccessMessage = '';
+  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    couponSuccessMessage = `
+    <!-- Coupon Success Message -->
+    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
+      <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
+      <p style="color: #075985; margin: 0; line-height: 1.6;">
+        <strong>${appliedCoupon.couponCode}</strong> - ${appliedCoupon.title}<br>
+        <span style="font-size: 14px;">You saved ${formatPrice(appliedCoupon.discountAmount)} on this order!</span>
+      </p>
+    </div>
+    `;
+  }
+
   // Create the main content
   const content = `
     <div style="background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 30px;">
@@ -162,6 +196,8 @@ const orderConfirmationTemplate = (order, config) => {
 
     <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
     <p style="font-size: 16px; line-height: 1.6;">Thank you for choosing us! Your order has been successfully received and is now being prepared for shipment. Here's a complete summary of your purchase:</p>
+
+    ${couponSuccessMessage}
 
     <!-- Order Details -->
     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #4299e1;">
@@ -307,6 +343,7 @@ const shippingConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
+    appliedCoupon, // Enhanced coupon information
   } = order || {};
 
   // Safety check for required fields
@@ -406,9 +443,27 @@ const shippingConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle regular coupon discount for shipping email
+  // Handle enhanced coupon discount for shipping email
   let couponDiscountHtml = '';
-  if (discount > 0) {
+  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    // Enhanced coupon display with more details
+    const discountText = appliedCoupon.discountType === 'percentage' 
+      ? `${appliedCoupon.originalDiscount}% off`
+      : `$${appliedCoupon.originalDiscount} off`;
+      
+    couponDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(appliedCoupon.discountAmount)}
+        </td>
+      </tr>
+    `;
+  } else if (discount > 0) {
+    // Fallback to legacy coupon display
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
@@ -575,6 +630,7 @@ const deliveryConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
+    appliedCoupon, // Enhanced coupon information
   } = order || {};
 
   // Safety check for required fields
@@ -633,9 +689,27 @@ const deliveryConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle regular coupon discount for delivery email
+  // Handle enhanced coupon discount for delivery email
   let couponDiscountHtml = '';
-  if (discount > 0) {
+  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    // Enhanced coupon display with more details
+    const discountText = appliedCoupon.discountType === 'percentage' 
+      ? `${appliedCoupon.originalDiscount}% off`
+      : `$${appliedCoupon.originalDiscount} off`;
+      
+    couponDiscountHtml = `
+      <tr>
+        <td colspan="2" style="padding: 12px; text-align: right;">
+          🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+        </td>
+        <td style="padding: 12px; text-align: right; color: #48bb78;">
+          -${formatPrice(appliedCoupon.discountAmount)}
+        </td>
+      </tr>
+    `;
+  } else if (discount > 0) {
+    // Fallback to legacy coupon display
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
