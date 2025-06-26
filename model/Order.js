@@ -125,7 +125,14 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancel'],
+      enum: [
+        'pending',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancel',
+        'refunded',
+      ],
       default: 'pending',
       lowercase: true,
     },
@@ -182,6 +189,45 @@ const orderSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    // Refund related fields
+    refundedAt: {
+      type: Date,
+      required: false,
+    },
+    refundReason: {
+      type: String,
+      required: false,
+    },
+    refundedBy: {
+      type: String,
+      required: false,
+    },
+    refundEmailSent: {
+      type: Boolean,
+      default: false,
+    },
+    stripeRefund: {
+      id: {
+        type: String,
+        required: false,
+      },
+      amount: {
+        type: Number,
+        required: false,
+      },
+      status: {
+        type: String,
+        required: false,
+      },
+      reason: {
+        type: String,
+        required: false,
+      },
+      created: {
+        type: Number,
+        required: false,
+      },
+    },
   },
   {
     timestamps: true,
@@ -189,31 +235,34 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Pre-save hook to handle negative totals and ensure data integrity
-orderSchema.pre('save', function(next) {
+orderSchema.pre('save', function (next) {
   // Ensure totalAmount doesn't go negative for free orders
   if (this.totalAmount < 0) {
-    console.log('⚠️ Negative total detected, setting to 0 for free order:', this.totalAmount);
+    console.log(
+      '⚠️ Negative total detected, setting to 0 for free order:',
+      this.totalAmount
+    );
     this.totalAmount = 0;
-    
+
     // Update payment method if it's a free order
     if (this.paymentMethod === 'Card' && this.totalAmount === 0) {
       this.paymentMethod = 'Free Order (100% Discount)';
     }
   }
-  
+
   // Ensure discount amounts are not negative
   if (this.discount < 0) {
     this.discount = 0;
   }
-  
+
   if (this.firstTimeDiscount && this.firstTimeDiscount.amount < 0) {
     this.firstTimeDiscount.amount = 0;
   }
-  
+
   if (this.appliedCoupon && this.appliedCoupon.discountAmount < 0) {
     this.appliedCoupon.discountAmount = 0;
   }
-  
+
   next();
 });
 

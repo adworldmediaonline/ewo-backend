@@ -6,6 +6,7 @@ const {
   sendOrderConfirmation,
   sendShippingNotificationWithTracking,
   sendDeliveryNotificationWithTracking,
+  sendRefundConfirmation,
 } = require('../services/emailService');
 const CartTrackingService = require('../services/cartTracking.service');
 
@@ -37,12 +38,15 @@ exports.paymentIntent = async (req, res, next) => {
 
     // Handle zero or negative amounts (free orders due to 100% discounts)
     if (amount <= 0) {
-      console.log('🎁 Free order detected - amount is $0 or negative:', amount / 100);
+      console.log(
+        '🎁 Free order detected - amount is $0 or negative:',
+        amount / 100
+      );
       return res.status(200).json({
         success: true,
         isFreeOrder: true,
         message: 'This is a free order - no payment required',
-        totalAmount: amount / 100
+        totalAmount: amount / 100,
       });
     }
 
@@ -52,7 +56,7 @@ exports.paymentIntent = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: 'Payment amount must be at least $0.50',
-        totalAmount: amount / 100
+        totalAmount: amount / 100,
       });
     }
 
@@ -172,12 +176,15 @@ exports.addOrder = async (req, res, next) => {
       await Order.findByIdAndUpdate(order._id, { emailSent: true });
     }
 
-          // Send purchase event to Meta Conversions API asynchronously
-          setImmediate(() => {
-            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
-              console.error('Meta Purchase API call failed (non-blocking):', error.message);
-            });
-          });
+    // Send purchase event to Meta Conversions API asynchronously
+    setImmediate(() => {
+      CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+        console.error(
+          'Meta Purchase API call failed (non-blocking):',
+          error.message
+        );
+      });
+    });
 
     res.status(200).json({
       success: true,
@@ -193,7 +200,9 @@ exports.addOrder = async (req, res, next) => {
 // get Orders
 exports.getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({}).populate('user').sort({ createdAt: -1 });
+    const orderItems = await Order.find({})
+      .populate('user')
+      .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       data: orderItems,
@@ -703,9 +712,14 @@ exports.handleStripeWebhook = async (req, res) => {
 
           // Send purchase event to Meta Conversions API asynchronously
           setImmediate(() => {
-            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
-              console.error('Meta Purchase API call failed (non-blocking):', error.message);
-            });
+            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(
+              error => {
+                console.error(
+                  'Meta Purchase API call failed (non-blocking):',
+                  error.message
+                );
+              }
+            );
           });
         } catch (error) {
           console.log(error);
@@ -726,12 +740,203 @@ exports.handleStripeWebhook = async (req, res) => {
 };
 
 // Add helper function for extracting client information
-const extractClientInfo = (req) => {
+const extractClientInfo = req => {
   return {
-    clientIpAddress: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
+    clientIpAddress:
+      req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
     clientUserAgent: req.headers['user-agent'],
     eventSourceUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
     fbp: req.headers['fbp'] || req.body.fbp,
-    fbc: req.headers['fbc'] || req.body.fbc
+    fbc: req.headers['fbc'] || req.body.fbc,
   };
+};
+
+// refund order
+exports.refundOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { refundReason, refundAmount } = req.body;
+
+    // Find the order
+    const order = await Order.findById(id).populate('user');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Check if order is already refunded
+    if (order.status === 'refunded') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order has already been refunded',
+      });
+    }
+
+    // Check if order can be refunded
+    if (order.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot refund a cancelled order',
+      });
+    }
+
+    // Check if order was paid (not a free order)
+    if (!order.paymentIntent || !order.paymentIntent.id) {
+      // Handle free orders or orders without payment intent
+      if (
+        order.totalAmount === 0 ||
+        order.paymentMethod === 'Free Order (100% Discount)'
+      ) {
+        // For free orders, just update the status
+        const updatedOrder = await Order.findByIdAndUpdate(
+          id,
+          {
+            status: 'refunded',
+            refundedAt: new Date(),
+            refundReason: refundReason || 'Free order refund',
+            refundedBy: 'admin',
+          },
+          { new: true }
+        ).populate('user');
+
+        // Send refund confirmation email
+        const emailSent = await sendRefundConfirmation(
+          updatedOrder,
+          refundReason
+        );
+
+        if (emailSent) {
+          await Order.findByIdAndUpdate(id, { refundEmailSent: true });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: 'Free order refunded successfully',
+          order: updatedOrder,
+          emailSent,
+          stripeRefund: null,
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'No payment information found for this order',
+        });
+      }
+    }
+
+    // Calculate refund amount (default to full order amount)
+    const amountToRefund = refundAmount || order.totalAmount;
+    const amountInCents = Math.round(amountToRefund * 100);
+
+    // Validate refund amount
+    if (amountInCents <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid refund amount',
+      });
+    }
+
+    // Check if the refund amount is not greater than the original payment
+    const originalAmountInCents = Math.round(order.totalAmount * 100);
+    if (amountInCents > originalAmountInCents) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refund amount cannot exceed the original payment amount',
+      });
+    }
+
+    let stripeRefund = null;
+
+    try {
+      // Process refund through Stripe
+      console.log(
+        '🔄 Processing Stripe refund for payment intent:',
+        order.paymentIntent.id
+      );
+      console.log('💰 Refund amount in cents:', amountInCents);
+
+      stripeRefund = await stripe.refunds.create({
+        payment_intent: order.paymentIntent.id,
+        amount: amountInCents,
+        reason: 'requested_by_customer',
+        metadata: {
+          order_id: order._id.toString(),
+          order_number: order.orderId || order.invoice,
+          refund_reason: refundReason || 'Admin refund',
+          refunded_by: 'admin',
+        },
+      });
+
+      console.log('✅ Stripe refund successful:', stripeRefund.id);
+    } catch (stripeError) {
+      console.error('❌ Stripe refund failed:', stripeError);
+
+      // Handle specific Stripe errors
+      if (stripeError.code === 'charge_already_refunded') {
+        return res.status(400).json({
+          success: false,
+          message: 'This payment has already been fully refunded',
+        });
+      }
+
+      if (stripeError.code === 'amount_too_large') {
+        return res.status(400).json({
+          success: false,
+          message: 'Refund amount exceeds the remaining refundable amount',
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to process refund through payment provider',
+        error: stripeError.message,
+      });
+    }
+
+    // If Stripe refund was successful, update the order
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        status: 'refunded',
+        refundedAt: new Date(),
+        refundReason: refundReason || 'Refund requested by admin',
+        refundedBy: 'admin',
+        // Store Stripe refund information
+        stripeRefund: {
+          id: stripeRefund.id,
+          amount: stripeRefund.amount,
+          status: stripeRefund.status,
+          reason: stripeRefund.reason,
+          created: stripeRefund.created,
+        },
+      },
+      { new: true }
+    ).populate('user');
+
+    // Send refund confirmation email
+    const emailSent = await sendRefundConfirmation(updatedOrder, refundReason);
+
+    if (emailSent) {
+      await Order.findByIdAndUpdate(id, { refundEmailSent: true });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Order refunded successfully',
+      order: updatedOrder,
+      emailSent,
+      stripeRefund: {
+        id: stripeRefund.id,
+        amount: stripeRefund.amount / 100, // Convert back to dollars
+        status: stripeRefund.status,
+        reason: stripeRefund.reason,
+      },
+    });
+  } catch (error) {
+    console.error('Error refunding order:', error);
+    next(error);
+  }
 };

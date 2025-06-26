@@ -4,6 +4,7 @@ const {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
+  refundConfirmationTemplate,
 } = require('../utils/emailTemplates');
 
 // Create nodemailer transporter
@@ -375,10 +376,59 @@ const sendDeliveryNotificationWithTracking = async (
   }
 };
 
+/**
+ * Send refund confirmation email
+ * @param {Object} order - Order data
+ * @param {string} refundReason - Optional refund reason
+ * @returns {Promise<boolean>} - Success status
+ */
+const sendRefundConfirmation = async (order, refundReason = null) => {
+  if (!order || !order.email) {
+    console.error('Missing required order data for refund email');
+    return false;
+  }
+
+  try {
+    // Extract clean order data from Mongoose document
+    const cleanOrderData = order.toObject ? order.toObject() : order;
+
+    console.log('📧 Refund email order data:', {
+      _id: cleanOrderData._id,
+      orderId: cleanOrderData.orderId,
+      invoice: cleanOrderData.invoice,
+      totalAmount: cleanOrderData.totalAmount,
+      status: cleanOrderData.status,
+    });
+
+    // Generate email HTML from template
+    const html = refundConfirmationTemplate(
+      cleanOrderData,
+      emailConfig,
+      refundReason
+    );
+
+    // Create subject line with order ID for better tracking
+    const orderNumber =
+      cleanOrderData.orderId || cleanOrderData.invoice || cleanOrderData._id;
+    const subject = `💰 Refund Processed for Order #${orderNumber} - ${emailConfig.storeName}`;
+
+    // Send the email
+    return await sendEmail({
+      to: cleanOrderData.email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending refund confirmation email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
   sendShippingNotificationWithTracking,
   sendDeliveryConfirmation,
   sendDeliveryNotificationWithTracking,
+  sendRefundConfirmation,
 };

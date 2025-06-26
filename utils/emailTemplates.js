@@ -115,15 +115,18 @@ const orderConfirmationTemplate = (order, config) => {
   let couponDiscountHtml = '';
   if (appliedCoupon && appliedCoupon.discountAmount > 0) {
     // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -180,8 +183,12 @@ const orderConfirmationTemplate = (order, config) => {
     <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
       <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
       <p style="color: #075985; margin: 0; line-height: 1.6;">
-        <strong>${appliedCoupon.couponCode}</strong> - ${appliedCoupon.title}<br>
-        <span style="font-size: 14px;">You saved ${formatPrice(appliedCoupon.discountAmount)} on this order!</span>
+        <strong>${appliedCoupon.couponCode}</strong> - ${
+      appliedCoupon.title
+    }<br>
+        <span style="font-size: 14px;">You saved ${formatPrice(
+          appliedCoupon.discountAmount
+        )} on this order!</span>
       </p>
     </div>
     `;
@@ -447,15 +454,18 @@ const shippingConfirmationTemplate = (order, config) => {
   let couponDiscountHtml = '';
   if (appliedCoupon && appliedCoupon.discountAmount > 0) {
     // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -693,15 +703,18 @@ const deliveryConfirmationTemplate = (order, config) => {
   let couponDiscountHtml = '';
   if (appliedCoupon && appliedCoupon.discountAmount > 0) {
     // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -879,8 +892,164 @@ const deliveryConfirmationTemplate = (order, config) => {
   });
 };
 
+/**
+ * Refund confirmation email template
+ * @param {Object} order - Order data
+ * @param {Object} config - Configuration
+ * @param {string} refundReason - Reason for refund
+ * @returns {string} - Complete HTML template
+ */
+const refundConfirmationTemplate = (order, config, refundReason = null) => {
+  const {
+    _id,
+    orderId,
+    invoice,
+    name,
+    cart = [],
+    totalAmount = 0,
+    paymentMethod = 'Card',
+    refundedAt,
+    createdAt,
+  } = order;
+
+  const {
+    storeName = secret.store_name,
+    supportEmail = secret.support_email,
+    clientUrl = secret.client_url,
+  } = config;
+
+  const orderNumber = orderId || invoice || _id;
+  const refundDate = refundedAt ? new Date(refundedAt) : new Date();
+  const orderDate = createdAt ? new Date(createdAt) : new Date();
+
+  // Generate items HTML for refunded items
+  const itemsHtml =
+    cart && cart.length > 0
+      ? cart
+          .map(
+            item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${
+          item.title || 'Product'
+        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
+          item.orderQuantity || 1
+        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
+          item.price
+        )}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
+          (item.price || 0) * (item.orderQuantity || 1)
+        )}</td>
+      </tr>
+    `
+          )
+          .join('')
+      : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="4">Order items not available</td></tr>`;
+
+  const refundReasonHtml = refundReason
+    ? `
+    <div style="background: #fef7e7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+      <h4 style="color: #92400e; margin-top: 0; margin-bottom: 8px;">Refund Reason</h4>
+      <p style="color: #92400e; margin: 0; font-size: 14px;">${refundReason}</p>
+    </div>
+  `
+    : '';
+
+  // Create the main content
+  const content = `
+    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 30px;">
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">💰 Refund Processed</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your refund has been successfully processed</p>
+    </div>
+
+    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">We have successfully processed your refund for order <strong>#${orderNumber}</strong>. The refund amount will be credited back to your original payment method within 3-5 business days.</p>
+
+    ${refundReasonHtml}
+
+    <!-- Order Details -->
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 15px;">📦 Refunded Order Details</h3>
+
+      <div style="margin-bottom: 15px;">
+        <strong>Order Number:</strong> #${orderNumber}<br>
+        <strong>Order Date:</strong> ${formatDate(orderDate)}<br>
+        <strong>Refund Date:</strong> ${formatDate(refundDate)}<br>
+        <strong>Payment Method:</strong> ${paymentMethod}
+        ${
+          order.stripeRefund && order.stripeRefund.id
+            ? `<br><strong>Refund ID:</strong> ${order.stripeRefund.id}<br><strong>Refund Status:</strong> <span style="text-transform: capitalize; color: #059669;">${order.stripeRefund.status}</span>`
+            : ''
+        }
+      </div>
+    </div>
+
+    <!-- Refunded Items -->
+    <h3 style="color: #2d3748; margin-bottom: 15px;">🛍️ Refunded Items</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <thead>
+        <tr style="background-color: #f7fafc;">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Item</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Qty</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Price</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <!-- Refund Summary -->
+    <div style="background-color: #f0fff4; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #9ae6b4;">
+      <h3 style="color: #276749; margin-top: 0; margin-bottom: 15px;">💰 Refund Summary</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; text-align: right; font-size: 18px; font-weight: bold; color: #276749;">
+            Total Refund Amount:
+          </td>
+          <td style="padding: 8px 0; text-align: right; font-size: 18px; font-weight: bold; color: #276749;">
+            ${formatPrice(totalAmount)}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Important Information -->
+    <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f87171;">
+      <h4 style="color: #991b1b; margin-top: 0; margin-bottom: 10px;">📋 Important Information</h4>
+      <ul style="color: #991b1b; margin: 0; padding-left: 20px; line-height: 1.6;">
+        <li>The refund will be processed to your original payment method</li>
+        <li>Please allow 3-5 business days for the refund to appear in your account</li>
+        <li>You will receive a separate confirmation from your bank/card issuer</li>
+        <li>If you don't see the refund after 7 business days, please contact us</li>
+      </ul>
+    </div>
+
+    <!-- Contact Information -->
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h4 style="color: #2d3748; margin-top: 0; margin-bottom: 10px;">📞 Need Help?</h4>
+      <p style="color: #4a5568; margin: 0; line-height: 1.6;">
+        If you have any questions about your refund or need assistance, please don't hesitate to contact our customer service team at
+        <a href="mailto:${supportEmail}" style="color: #4299e1; text-decoration: none;">${supportEmail}</a>
+      </p>
+    </div>
+
+    <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">Thank you for giving us the opportunity to serve you. We hope to see you again soon!</p>
+
+    <p style="font-size: 16px; line-height: 1.6;">
+      Best regards,<br>
+      <strong>The ${storeName} Team</strong>
+    </p>
+  `;
+
+  return baseTemplate({ content, storeName, supportEmail });
+};
+
 module.exports = {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
+  refundConfirmationTemplate,
 };

@@ -8,6 +8,7 @@ const {
   sendShippingNotification,
   sendDeliveryNotification,
   updateShippingDetails,
+  refundOrder,
 } = require('../controller/order.controller');
 
 // router
@@ -29,5 +30,7 @@ router.post('/send-shipping-notification/:id', sendShippingNotification);
 router.post('/send-delivery-notification/:id', sendDeliveryNotification);
 // update shipping details and optionally send notification
 router.patch('/update-shipping/:id', updateShippingDetails);
+// refund order
+router.post('/refund/:id', refundOrder);
 
 module.exports = router;
