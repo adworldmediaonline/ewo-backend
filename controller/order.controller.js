@@ -755,7 +755,7 @@ const extractClientInfo = req => {
 exports.refundOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { refundReason, refundAmount } = req.body;
+    const { refundReason, refundAmount, paymentIntentId } = req.body;
 
     // Find the order
     const order = await Order.findById(id).populate('user');
@@ -783,48 +783,59 @@ exports.refundOrder = async (req, res, next) => {
       });
     }
 
-    // Check if order was paid (not a free order)
-    if (!order.paymentIntent || !order.paymentIntent.id) {
-      // Handle free orders or orders without payment intent
-      if (
-        order.totalAmount === 0 ||
-        order.paymentMethod === 'Free Order (100% Discount)'
-      ) {
-        // For free orders, just update the status
-        const updatedOrder = await Order.findByIdAndUpdate(
-          id,
-          {
-            status: 'refunded',
-            refundedAt: new Date(),
-            refundReason: refundReason || 'Free order refund',
-            refundedBy: 'admin',
-          },
-          { new: true }
-        ).populate('user');
+    // Handle free orders first
+    if (
+      order.totalAmount === 0 ||
+      order.paymentMethod === 'Free Order (100% Discount)'
+    ) {
+      // For free orders, just update the status
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id,
+        {
+          status: 'refunded',
+          refundedAt: new Date(),
+          refundReason: refundReason || 'Free order refund',
+          refundedBy: 'admin',
+        },
+        { new: true }
+      ).populate('user');
 
-        // Send refund confirmation email
-        const emailSent = await sendRefundConfirmation(
-          updatedOrder,
-          refundReason
-        );
+      // Send refund confirmation email
+      const emailSent = await sendRefundConfirmation(
+        updatedOrder,
+        refundReason
+      );
 
-        if (emailSent) {
-          await Order.findByIdAndUpdate(id, { refundEmailSent: true });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: 'Free order refunded successfully',
-          order: updatedOrder,
-          emailSent,
-          stripeRefund: null,
-        });
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: 'No payment information found for this order',
-        });
+      if (emailSent) {
+        await Order.findByIdAndUpdate(id, { refundEmailSent: true });
       }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Free order refunded successfully',
+        order: updatedOrder,
+        emailSent,
+        stripeRefund: null,
+      });
+    }
+
+    // For paid orders, determine payment intent ID
+    const paymentIntentIdToUse = paymentIntentId || order.paymentIntent?.id;
+
+    if (!paymentIntentIdToUse) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Payment intent ID is required to process refund. Please provide the Stripe Payment Intent ID.',
+      });
+    }
+
+    // Validate payment intent ID format
+    if (!paymentIntentIdToUse.startsWith('pi_')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment intent ID format. Must start with "pi_".',
+      });
     }
 
     // Calculate refund amount (default to full order amount)
@@ -854,12 +865,12 @@ exports.refundOrder = async (req, res, next) => {
       // Process refund through Stripe
       console.log(
         '🔄 Processing Stripe refund for payment intent:',
-        order.paymentIntent.id
+        paymentIntentIdToUse
       );
       console.log('💰 Refund amount in cents:', amountInCents);
 
       stripeRefund = await stripe.refunds.create({
-        payment_intent: order.paymentIntent.id,
+        payment_intent: paymentIntentIdToUse,
         amount: amountInCents,
         reason: 'requested_by_customer',
         metadata: {
@@ -867,6 +878,7 @@ exports.refundOrder = async (req, res, next) => {
           order_number: order.orderId || order.invoice,
           refund_reason: refundReason || 'Admin refund',
           refunded_by: 'admin',
+          manual_payment_intent: paymentIntentId ? 'true' : 'false',
         },
       });
 
