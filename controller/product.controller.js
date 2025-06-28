@@ -216,6 +216,7 @@ exports.getProductSuggestions = async (req, res) => {
             },
           },
           price: 1,
+          finalPriceDiscount: 1,
           sku: 1,
           _id: 0,
         },
