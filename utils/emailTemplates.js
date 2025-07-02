@@ -81,14 +81,16 @@ const orderConfirmationTemplate = (order, config) => {
   const {
     _id,
     name,
-    cart = [],
-    totalAmount = 0,
-    subTotal = 0,
-    shippingCost = 0,
-    discount = 0,
-    paymentMethod = 'Card',
+    email,
+    cart,
+    subTotal,
+    shippingCost,
+    discount,
+    totalAmount,
+    paymentMethod,
     firstTimeDiscount,
-    appliedCoupon, // Enhanced coupon information
+    appliedCoupons = [], // Enhanced: Multiple coupons support
+    appliedCoupon, // Legacy: Single coupon support for backward compatibility
   } = order;
 
   // Handle first-time discount display
@@ -111,22 +113,77 @@ const orderConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle enhanced coupon discount
+  // Handle multiple coupon discounts
   let couponDiscountHtml = '';
-  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
-    // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+
+  // Check for multiple coupons first (enhanced)
+  if (appliedCoupons && appliedCoupons.length > 0) {
+    const totalCouponDiscount = appliedCoupons.reduce(
+      (sum, coupon) => sum + (coupon.discount || coupon.discountAmount || 0),
+      0
+    );
+
+    if (appliedCoupons.length === 1) {
+      // Single coupon display
+      const coupon = appliedCoupons[0];
+      const discountText =
+        coupon.discountType === 'percentage'
+          ? `${coupon.originalDiscount}% off`
+          : `$${coupon.originalDiscount} off`;
+
+      couponDiscountHtml = `
+        <tr>
+          <td style="padding: 12px; text-align: right;">
+            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+              coupon.title
+            } (${discountText})</div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(coupon.discount || coupon.discountAmount)}
+          </td>
+        </tr>
+      `;
+    } else {
+      // Multiple coupons display
+      couponDiscountHtml = `
+        <tr>
+          <td style="padding: 12px; text-align: right;">
+            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">
+              ${appliedCoupons
+                .map(c => `${c.couponCode} (${c.title})`)
+                .join(', ')}
+            </div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(totalCouponDiscount)}
+          </td>
+        </tr>
+      `;
+    }
+  } else if (
+    appliedCoupon &&
+    (appliedCoupon.discount > 0 || appliedCoupon.discountAmount > 0)
+  ) {
+    // Legacy single coupon support
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
-          -${formatPrice(appliedCoupon.discountAmount)}
+          -${formatPrice(
+            appliedCoupon.discount || appliedCoupon.discountAmount
+          )}
         </td>
       </tr>
     `;
@@ -172,16 +229,65 @@ const orderConfirmationTemplate = (order, config) => {
           .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
-  // Add coupon success message if enhanced coupon was applied
+  // Add coupon success message for multiple or single coupons
   let couponSuccessMessage = '';
-  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+
+  // Handle multiple coupons
+  if (appliedCoupons && appliedCoupons.length > 0) {
+    const totalSavings = appliedCoupons.reduce(
+      (sum, coupon) => sum + (coupon.discount || coupon.discountAmount || 0),
+      0
+    );
+
+    if (appliedCoupons.length === 1) {
+      const coupon = appliedCoupons[0];
+      couponSuccessMessage = `
+      <!-- Single Coupon Success Message -->
+      <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
+        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
+        <p style="color: #075985; margin: 0; line-height: 1.6;">
+          <strong>${coupon.couponCode}</strong> - ${coupon.title}<br>
+          <span style="font-size: 14px;">You saved ${formatPrice(
+            coupon.discount || coupon.discountAmount
+          )} on this order!</span>
+        </p>
+      </div>
+      `;
+    } else {
+      const couponList = appliedCoupons
+        .map(c => `<strong>${c.couponCode}</strong> (${c.title})`)
+        .join('<br>');
+      couponSuccessMessage = `
+      <!-- Multiple Coupons Success Message -->
+      <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
+        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 ${
+          appliedCoupons.length
+        } Coupons Applied Successfully!</h4>
+        <div style="color: #075985; margin: 0; line-height: 1.6;">
+          ${couponList}<br>
+          <span style="font-size: 14px; font-weight: bold; margin-top: 10px; display: block;">Total savings: ${formatPrice(
+            totalSavings
+          )}!</span>
+        </div>
+      </div>
+      `;
+    }
+  } else if (
+    appliedCoupon &&
+    (appliedCoupon.discount > 0 || appliedCoupon.discountAmount > 0)
+  ) {
+    // Legacy single coupon support
     couponSuccessMessage = `
     <!-- Coupon Success Message -->
     <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
       <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
       <p style="color: #075985; margin: 0; line-height: 1.6;">
-        <strong>${appliedCoupon.couponCode}</strong> - ${appliedCoupon.title}<br>
-        <span style="font-size: 14px;">You saved ${formatPrice(appliedCoupon.discountAmount)} on this order!</span>
+        <strong>${appliedCoupon.couponCode}</strong> - ${
+      appliedCoupon.title
+    }<br>
+        <span style="font-size: 14px;">You saved ${formatPrice(
+          appliedCoupon.discount || appliedCoupon.discountAmount
+        )} on this order!</span>
       </p>
     </div>
     `;
@@ -343,7 +449,8 @@ const shippingConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
-    appliedCoupon, // Enhanced coupon information
+    appliedCoupons = [], // Enhanced: Multiple coupons support
+    appliedCoupon, // Legacy: Single coupon support for backward compatibility
   } = order || {};
 
   // Safety check for required fields
@@ -443,19 +550,69 @@ const shippingConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle enhanced coupon discount for shipping email
+  // Handle multiple coupon discounts for shipping email
   let couponDiscountHtml = '';
-  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
-    // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+
+  // Check for multiple coupons first (enhanced)
+  if (appliedCoupons && appliedCoupons.length > 0) {
+    const totalCouponDiscount = appliedCoupons.reduce(
+      (sum, coupon) => sum + (coupon.discountAmount || 0),
+      0
+    );
+
+    if (appliedCoupons.length === 1) {
+      // Single coupon display
+      const coupon = appliedCoupons[0];
+      const discountText =
+        coupon.discountType === 'percentage'
+          ? `${coupon.originalDiscount}% off`
+          : `$${coupon.originalDiscount} off`;
+
+      couponDiscountHtml = `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;">
+            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+              coupon.title
+            } (${discountText})</div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(coupon.discountAmount)}
+          </td>
+        </tr>
+      `;
+    } else {
+      // Multiple coupons display
+      couponDiscountHtml = `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;">
+            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">
+              ${appliedCoupons
+                .map(c => `${c.couponCode} (${c.title})`)
+                .join(', ')}
+            </div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(totalCouponDiscount)}
+          </td>
+        </tr>
+      `;
+    }
+  } else if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    // Legacy single coupon support
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -630,7 +787,8 @@ const deliveryConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
-    appliedCoupon, // Enhanced coupon information
+    appliedCoupons = [], // Enhanced: Multiple coupons support
+    appliedCoupon, // Legacy: Single coupon support for backward compatibility
   } = order || {};
 
   // Safety check for required fields
@@ -689,19 +847,69 @@ const deliveryConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Handle enhanced coupon discount for delivery email
+  // Handle multiple coupon discounts for delivery email
   let couponDiscountHtml = '';
-  if (appliedCoupon && appliedCoupon.discountAmount > 0) {
-    // Enhanced coupon display with more details
-    const discountText = appliedCoupon.discountType === 'percentage' 
-      ? `${appliedCoupon.originalDiscount}% off`
-      : `$${appliedCoupon.originalDiscount} off`;
-      
+
+  // Check for multiple coupons first (enhanced)
+  if (appliedCoupons && appliedCoupons.length > 0) {
+    const totalCouponDiscount = appliedCoupons.reduce(
+      (sum, coupon) => sum + (coupon.discountAmount || 0),
+      0
+    );
+
+    if (appliedCoupons.length === 1) {
+      // Single coupon display
+      const coupon = appliedCoupons[0];
+      const discountText =
+        coupon.discountType === 'percentage'
+          ? `${coupon.originalDiscount}% off`
+          : `$${coupon.originalDiscount} off`;
+
+      couponDiscountHtml = `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;">
+            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+              coupon.title
+            } (${discountText})</div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(coupon.discountAmount)}
+          </td>
+        </tr>
+      `;
+    } else {
+      // Multiple coupons display
+      couponDiscountHtml = `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;">
+            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">
+              ${appliedCoupons
+                .map(c => `${c.couponCode} (${c.title})`)
+                .join(', ')}
+            </div>
+          </td>
+          <td style="padding: 12px; text-align: right; color: #48bb78;">
+            -${formatPrice(totalCouponDiscount)}
+          </td>
+        </tr>
+      `;
+    }
+  } else if (appliedCoupon && appliedCoupon.discountAmount > 0) {
+    // Legacy single coupon support
+    const discountText =
+      appliedCoupon.discountType === 'percentage'
+        ? `${appliedCoupon.originalDiscount}% off`
+        : `$${appliedCoupon.originalDiscount} off`;
+
     couponDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title} (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
+            appliedCoupon.title
+          } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}

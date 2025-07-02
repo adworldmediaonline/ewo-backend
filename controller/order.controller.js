@@ -37,12 +37,15 @@ exports.paymentIntent = async (req, res, next) => {
 
     // Handle zero or negative amounts (free orders due to 100% discounts)
     if (amount <= 0) {
-      console.log('🎁 Free order detected - amount is $0 or negative:', amount / 100);
+      console.log(
+        '🎁 Free order detected - amount is $0 or negative:',
+        amount / 100
+      );
       return res.status(200).json({
         success: true,
         isFreeOrder: true,
         message: 'This is a free order - no payment required',
-        totalAmount: amount / 100
+        totalAmount: amount / 100,
       });
     }
 
@@ -52,7 +55,7 @@ exports.paymentIntent = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: 'Payment amount must be at least $0.50',
-        totalAmount: amount / 100
+        totalAmount: amount / 100,
       });
     }
 
@@ -143,12 +146,26 @@ exports.addOrder = async (req, res, next) => {
       discount: orderData.discount,
       firstTimeDiscount: orderData.firstTimeDiscount,
       totalAmount: orderData.totalAmount,
+      appliedCoupons: orderData.appliedCoupons,
+      appliedCouponsCount: orderData.appliedCoupons?.length || 0,
     });
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
       orderData.isGuestOrder = true;
     }
+
+    // Fix appliedCoupons field mapping: convert 'discount' to 'discountAmount'
+    if (orderData.appliedCoupons && Array.isArray(orderData.appliedCoupons)) {
+      orderData.appliedCoupons = orderData.appliedCoupons.map(coupon => ({
+        ...coupon,
+        discountAmount: coupon.discount || coupon.discountAmount || 0,
+        // Keep both fields for compatibility
+        discount: coupon.discount || coupon.discountAmount || 0,
+      }));
+    }
+
+    console.log('🎫 Fixed appliedCoupons data:', orderData.appliedCoupons);
 
     const order = await Order.create(orderData);
 
@@ -159,12 +176,25 @@ exports.addOrder = async (req, res, next) => {
       discount: order.discount,
       firstTimeDiscount: order.firstTimeDiscount,
       totalAmount: order.totalAmount,
+      appliedCoupons: order.appliedCoupons,
+      appliedCouponsCount: order.appliedCoupons?.length || 0,
     });
 
     // Update product quantities
     await updateProductQuantities(order.cart);
 
     // Send confirmation email using email service
+    console.log('📧 Order data for email template:', {
+      _id: order._id,
+      subTotal: order.subTotal,
+      shippingCost: order.shippingCost,
+      discount: order.discount,
+      firstTimeDiscount: order.firstTimeDiscount,
+      totalAmount: order.totalAmount,
+      appliedCoupons: order.appliedCoupons,
+      appliedCouponsCount: order.appliedCoupons?.length || 0,
+    });
+
     const emailSent = await sendOrderConfirmation(order);
 
     // Update order to mark email as sent
@@ -172,12 +202,15 @@ exports.addOrder = async (req, res, next) => {
       await Order.findByIdAndUpdate(order._id, { emailSent: true });
     }
 
-          // Send purchase event to Meta Conversions API asynchronously
-          setImmediate(() => {
-            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
-              console.error('Meta Purchase API call failed (non-blocking):', error.message);
-            });
-          });
+    // Send purchase event to Meta Conversions API asynchronously
+    setImmediate(() => {
+      CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
+        console.error(
+          'Meta Purchase API call failed (non-blocking):',
+          error.message
+        );
+      });
+    });
 
     res.status(200).json({
       success: true,
@@ -193,7 +226,9 @@ exports.addOrder = async (req, res, next) => {
 // get Orders
 exports.getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({}).populate('user').sort({ createdAt: -1 });
+    const orderItems = await Order.find({})
+      .populate('user')
+      .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       data: orderItems,
@@ -703,9 +738,14 @@ exports.handleStripeWebhook = async (req, res) => {
 
           // Send purchase event to Meta Conversions API asynchronously
           setImmediate(() => {
-            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
-              console.error('Meta Purchase API call failed (non-blocking):', error.message);
-            });
+            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(
+              error => {
+                console.error(
+                  'Meta Purchase API call failed (non-blocking):',
+                  error.message
+                );
+              }
+            );
           });
         } catch (error) {
           console.log(error);
@@ -726,12 +766,13 @@ exports.handleStripeWebhook = async (req, res) => {
 };
 
 // Add helper function for extracting client information
-const extractClientInfo = (req) => {
+const extractClientInfo = req => {
   return {
-    clientIpAddress: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
+    clientIpAddress:
+      req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
     clientUserAgent: req.headers['user-agent'],
     eventSourceUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
     fbp: req.headers['fbp'] || req.body.fbp,
-    fbc: req.headers['fbc'] || req.body.fbc
+    fbc: req.headers['fbc'] || req.body.fbc,
   };
 };
