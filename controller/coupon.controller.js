@@ -835,6 +835,18 @@ const validateMultipleCoupons = async (req, res, next) => {
   }
 };
 
+// get all coupons
+const getAllActiveCoupons = async (req, res, next) => {
+  try {
+    const coupons = await Coupon.find({
+      status: 'active',
+    }).populate('applicableProducts');
+    res.json({ success: true, data: coupons });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   addCoupon,
   addAllCoupon,
@@ -851,4 +863,5 @@ module.exports = {
   getCouponsByProduct,
   getOverallAnalytics,
   validateMultipleCoupons,
+  getAllActiveCoupons,
 };
