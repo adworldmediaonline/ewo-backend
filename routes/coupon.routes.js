@@ -16,10 +16,14 @@ const {
   getValidCoupons,
   getCouponsByProduct,
   getOverallAnalytics,
+  getAllActiveCoupons,
 } = require('../controller/coupon.controller');
 
 // Import Coupon model for debug endpoint
 const Coupon = require('../model/Coupon');
+
+// get all coupons
+router.get('/list-all', getAllActiveCoupons);
 
 // Import middleware for authentication and authorization
 const verifyToken = require('../middleware/verifyToken');
