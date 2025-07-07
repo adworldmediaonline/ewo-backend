@@ -94,7 +94,7 @@ const sendOrderConfirmation = async order => {
     // Send the email
     return await sendEmail({
       to: order.email,
-      subject: `Order Confirmation #${order._id}`,
+      subject: `Order Confirmation - ${emailConfig.storeName}`,
       html,
     });
   } catch (error) {

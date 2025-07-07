@@ -296,44 +296,31 @@ const orderConfirmationTemplate = (order, config) => {
   // Create the main content
   const content = `
     <div style="background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 30px;">
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🎉 Thank You for Your Order!</h1>
-      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your order has been received and is being processed</p>
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Your Order is Confirmed!</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Thank you for your order with East West Off Road!</p>
     </div>
 
-    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
-    <p style="font-size: 16px; line-height: 1.6;">Thank you for choosing us! Your order has been successfully received and is now being prepared for shipment. Here's a complete summary of your purchase:</p>
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Thank you for your order with East West Off Road! We're excited to let you know that your order has been successfully confirmed.</p>
 
     ${couponSuccessMessage}
 
     <!-- Order Details -->
     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #4299e1;">
-      <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 20px; font-size: 18px;">📋 Order Information</h3>
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right; color: #4299e1; font-family: 'Courier New', monospace; font-weight: bold;">#${_id}</td>
+          <td style="padding: 8px 0; text-align: right; color: #4299e1; font-family: 'Courier New', monospace; font-weight: bold;">--- ${_id} ---</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><strong>Order Date:</strong></td>
-          <td style="padding: 8px 0; text-align: right; color: #48bb78; font-weight: bold;">${formatDate()}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0;"><strong>Payment Method:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${paymentMethod}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0;"><strong>Order Status:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">
-            <span style="background-color: #ffd93d; color: #744210; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">
-              ⏳ Processing
-            </span>
-          </td>
+          <td style="padding: 8px 0;"><strong>Order Date & Time:</strong></td>
+          <td style="padding: 8px 0; text-align: right; color: #48bb78; font-weight: bold;">--- ${formatDate()} ---</td>
         </tr>
       </table>
     </div>
 
     <!-- Order Items -->
-    <h3 style="color: #2d3748; border-bottom: 2px solid #4299e1; padding-bottom: 10px; margin-top: 40px; font-size: 18px;">🛍️ Your Order Items</h3>
+    <h3 style="color: #2d3748; border-bottom: 2px solid #4299e1; padding-bottom: 10px; margin-top: 40px; font-size: 18px;">Order Summary:</h3>
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
       <thead>
         <tr style="background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);">
@@ -371,52 +358,22 @@ const orderConfirmationTemplate = (order, config) => {
 
     <!-- What's Next Section -->
     <div style="background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%); padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #38b2ac;">
-      <h4 style="color: #2d3748; margin-top: 0; margin-bottom: 15px;">⏰ What Happens Next?</h4>
-      <ul style="color: #4a5568; line-height: 1.6; margin: 0; padding-left: 20px;">
-        <li style="margin-bottom: 8px;">📦 <strong>Order Processing:</strong> We're preparing your items for shipment</li>
-        <li style="margin-bottom: 8px;">📧 <strong>Shipping Notification:</strong> You'll receive an email with tracking details once shipped</li>
-        <li style="margin-bottom: 8px;">🚚 <strong>Delivery:</strong> Your order will arrive within 3-7 business days</li>
-        <li style="margin-bottom: 8px;">💬 <strong>Questions?</strong> Contact our support team anytime</li>
-      </ul>
+      <p style="color: #4a5568; line-height: 1.6; margin: 0;">We'll notify you again as soon as your order is shipped. Meanwhile, you can track or view your order anytime by clicking the link below:</p>
     </div>
 
     <!-- Action Buttons -->
     <div style="margin: 40px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px;">
-      <p style="margin-bottom: 20px; font-size: 16px; color: #4a5568;">Manage your order and track its progress:</p>
-      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin-right: 15px;">View Order Details</a>
-      <a href="${clientUrl}/profile" style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">My Account</a>
+      <a href="${clientUrl}/profile" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">👉 View Your Order</a>
     </div>
 
-    <!-- Order Processing Timeline -->
-    <div style="background-color: #f0f8ff; padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #4299e1;">
-      <h4 style="color: #2d3748; margin-top: 0; margin-bottom: 15px;">📋 Order Processing Timeline</h4>
-      <div style="position: relative;">
-        <div style="display: flex; align-items: center; margin-bottom: 12px; color: #48bb78;">
-          <span style="width: 20px; height: 20px; background-color: #48bb78; border-radius: 50%; display: inline-block; margin-right: 12px; color: white; text-align: center; font-size: 12px; line-height: 20px;">✓</span>
-          <span style="font-weight: bold;">Order Received</span>
-          <span style="margin-left: auto; font-size: 12px; color: #718096;">${formatDate()}</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 12px; color: #ffd93d;">
-          <span style="width: 20px; height: 20px; background-color: #ffd93d; border-radius: 50%; display: inline-block; margin-right: 12px; color: #744210; text-align: center; font-size: 12px; line-height: 20px;">⏳</span>
-          <span style="font-weight: bold;">Processing</span>
-          <span style="margin-left: auto; font-size: 12px; color: #718096;">Current Status</span>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 12px; color: #a0aec0;">
-          <span style="width: 20px; height: 20px; background-color: #e2e8f0; border-radius: 50%; display: inline-block; margin-right: 12px; color: #718096; text-align: center; font-size: 12px; line-height: 20px;">📦</span>
-          <span>Shipped</span>
-          <span style="margin-left: auto; font-size: 12px; color: #718096;">Pending</span>
-        </div>
-        <div style="display: flex; align-items: center; color: #a0aec0;">
-          <span style="width: 20px; height: 20px; background-color: #e2e8f0; border-radius: 50%; display: inline-block; margin-right: 12px; color: #718096; text-align: center; font-size: 12px; line-height: 20px;">🎉</span>
-          <span>Delivered</span>
-          <span style="margin-left: auto; font-size: 12px; color: #718096;">Pending</span>
-        </div>
-      </div>
-    </div>
+    <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">If you have any questions, feel free to reach out to our support team.</p>
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px;">Thank you once again for choosing us! We truly appreciate your business.</p>
 
-    <p style="text-align: center; color: #718096; font-size: 14px; margin-top: 40px;">
-      Thank you for your business! We're excited to get your order to you as quickly as possible.
-    </p>
+    <div style="text-align: center; margin-top: 40px;">
+      <p style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Best regards,</p>
+      <p style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">Team East West Off Road</p>
+      <p style="font-size: 14px; color: #718096;">${supportEmail} | [Phone Number]</p>
+    </div>
   `;
 
   return baseTemplate({
