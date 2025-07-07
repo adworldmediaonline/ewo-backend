@@ -82,6 +82,44 @@ module.exports.getOrderByUser = async (req, res, next) => {
       },
     ]);
 
+    // total shipped order count
+    const totalShippedOrder = await Order.aggregate([
+      {
+        $match: {
+          status: 'shipped',
+          user: new mongoose.Types.ObjectId(req.user._id),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    // total cancelled order count
+    const totalCancelledOrder = await Order.aggregate([
+      {
+        $match: {
+          status: 'cancel',
+          user: new mongoose.Types.ObjectId(req.user._id),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
     // today order amount
 
     // query for orders
@@ -94,7 +132,9 @@ module.exports.getOrderByUser = async (req, res, next) => {
         totalProcessingOrder.length === 0 ? 0 : totalProcessingOrder[0].count,
       delivered:
         totalDeliveredOrder.length === 0 ? 0 : totalDeliveredOrder[0].count,
-
+      shipped: totalShippedOrder.length === 0 ? 0 : totalShippedOrder[0].count,
+      cancelled:
+        totalCancelledOrder.length === 0 ? 0 : totalCancelledOrder[0].count,
       totalDoc,
     });
   } catch (error) {
