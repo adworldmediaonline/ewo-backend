@@ -6,6 +6,7 @@ const {
   sendOrderConfirmation,
   sendShippingNotificationWithTracking,
   sendDeliveryNotificationWithTracking,
+  sendOrderCancellation,
 } = require('../services/emailService');
 const CartTrackingService = require('../services/cartTracking.service');
 
@@ -1304,7 +1305,7 @@ exports.cancelOrder = async (req, res, next) => {
           receiptNumber: refund.receipt_number,
         };
 
-        await Order.findByIdAndUpdate(
+        const updatedOrder = await Order.findByIdAndUpdate(
           orderId,
           {
             $push: { 'paymentIntent.refunds': refundData },
@@ -1312,6 +1313,15 @@ exports.cancelOrder = async (req, res, next) => {
           },
           { new: true }
         );
+
+        // Send cancellation email
+        console.log('📧 Sending order cancellation email...');
+        const emailSent = await sendOrderCancellation(updatedOrder);
+        if (emailSent) {
+          console.log('✅ Cancellation email sent successfully');
+        } else {
+          console.log('⚠️ Failed to send cancellation email');
+        }
 
         res.status(200).json({
           success: true,
@@ -1321,13 +1331,27 @@ exports.cancelOrder = async (req, res, next) => {
             amount: refund.amount / 100, // Convert back to dollars
             status: refund.status,
             receiptNumber: refund.receipt_number,
+            emailSent: emailSent,
           },
         });
       } catch (stripeError) {
         console.error('Error processing cancellation refund:', stripeError);
 
         // Still cancel the order even if refund fails
-        await Order.findByIdAndUpdate(orderId, { status: 'cancel' });
+        const cancelledOrder = await Order.findByIdAndUpdate(
+          orderId,
+          { status: 'cancel' },
+          { new: true }
+        );
+
+        // Send cancellation email even if refund failed
+        console.log('📧 Sending order cancellation email (refund failed)...');
+        const emailSent = await sendOrderCancellation(cancelledOrder);
+        if (emailSent) {
+          console.log('✅ Cancellation email sent successfully');
+        } else {
+          console.log('⚠️ Failed to send cancellation email');
+        }
 
         res.status(200).json({
           success: true,
@@ -1335,12 +1359,26 @@ exports.cancelOrder = async (req, res, next) => {
             'Order cancelled, but refund failed. Please process refund manually.',
           data: {
             refundError: stripeError.message,
+            emailSent: emailSent,
           },
         });
       }
     } else {
       // Non-card payment or free order - just cancel
-      await Order.findByIdAndUpdate(orderId, { status: 'cancel' });
+      const cancelledOrder = await Order.findByIdAndUpdate(
+        orderId,
+        { status: 'cancel' },
+        { new: true }
+      );
+
+      // Send cancellation email for non-card orders
+      console.log('📧 Sending order cancellation email (non-card payment)...');
+      const emailSent = await sendOrderCancellation(cancelledOrder);
+      if (emailSent) {
+        console.log('✅ Cancellation email sent successfully');
+      } else {
+        console.log('⚠️ Failed to send cancellation email');
+      }
 
       res.status(200).json({
         success: true,
@@ -1348,6 +1386,7 @@ exports.cancelOrder = async (req, res, next) => {
         data: {
           paymentMethod: order.paymentMethod,
           note: 'No refund processed - order was not paid by card',
+          emailSent: emailSent,
         },
       });
     }
