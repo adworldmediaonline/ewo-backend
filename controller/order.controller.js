@@ -134,13 +134,13 @@ exports.paymentIntent = async (req, res, next) => {
   }
 };
 
-// addOrder
+// addOrder - PRIMARY payment processing method (does not rely on webhooks)
 exports.addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
 
     // Log the incoming order data for debugging
-    console.log('📋 Incoming Order Data:', {
+    console.log('📋 Processing Order (Primary Payment Flow):', {
       subTotal: orderData.subTotal,
       shippingCost: orderData.shippingCost,
       discount: orderData.discount,
@@ -148,6 +148,12 @@ exports.addOrder = async (req, res, next) => {
       totalAmount: orderData.totalAmount,
       appliedCoupons: orderData.appliedCoupons,
       appliedCouponsCount: orderData.appliedCoupons?.length || 0,
+      paymentIntentId: orderData.paymentIntentId,
+      paymentMethod: orderData.paymentMethod,
+      hasPaymentInfo: !!orderData.paymentInfo,
+      paymentInfoId: orderData.paymentInfo?.id,
+      isPaid: orderData.isPaid,
+      paidAt: orderData.paidAt,
     });
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
@@ -167,9 +173,191 @@ exports.addOrder = async (req, res, next) => {
 
     console.log('🎫 Fixed appliedCoupons data:', orderData.appliedCoupons);
 
+    // PRIMARY PAYMENT PROCESSING: Capture and process payment intent data
+    // This is the main payment processing flow - does NOT rely on webhooks
+    let paymentIntentId = orderData.paymentIntentId;
+
+    // Handle both paymentIntentId and paymentInfo fields from frontend
+    if (!paymentIntentId && orderData.paymentInfo) {
+      paymentIntentId = orderData.paymentInfo.id;
+      console.log(
+        '🔄 Extracted payment intent ID from paymentInfo:',
+        paymentIntentId
+      );
+    }
+
+    if (paymentIntentId && orderData.paymentMethod === 'Card') {
+      try {
+        console.log(
+          '💳 Processing Stripe payment intent (Primary Flow):',
+          paymentIntentId
+        );
+
+        // Retrieve the payment intent from Stripe to get complete information
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          paymentIntentId,
+          {
+            expand: ['charges.data.balance_transaction'],
+          }
+        );
+
+        console.log('🔍 Retrieved payment intent:', {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount,
+          charges: paymentIntent.charges?.data?.length || 0,
+        });
+
+        // Extract charge information (needed for refunds)
+        let chargeData = null;
+        if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+          const charge = paymentIntent.charges.data[0];
+          chargeData = {
+            chargeId: charge.id,
+            receiptUrl: charge.receipt_url,
+            receiptNumber: charge.receipt_number,
+            paidAt: charge.created ? new Date(charge.created * 1000) : null,
+            stripeFee: charge.balance_transaction
+              ? charge.balance_transaction.fee
+              : null,
+            netAmount: charge.balance_transaction
+              ? charge.balance_transaction.net
+              : null,
+          };
+
+          // Extract payment method details (safe, non-sensitive info)
+          if (charge.payment_method_details) {
+            const pmDetails = charge.payment_method_details;
+            chargeData.paymentMethodDetails = {
+              type: pmDetails.type,
+            };
+
+            // Add card-specific details if available
+            if (pmDetails.card) {
+              chargeData.paymentMethodDetails.cardBrand = pmDetails.card.brand;
+              chargeData.paymentMethodDetails.cardLast4 = pmDetails.card.last4;
+              chargeData.paymentMethodDetails.cardExpMonth =
+                pmDetails.card.exp_month;
+              chargeData.paymentMethodDetails.cardExpYear =
+                pmDetails.card.exp_year;
+              chargeData.paymentMethodDetails.cardCountry =
+                pmDetails.card.country;
+              chargeData.paymentMethodDetails.cardFunding =
+                pmDetails.card.funding;
+            }
+          }
+        }
+
+        // Structure the payment intent data for storage
+        orderData.paymentIntent = {
+          id: paymentIntent.id,
+          clientSecret: paymentIntent.client_secret,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          status: paymentIntent.status,
+          paymentMethodId: paymentIntent.payment_method,
+          customerId: paymentIntent.customer,
+          createdAt: paymentIntent.created
+            ? new Date(paymentIntent.created * 1000)
+            : null,
+          refunds: [],
+          // Include charge data if available
+          ...chargeData,
+          // Store original payment intent data for reference
+          legacyData: {
+            originalAmount: paymentIntent.amount,
+            originalCurrency: paymentIntent.currency,
+            metadata: paymentIntent.metadata,
+            processedViaAddOrder: true, // Mark as processed via primary flow
+            frontendPaymentInfo: orderData.paymentInfo, // Store original frontend data
+          },
+        };
+
+        console.log(
+          '✅ Enhanced payment intent data prepared (Primary Flow):',
+          {
+            id: orderData.paymentIntent.id,
+            chargeId: orderData.paymentIntent.chargeId,
+            status: orderData.paymentIntent.status,
+            amount: orderData.paymentIntent.amount,
+            receiptUrl: orderData.paymentIntent.receiptUrl,
+          }
+        );
+      } catch (stripeError) {
+        console.error(
+          '❌ Error retrieving payment intent from Stripe:',
+          stripeError
+        );
+
+        // Fallback: Use payment intent data from frontend if available
+        if (orderData.paymentInfo && orderData.paymentInfo.id) {
+          console.log('🔄 Using fallback payment info from frontend');
+          orderData.paymentIntent = {
+            id: orderData.paymentInfo.id,
+            status: orderData.paymentInfo.status || 'succeeded',
+            amount: orderData.paymentInfo.amount || orderData.totalAmount * 100,
+            currency: orderData.paymentInfo.currency || 'usd',
+            clientSecret: orderData.paymentInfo.client_secret,
+            legacyData: {
+              fallbackMode: true,
+              processedViaAddOrder: true,
+              frontendPaymentInfo: orderData.paymentInfo,
+              stripeError: stripeError.message,
+              note: 'Used frontend payment data due to Stripe API error',
+            },
+          };
+        } else {
+          // Last resort: Create minimal payment info
+          orderData.paymentIntent = {
+            id: paymentIntentId,
+            status: 'unknown',
+            amount: orderData.totalAmount * 100,
+            currency: 'usd',
+            legacyData: {
+              error: stripeError.message,
+              fallbackMode: true,
+              processedViaAddOrder: true,
+              frontendPaymentInfo: orderData.paymentInfo,
+            },
+          };
+        }
+      }
+    } else if (orderData.paymentMethod === 'Free Order (100% Discount)') {
+      // Handle free orders
+      orderData.paymentIntent = {
+        id: 'free-order-' + Date.now(),
+        status: 'succeeded',
+        amount: 0,
+        currency: 'usd',
+        legacyData: {
+          freeOrder: true,
+          reason: '100% discount applied',
+          processedViaAddOrder: true,
+        },
+      };
+    } else if (orderData.paymentMethod === 'COD') {
+      // Handle Cash on Delivery orders
+      orderData.paymentIntent = {
+        id: 'cod-order-' + Date.now(),
+        status: 'pending',
+        amount: orderData.totalAmount * 100,
+        currency: 'usd',
+        legacyData: {
+          codOrder: true,
+          reason: 'Cash on Delivery',
+          processedViaAddOrder: true,
+        },
+      };
+    }
+
+    // Clean up frontend-only fields before saving to database
+    delete orderData.paymentInfo; // Remove frontend paymentInfo field
+    delete orderData.isPaid; // Remove frontend isPaid field
+    delete orderData.paidAt; // Remove frontend paidAt field
+
     const order = await Order.create(orderData);
 
-    console.log('✅ Order Created in Database:', {
+    console.log('✅ Order Created in Database (Primary Flow):', {
       _id: order._id,
       subTotal: order.subTotal,
       shippingCost: order.shippingCost,
@@ -178,21 +366,19 @@ exports.addOrder = async (req, res, next) => {
       totalAmount: order.totalAmount,
       appliedCoupons: order.appliedCoupons,
       appliedCouponsCount: order.appliedCoupons?.length || 0,
+      paymentIntentId: order.paymentIntent?.id,
+      chargeId: order.paymentIntent?.chargeId,
+      paymentMethod: order.paymentMethod,
     });
 
     // Update product quantities
     await updateProductQuantities(order.cart);
 
     // Send confirmation email using email service
-    console.log('📧 Order data for email template:', {
+    console.log('📧 Sending order confirmation email:', {
       _id: order._id,
-      subTotal: order.subTotal,
-      shippingCost: order.shippingCost,
-      discount: order.discount,
-      firstTimeDiscount: order.firstTimeDiscount,
-      totalAmount: order.totalAmount,
-      appliedCoupons: order.appliedCoupons,
-      appliedCouponsCount: order.appliedCoupons?.length || 0,
+      email: order.email,
+      paymentMethod: order.paymentMethod,
     });
 
     const emailSent = await sendOrderConfirmation(order);
@@ -218,7 +404,7 @@ exports.addOrder = async (req, res, next) => {
       order: order,
     });
   } catch (error) {
-    console.log(error);
+    console.log('❌ Error in addOrder (Primary Flow):', error);
     next(error);
   }
 };
@@ -603,14 +789,12 @@ async function updateProductQuantities(cartItems) {
   }
 }
 
-// later user
-// Handle Stripe webhook events
+// Handle Stripe webhook events (OPTIONAL - not required for core functionality)
 exports.handleStripeWebhook = async (req, res) => {
-  // console.log('Stripe signature header:', req.headers['stripe-signature']);
-  // console.log('Stripe webhook secret:', secret.stripe_webhook_secret);
-  // console.log('Raw body (length):', req.body.length);
-  // console.log('Webhook body (should be Buffer):', Buffer.isBuffer(req.body));
-  // res.status(200).json({ received: true });
+  // NOTE: This webhook handler is optional and not required for core payment functionality
+  // All payment data is captured during order creation in the addOrder method
+  // This webhook can be used in the future for additional payment event handling
+
   const signature = req.headers['stripe-signature'];
   let event;
 
@@ -620,150 +804,134 @@ exports.handleStripeWebhook = async (req, res) => {
       req.body,
       signature,
       secret.stripe_webhook_secret
-      // process.env.STRIPE_WEBHOOK_SECRET
     );
-    console.log('event');
-    console.log('signature', signature);
+    console.log('📡 Webhook event received:', event.type);
   } catch (err) {
-    console.log('err', err);
+    console.log('⚠️ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log('event successfully verified');
-  // Handle the event asynchronously
+  // Handle the event asynchronously (optional processing)
   try {
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
+        console.log(
+          '💳 Payment intent succeeded via webhook:',
+          paymentIntent.id
+        );
 
-        // Extract order data from metadata
-        const metadata = paymentIntent.metadata || {};
+        // Optional: Update order status or perform additional processing
+        // Note: Primary order creation happens in addOrder method, not here
 
-        // Parse cart data if available in metadata
-        let cartItems = [];
-        if (metadata.order_cart) {
-          try {
-            cartItems = JSON.parse(metadata.order_cart);
-
-            // Ensure product IDs are correctly formatted
-            cartItems = cartItems.map(item => {
-              // If ID is present, ensure it's a string
-              if (item._id) {
-                item._id = item._id.toString();
-              }
-              return item;
-            });
-          } catch (error) {
-            console.error('Failed to parse cart data:', error);
-          }
-        } else {
-          // If we have a product name but no cart data, try to find the product by name/title
-          if (metadata.order_product) {
-            try {
-              const product = await Products.findOne({
-                title: { $regex: new RegExp(metadata.order_product, 'i') },
-              });
-
-              if (product) {
-                cartItems = [
-                  {
-                    _id: product._id.toString(),
-                    title: product.title,
-                    price: paymentIntent.amount / 100,
-                    orderQuantity: 1,
-                  },
-                ];
-              } else {
-              }
-            } catch (error) {
-              console.error('Error finding product by title:', error);
-            }
-          }
-        }
-
-        // For dev/testing: Create a minimal order if metadata is insufficient
-        // This ensures at least something is saved when a payment succeeds
-        const minimalOrder = {
-          name: metadata.order_name || metadata.email || 'Customer',
-          email:
-            metadata.order_email || metadata.email || 'customer@example.com',
-          contact: metadata.order_contact || '1234567890',
-          address: metadata.order_address || 'Address from payment',
-          city: metadata.order_city || 'City',
-          country: metadata.order_country || 'Country',
-          zipCode: metadata.order_zipCode || '12345',
-          status: 'pending',
-          paymentMethod: 'Card',
-          cart:
-            cartItems.length > 0
-              ? cartItems
-              : [
-                  {
-                    title: metadata.order_product,
-                    price: paymentIntent.amount / 100,
-                    orderQuantity: 1,
-                  },
-                ],
-          subTotal: paymentIntent.amount / 100,
-          shippingCost: Number(metadata.order_shippingCost || 0),
-          discount: Number(metadata.order_discount || 0),
-          totalAmount: paymentIntent.amount / 100,
-          state: metadata.order_state || 'pending',
-          paymentIntent: {
-            id: paymentIntent.id,
-            amount: paymentIntent.amount,
-            status: paymentIntent.status,
-          },
-          isGuestOrder: !metadata.order_user,
-          user: metadata.order_user || undefined, // Make it undefined for guest checkout
-        };
-
-        try {
-          // Create the order with minimal data
-          const order = await Order.create(minimalOrder);
-
-          // Check product IDs in cart
-          const productIds = order.cart.map(item => item._id).filter(Boolean);
-
-          // Update product quantities
-          await updateProductQuantities(order.cart);
-          console.log('order', order);
-          // Send confirmation email using email service
-          const emailSent = await sendOrderConfirmation(order);
-
-          // Update order to mark email as sent
-          if (emailSent) {
-            await Order.findByIdAndUpdate(order._id, { emailSent: true });
-          }
-
-          // Send purchase event to Meta Conversions API asynchronously
-          setImmediate(() => {
-            CartTrackingService.sendPurchaseToMeta(orderData, req).catch(
-              error => {
-                console.error(
-                  'Meta Purchase API call failed (non-blocking):',
-                  error.message
-                );
-              }
-            );
-          });
-        } catch (error) {
-          console.log(error);
-        }
         break;
 
       case 'payment_intent.payment_failed':
         const failedPaymentIntent = event.data.object;
+        console.log(
+          '❌ Payment intent failed via webhook:',
+          failedPaymentIntent.id
+        );
+
+        // Optional: Handle failed payments
+        // Note: This is supplementary to main order processing
+
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`📋 Unhandled webhook event type: ${event.type}`);
     }
   } catch (error) {
-    console.error(`Error processing webhook: ${error.message}`);
+    console.error(`❌ Error processing webhook: ${error.message}`);
+    // Don't fail the webhook response - just log the error
   }
+
+  // Always respond with success to acknowledge webhook receipt
   res.status(200).json({ received: true });
 };
+
+/**
+ * Build comprehensive payment intent data from Stripe payment intent
+ * @param {Object} paymentIntent - Stripe payment intent object
+ * @returns {Object} - Structured payment intent data
+ */
+async function buildPaymentIntentData(paymentIntent) {
+  try {
+    // Extract charge information (needed for refunds)
+    let chargeData = {};
+    if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+      const charge = paymentIntent.charges.data[0];
+      chargeData = {
+        chargeId: charge.id,
+        receiptUrl: charge.receipt_url,
+        receiptNumber: charge.receipt_number,
+        paidAt: charge.created ? new Date(charge.created * 1000) : null,
+        stripeFee: charge.balance_transaction
+          ? charge.balance_transaction.fee
+          : null,
+        netAmount: charge.balance_transaction
+          ? charge.balance_transaction.net
+          : null,
+      };
+
+      // Extract payment method details (safe, non-sensitive info)
+      if (charge.payment_method_details) {
+        const pmDetails = charge.payment_method_details;
+        chargeData.paymentMethodDetails = {
+          type: pmDetails.type,
+        };
+
+        // Add card-specific details if available
+        if (pmDetails.card) {
+          chargeData.paymentMethodDetails.cardBrand = pmDetails.card.brand;
+          chargeData.paymentMethodDetails.cardLast4 = pmDetails.card.last4;
+          chargeData.paymentMethodDetails.cardExpMonth =
+            pmDetails.card.exp_month;
+          chargeData.paymentMethodDetails.cardExpYear = pmDetails.card.exp_year;
+          chargeData.paymentMethodDetails.cardCountry = pmDetails.card.country;
+          chargeData.paymentMethodDetails.cardFunding = pmDetails.card.funding;
+        }
+      }
+    }
+
+    // Structure the payment intent data for storage
+    return {
+      id: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      status: paymentIntent.status,
+      paymentMethodId: paymentIntent.payment_method,
+      customerId: paymentIntent.customer,
+      createdAt: paymentIntent.created
+        ? new Date(paymentIntent.created * 1000)
+        : null,
+      refunds: [],
+      // Include charge data if available
+      ...chargeData,
+      // Store original payment intent data for reference
+      legacyData: {
+        originalAmount: paymentIntent.amount,
+        originalCurrency: paymentIntent.currency,
+        metadata: paymentIntent.metadata,
+        webhookProcessed: true,
+      },
+    };
+  } catch (error) {
+    console.error('Error building payment intent data:', error);
+    // Return minimal data if processing fails
+    return {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      status: paymentIntent.status,
+      legacyData: {
+        error: error.message,
+        fallbackMode: true,
+      },
+    };
+  }
+}
 
 // Add helper function for extracting client information
 const extractClientInfo = req => {
@@ -775,4 +943,476 @@ const extractClientInfo = req => {
     fbp: req.headers['fbp'] || req.body.fbp,
     fbc: req.headers['fbc'] || req.body.fbc,
   };
+};
+
+/**
+ * Process refund for an order
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.processRefund = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { amount, reason = 'requested_by_customer' } = req.body;
+
+    // Validate order exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Check if order has payment intent data
+    if (
+      !order.paymentIntent ||
+      (!order.paymentIntent.chargeId && !order.paymentIntent.id)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order does not have valid payment data for refund',
+      });
+    }
+
+    // Validate refund amount
+    const maxRefundAmount = order.totalAmount * 100; // Convert to cents
+    const refundAmount = amount || maxRefundAmount;
+
+    if (refundAmount > maxRefundAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refund amount cannot exceed the order total',
+      });
+    }
+
+    // Calculate already refunded amount
+    const alreadyRefunded = order.paymentIntent.refunds.reduce(
+      (sum, refund) => sum + (refund.amount || 0),
+      0
+    );
+
+    if (alreadyRefunded + refundAmount > maxRefundAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refund amount exceeds remaining refundable amount',
+      });
+    }
+
+    console.log('💸 Processing refund:', {
+      orderId: order._id,
+      chargeId: order.paymentIntent.chargeId,
+      paymentIntentId: order.paymentIntent.id,
+      refundAmount: refundAmount,
+      reason: reason,
+    });
+
+    // Process refund through Stripe
+    let refund;
+    try {
+      if (order.paymentIntent.chargeId) {
+        // Preferred method: Use charge ID
+        console.log(
+          '💳 Using charge ID for refund:',
+          order.paymentIntent.chargeId
+        );
+        refund = await stripe.refunds.create({
+          charge: order.paymentIntent.chargeId,
+          amount: refundAmount,
+          reason: reason,
+          metadata: {
+            orderId: order._id.toString(),
+            orderNumber: order.orderId || order._id.toString(),
+          },
+        });
+      } else if (order.paymentIntent.id) {
+        // Alternative method: Use payment intent ID
+        console.log(
+          '💳 Using payment intent ID for refund:',
+          order.paymentIntent.id
+        );
+
+        // First, retrieve the payment intent to get the charge ID
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          order.paymentIntent.id,
+          {
+            expand: ['charges.data'],
+          }
+        );
+
+        console.log('🔍 Payment Intent retrieved:', {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount,
+          chargesCount: paymentIntent.charges?.data?.length || 0,
+          charges:
+            paymentIntent.charges?.data?.map(charge => ({
+              id: charge.id,
+              status: charge.status,
+              amount: charge.amount,
+            })) || [],
+        });
+
+        if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+          const chargeId = paymentIntent.charges.data[0].id;
+          console.log('💳 Retrieved charge ID from payment intent:', chargeId);
+
+          refund = await stripe.refunds.create({
+            charge: chargeId,
+            amount: refundAmount,
+            reason: reason,
+            metadata: {
+              orderId: order._id.toString(),
+              orderNumber: order.orderId || order._id.toString(),
+            },
+          });
+
+          // Update order with the charge ID for future use
+          await Order.findByIdAndUpdate(orderId, {
+            $set: { 'paymentIntent.chargeId': chargeId },
+          });
+        } else {
+          // For test mode or cases where charges aren't immediately available,
+          // try using payment intent ID directly
+          console.log(
+            '⚠️ No charges found, trying payment intent refund directly'
+          );
+
+          try {
+            refund = await stripe.refunds.create({
+              payment_intent: order.paymentIntent.id,
+              amount: refundAmount,
+              reason: reason,
+              metadata: {
+                orderId: order._id.toString(),
+                orderNumber: order.orderId || order._id.toString(),
+              },
+            });
+            console.log('✅ Refund created using payment intent ID directly');
+          } catch (directRefundError) {
+            console.error(
+              '❌ Direct payment intent refund failed:',
+              directRefundError.message
+            );
+            throw new Error(
+              `No charges found for this payment intent and direct refund failed: ${directRefundError.message}`
+            );
+          }
+        }
+      } else {
+        throw new Error('No valid payment data found for refund');
+      }
+    } catch (stripeError) {
+      console.error('❌ Stripe refund error:', stripeError);
+      return res.status(400).json({
+        success: false,
+        message: `Refund failed: ${stripeError.message}`,
+      });
+    }
+
+    console.log('✅ Stripe refund processed:', {
+      refundId: refund.id,
+      amount: refund.amount,
+      status: refund.status,
+    });
+
+    // Update order with refund information
+    const refundData = {
+      refundId: refund.id,
+      amount: refund.amount,
+      reason: refund.reason,
+      status: refund.status,
+      createdAt: new Date(),
+      receiptNumber: refund.receipt_number,
+    };
+
+    await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $push: { 'paymentIntent.refunds': refundData },
+        $set: {
+          status: refundAmount === maxRefundAmount ? 'cancel' : 'processing',
+        },
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Refund processed successfully',
+      data: {
+        refundId: refund.id,
+        amount: refund.amount / 100, // Convert back to dollars
+        status: refund.status,
+        receiptNumber: refund.receipt_number,
+      },
+    });
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    next(error);
+  }
+};
+
+/**
+ * Cancel an order (full refund if paid)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.cancelOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { reason = 'requested_by_customer' } = req.body;
+
+    // Validate order exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Check if order is already cancelled
+    if (order.status === 'cancel') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order is already cancelled',
+      });
+    }
+
+    // Check if order has been shipped
+    if (order.status === 'shipped' || order.status === 'delivered') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel order that has been shipped or delivered',
+      });
+    }
+
+    console.log('🚫 Cancelling order:', {
+      orderId: order._id,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      totalAmount: order.totalAmount,
+    });
+
+    // Process refund if order was paid by card
+    if (
+      order.paymentMethod === 'Card' &&
+      (order.paymentIntent?.chargeId || order.paymentIntent?.id)
+    ) {
+      try {
+        let refund;
+
+        if (order.paymentIntent.chargeId) {
+          // Preferred method: Use charge ID
+          console.log(
+            '💳 Using charge ID for cancellation refund:',
+            order.paymentIntent.chargeId
+          );
+          refund = await stripe.refunds.create({
+            charge: order.paymentIntent.chargeId,
+            reason: reason,
+            metadata: {
+              orderId: order._id.toString(),
+              orderNumber: order.orderId || order._id.toString(),
+              cancellation: true,
+            },
+          });
+        } else if (order.paymentIntent.id) {
+          // Alternative method: Use payment intent ID
+          console.log(
+            '💳 Using payment intent ID for cancellation refund:',
+            order.paymentIntent.id
+          );
+
+          // First, retrieve the payment intent to get the charge ID
+          const paymentIntent = await stripe.paymentIntents.retrieve(
+            order.paymentIntent.id,
+            {
+              expand: ['charges.data'],
+            }
+          );
+
+          if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+            const chargeId = paymentIntent.charges.data[0].id;
+            console.log(
+              '💳 Retrieved charge ID from payment intent for cancellation:',
+              chargeId
+            );
+
+            refund = await stripe.refunds.create({
+              charge: chargeId,
+              reason: reason,
+              metadata: {
+                orderId: order._id.toString(),
+                orderNumber: order.orderId || order._id.toString(),
+                cancellation: true,
+              },
+            });
+
+            // Update order with the charge ID for future use
+            await Order.findByIdAndUpdate(orderId, {
+              $set: { 'paymentIntent.chargeId': chargeId },
+            });
+          } else {
+            // For test mode or cases where charges aren't immediately available,
+            // try using payment intent ID directly
+            console.log(
+              '⚠️ No charges found for cancellation, trying payment intent refund directly'
+            );
+
+            try {
+              refund = await stripe.refunds.create({
+                payment_intent: order.paymentIntent.id,
+                reason: reason,
+                metadata: {
+                  orderId: order._id.toString(),
+                  orderNumber: order.orderId || order._id.toString(),
+                  cancellation: true,
+                },
+              });
+              console.log(
+                '✅ Cancellation refund created using payment intent ID directly'
+              );
+            } catch (directRefundError) {
+              console.error(
+                '❌ Direct payment intent cancellation refund failed:',
+                directRefundError.message
+              );
+              throw new Error(
+                `No charges found for this payment intent and direct cancellation refund failed: ${directRefundError.message}`
+              );
+            }
+          }
+        }
+
+        console.log('✅ Cancellation refund processed:', {
+          refundId: refund.id,
+          amount: refund.amount,
+          status: refund.status,
+        });
+
+        // Update order with refund information
+        const refundData = {
+          refundId: refund.id,
+          amount: refund.amount,
+          reason: refund.reason,
+          status: refund.status,
+          createdAt: new Date(),
+          receiptNumber: refund.receipt_number,
+        };
+
+        await Order.findByIdAndUpdate(
+          orderId,
+          {
+            $push: { 'paymentIntent.refunds': refundData },
+            $set: { status: 'cancel' },
+          },
+          { new: true }
+        );
+
+        res.status(200).json({
+          success: true,
+          message: 'Order cancelled and refund processed successfully',
+          data: {
+            refundId: refund.id,
+            amount: refund.amount / 100, // Convert back to dollars
+            status: refund.status,
+            receiptNumber: refund.receipt_number,
+          },
+        });
+      } catch (stripeError) {
+        console.error('Error processing cancellation refund:', stripeError);
+
+        // Still cancel the order even if refund fails
+        await Order.findByIdAndUpdate(orderId, { status: 'cancel' });
+
+        res.status(200).json({
+          success: true,
+          message:
+            'Order cancelled, but refund failed. Please process refund manually.',
+          data: {
+            refundError: stripeError.message,
+          },
+        });
+      }
+    } else {
+      // Non-card payment or free order - just cancel
+      await Order.findByIdAndUpdate(orderId, { status: 'cancel' });
+
+      res.status(200).json({
+        success: true,
+        message: 'Order cancelled successfully',
+        data: {
+          paymentMethod: order.paymentMethod,
+          note: 'No refund processed - order was not paid by card',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    next(error);
+  }
+};
+
+/**
+ * Get payment details for an order
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.getPaymentDetails = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    // Validate order exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Extract payment details
+    const paymentDetails = {
+      orderId: order._id,
+      orderNumber: order.orderId,
+      totalAmount: order.totalAmount,
+      paymentMethod: order.paymentMethod,
+      paymentIntent: order.paymentIntent
+        ? {
+            id: order.paymentIntent.id,
+            status: order.paymentIntent.status,
+            amount: order.paymentIntent.amount,
+            currency: order.paymentIntent.currency,
+            chargeId: order.paymentIntent.chargeId,
+            receiptUrl: order.paymentIntent.receiptUrl,
+            receiptNumber: order.paymentIntent.receiptNumber,
+            paymentMethodDetails: order.paymentIntent.paymentMethodDetails,
+            createdAt: order.paymentIntent.createdAt,
+            paidAt: order.paymentIntent.paidAt,
+            refunds: order.paymentIntent.refunds || [],
+          }
+        : null,
+      refundable:
+        order.paymentMethod === 'Card' &&
+        (order.paymentIntent?.chargeId || order.paymentIntent?.id),
+      refundedAmount:
+        order.paymentIntent?.refunds?.reduce(
+          (sum, refund) => sum + (refund.amount || 0),
+          0
+        ) || 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: paymentDetails,
+    });
+  } catch (error) {
+    console.error('Error getting payment details:', error);
+    next(error);
+  }
 };
