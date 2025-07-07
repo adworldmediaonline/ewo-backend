@@ -363,7 +363,7 @@ const orderConfirmationTemplate = (order, config) => {
 
     <!-- Action Buttons -->
     <div style="margin: 40px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px;">
-      <a href="${clientUrl}/profile" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">👉 View Your Order</a>
+      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">👉 View Your Order</a>
     </div>
 
     <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">If you have any questions, feel free to reach out to our support team.</p>
