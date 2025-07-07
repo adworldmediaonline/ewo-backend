@@ -153,9 +153,140 @@ const orderSchema = new mongoose.Schema(
       type: Object,
       required: false,
     },
+    // Enhanced Stripe payment data structure
     paymentIntent: {
-      type: Object,
-      required: false,
+      // Payment Intent details
+      id: {
+        type: String,
+        required: false,
+      },
+      clientSecret: {
+        type: String,
+        required: false,
+      },
+      amount: {
+        type: Number,
+        required: false,
+      },
+      currency: {
+        type: String,
+        required: false,
+        default: 'usd',
+      },
+      status: {
+        type: String,
+        required: false,
+      },
+      // Charge information (needed for refunds)
+      chargeId: {
+        type: String,
+        required: false,
+      },
+      paymentMethodId: {
+        type: String,
+        required: false,
+      },
+      // Customer information
+      customerId: {
+        type: String,
+        required: false,
+      },
+      // Receipt and transaction details
+      receiptUrl: {
+        type: String,
+        required: false,
+      },
+      receiptNumber: {
+        type: String,
+        required: false,
+      },
+      // Payment method details (safe, non-sensitive info)
+      paymentMethodDetails: {
+        type: {
+          type: String,
+          required: false,
+        },
+        cardBrand: {
+          type: String,
+          required: false,
+        },
+        cardLast4: {
+          type: String,
+          required: false,
+        },
+        cardExpMonth: {
+          type: Number,
+          required: false,
+        },
+        cardExpYear: {
+          type: Number,
+          required: false,
+        },
+        cardCountry: {
+          type: String,
+          required: false,
+        },
+        cardFunding: {
+          type: String,
+          required: false,
+        },
+      },
+      // Transaction fees and net amount
+      applicationFeeAmount: {
+        type: Number,
+        required: false,
+      },
+      stripeFee: {
+        type: Number,
+        required: false,
+      },
+      netAmount: {
+        type: Number,
+        required: false,
+      },
+      // Timestamps
+      createdAt: {
+        type: Date,
+        required: false,
+      },
+      paidAt: {
+        type: Date,
+        required: false,
+      },
+      // Refund information
+      refunds: [
+        {
+          refundId: {
+            type: String,
+            required: false,
+          },
+          amount: {
+            type: Number,
+            required: false,
+          },
+          reason: {
+            type: String,
+            required: false,
+          },
+          status: {
+            type: String,
+            required: false,
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+          receiptNumber: {
+            type: String,
+            required: false,
+          },
+        },
+      ],
+      // Legacy support (keeping for backward compatibility)
+      legacyData: {
+        type: Object,
+        required: false,
+      },
     },
     paymentMethod: {
       type: String,

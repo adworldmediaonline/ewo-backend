@@ -8,6 +8,9 @@ const {
   sendShippingNotification,
   sendDeliveryNotification,
   updateShippingDetails,
+  processRefund,
+  cancelOrder,
+  getPaymentDetails,
 } = require('../controller/order.controller');
 
 // router
@@ -29,5 +32,13 @@ router.post('/send-shipping-notification/:id', sendShippingNotification);
 router.post('/send-delivery-notification/:id', sendDeliveryNotification);
 // update shipping details and optionally send notification
 router.patch('/update-shipping/:id', updateShippingDetails);
+
+// Enhanced: Payment management routes
+// process refund for an order
+router.post('/refund/:orderId', processRefund);
+// cancel order (with automatic refund if applicable)
+router.post('/cancel/:orderId', cancelOrder);
+// get payment details for an order
+router.get('/payment-details/:orderId', getPaymentDetails);
 
 module.exports = router;

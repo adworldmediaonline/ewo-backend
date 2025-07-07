@@ -4,6 +4,7 @@ const {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
+  orderCancellationTemplate,
 } = require('../utils/emailTemplates');
 
 // Create nodemailer transporter
@@ -93,7 +94,7 @@ const sendOrderConfirmation = async order => {
     // Send the email
     return await sendEmail({
       to: order.email,
-      subject: `Order Confirmation #${order._id}`,
+      subject: `Order Confirmation - ${emailConfig.storeName}`,
       html,
     });
   } catch (error) {
@@ -375,10 +376,58 @@ const sendDeliveryNotificationWithTracking = async (
   }
 };
 
+/**
+ * Send order cancellation email
+ * @param {Object} order - Order data
+ * @returns {Promise<boolean>} - Success status
+ */
+const sendOrderCancellation = async order => {
+  if (!order || !order.email) {
+    console.error('Missing required order data for cancellation email');
+    return false;
+  }
+
+  try {
+    // Extract clean order data from Mongoose document
+    const cleanOrderData = order.toObject ? order.toObject() : order;
+
+    console.log('📧 Cancellation email order data:', {
+      _id: cleanOrderData._id,
+      orderId: cleanOrderData.orderId,
+      totalAmount: cleanOrderData.totalAmount,
+      paymentMethod: cleanOrderData.paymentMethod,
+    });
+
+    // Add cancellation timestamp
+    const orderWithCancellation = {
+      ...cleanOrderData,
+      cancelledAt: new Date(),
+    };
+
+    // Generate email HTML from template
+    const html = orderCancellationTemplate(orderWithCancellation, emailConfig);
+
+    // Create subject line with order ID for better tracking
+    const orderNumber = cleanOrderData.orderId || cleanOrderData._id;
+    const subject = `Your Order Has Been Cancelled - ${emailConfig.storeName}`;
+
+    // Send the email
+    return await sendEmail({
+      to: cleanOrderData.email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending order cancellation email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
   sendShippingNotificationWithTracking,
   sendDeliveryConfirmation,
   sendDeliveryNotificationWithTracking,
+  sendOrderCancellation,
 };
