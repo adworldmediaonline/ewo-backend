@@ -1,10 +1,12 @@
 const nodemailer = require('nodemailer');
 const { secret } = require('../config/secret');
+const jwt = require('jsonwebtoken');
 const {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
   orderCancellationTemplate,
+  feedbackEmailTemplate,
 } = require('../utils/emailTemplates');
 
 // Create nodemailer transporter
@@ -361,6 +363,21 @@ const sendDeliveryNotificationWithTracking = async (
 
     console.log(`Delivery notification sent successfully for order ${orderId}`);
 
+    // Automatically schedule feedback email after 15 seconds
+    console.log(
+      `📅 Auto-scheduling feedback email for order ${orderId} in 15 seconds`
+    );
+    setTimeout(async () => {
+      try {
+        await sendFeedbackEmailAfterDelay(orderId);
+      } catch (error) {
+        console.error(
+          `Failed to send feedback email for order ${orderId}:`,
+          error
+        );
+      }
+    }, 15 * 1000); // 15 seconds in milliseconds
+
     return {
       success: true,
       message: 'Delivery notification sent successfully',
@@ -423,6 +440,251 @@ const sendOrderCancellation = async order => {
   }
 };
 
+/**
+ * Generate secure token for feedback email review submission
+ * @param {string} orderId - Order ID
+ * @param {string} email - Customer email
+ * @returns {string} - JWT token
+ */
+const generateFeedbackToken = (orderId, email) => {
+  return jwt.sign(
+    {
+      orderId,
+      email,
+      purpose: 'feedback_review',
+      timestamp: Date.now(),
+    },
+    secret.jwt_secret_for_verify,
+    { expiresIn: '7d' } // Token valid for 7 days
+  );
+};
+
+/**
+ * Send feedback email after delay (called automatically after delivery)
+ * @param {string} orderId - Order ID
+ * @returns {Promise<boolean>} - Success status
+ */
+const sendFeedbackEmailAfterDelay = async orderId => {
+  try {
+    // Import Order model here to avoid circular dependency
+    const Order = require('../model/Order');
+
+    // Find the order
+    const order = await Order.findById(orderId).populate('user');
+
+    if (!order) {
+      console.error(`Order not found for feedback email: ${orderId}`);
+      return false;
+    }
+
+    if (!order.email) {
+      console.error(`Order has no email address: ${orderId}`);
+      return false;
+    }
+
+    if (order.status !== 'delivered') {
+      console.error(
+        `Order is not delivered, cannot send feedback email: ${orderId}`
+      );
+      return false;
+    }
+
+    if (order.feedbackEmailSent) {
+      console.log(`Feedback email already sent for order: ${orderId}`);
+      return false;
+    }
+
+    // Generate secure token for review submission
+    const reviewToken = generateFeedbackToken(orderId, order.email);
+
+    // Generate email HTML from template
+    const html = feedbackEmailTemplate(order, emailConfig, reviewToken);
+
+    // Create subject line
+    const orderNumber = order.orderId || order._id;
+    const subject = `⭐ How was your order? Share your experience - ${emailConfig.storeName}`;
+
+    // Send the email
+    const emailSent = await sendEmail({
+      to: order.email,
+      subject,
+      html,
+    });
+
+    if (emailSent) {
+      // Mark feedback email as sent
+      await Order.findByIdAndUpdate(orderId, {
+        feedbackEmailSent: true,
+        feedbackEmailSentAt: new Date(),
+        feedbackEmailProcessed: true,
+      });
+
+      console.log(`✅ Feedback email sent successfully for order ${orderId}`);
+      return true;
+    } else {
+      console.error(`Failed to send feedback email for order ${orderId}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error sending feedback email after delay:', error);
+    return false;
+  }
+};
+
+/**
+ * Send feedback email with embedded review form
+ * @param {Object} order - Order data
+ * @returns {Promise<boolean>} - Success status
+ */
+const sendFeedbackEmail = async order => {
+  if (!order || !order.email) {
+    console.error('Missing required order data for feedback email');
+    return false;
+  }
+
+  try {
+    // Extract clean order data from Mongoose document
+    const cleanOrderData = order.toObject ? order.toObject() : order;
+
+    console.log('📧 Feedback email order data:', {
+      _id: cleanOrderData._id,
+      email: cleanOrderData.email,
+      name: cleanOrderData.name,
+      status: cleanOrderData.status,
+    });
+
+    // Generate secure token for review submission
+    const reviewToken = generateFeedbackToken(
+      cleanOrderData._id,
+      cleanOrderData.email
+    );
+
+    // Generate email HTML from template
+    const html = feedbackEmailTemplate(
+      cleanOrderData,
+      emailConfig,
+      reviewToken
+    );
+
+    // Create subject line with order ID for better tracking
+    const orderNumber = cleanOrderData.orderId || cleanOrderData._id;
+    const subject = `📝 How was your experience? Order #${orderNumber} - ${emailConfig.storeName}`;
+
+    // Send the email
+    return await sendEmail({
+      to: cleanOrderData.email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending feedback email:', error);
+    return false;
+  }
+};
+
+/**
+ * Schedule feedback email to be sent after 3 minutes
+ * @param {string} orderId - Order ID
+ * @returns {Promise<Object>} - Result with success status and message
+ */
+const scheduleFeedbackEmail = async orderId => {
+  try {
+    // Import Order model here to avoid circular dependency
+    const Order = require('../model/Order');
+
+    // Find the order
+    const order = await Order.findById(orderId).populate('user');
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (!order.email) {
+      throw new Error('Order has no email address');
+    }
+
+    if (order.status !== 'delivered') {
+      throw new Error(
+        'Order must be delivered before feedback can be requested'
+      );
+    }
+
+    if (order.feedbackEmailSent) {
+      throw new Error('Feedback email has already been sent for this order');
+    }
+
+    // Mark feedback email as scheduled
+    const scheduledAt = new Date();
+    await Order.findByIdAndUpdate(orderId, {
+      feedbackEmailScheduledAt: scheduledAt,
+    });
+
+    console.log(
+      `📅 Feedback email scheduled for order ${orderId}, will send in 15 seconds`
+    );
+
+    // Schedule email to be sent after 15 seconds
+    setTimeout(async () => {
+      try {
+        console.log(`⏰ Sending scheduled feedback email for order ${orderId}`);
+
+        // Get fresh order data
+        const freshOrder = await Order.findById(orderId).populate('user');
+
+        if (!freshOrder) {
+          console.error(
+            `Order ${orderId} not found when trying to send feedback email`
+          );
+          return;
+        }
+
+        if (freshOrder.feedbackEmailSent) {
+          console.log(
+            `Feedback email already sent for order ${orderId}, skipping`
+          );
+          return;
+        }
+
+        // Send the feedback email
+        const emailSent = await sendFeedbackEmail(freshOrder);
+
+        if (emailSent) {
+          // Mark feedback email as sent
+          await Order.findByIdAndUpdate(orderId, {
+            feedbackEmailSent: true,
+            feedbackEmailSentAt: new Date(),
+          });
+          console.log(
+            `✅ Feedback email sent successfully for order ${orderId}`
+          );
+        } else {
+          console.error(
+            `❌ Failed to send feedback email for order ${orderId}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `Error sending scheduled feedback email for order ${orderId}:`,
+          error
+        );
+      }
+    }, 15 * 1000); // 15 seconds in milliseconds
+
+    return {
+      success: true,
+      message:
+        'Feedback email scheduled successfully. It will be sent in 15 seconds.',
+      scheduledAt: scheduledAt,
+    };
+  } catch (error) {
+    console.error('Error scheduling feedback email:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to schedule feedback email',
+    };
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
@@ -430,4 +692,6 @@ module.exports = {
   sendDeliveryConfirmation,
   sendDeliveryNotificationWithTracking,
   sendOrderCancellation,
+  scheduleFeedbackEmail,
+  sendFeedbackEmailAfterDelay,
 };

@@ -7,6 +7,7 @@ const {
   sendShippingNotificationWithTracking,
   sendDeliveryNotificationWithTracking,
   sendOrderCancellation,
+  scheduleFeedbackEmail,
 } = require('../services/emailService');
 const CartTrackingService = require('../services/cartTracking.service');
 
@@ -790,67 +791,6 @@ async function updateProductQuantities(cartItems) {
   }
 }
 
-// Handle Stripe webhook events (OPTIONAL - not required for core functionality)
-exports.handleStripeWebhook = async (req, res) => {
-  // NOTE: This webhook handler is optional and not required for core payment functionality
-  // All payment data is captured during order creation in the addOrder method
-  // This webhook can be used in the future for additional payment event handling
-
-  const signature = req.headers['stripe-signature'];
-  let event;
-
-  try {
-    // Verify the event came from Stripe
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      signature,
-      secret.stripe_webhook_secret
-    );
-    console.log('📡 Webhook event received:', event.type);
-  } catch (err) {
-    console.log('⚠️ Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event asynchronously (optional processing)
-  try {
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
-        console.log(
-          '💳 Payment intent succeeded via webhook:',
-          paymentIntent.id
-        );
-
-        // Optional: Update order status or perform additional processing
-        // Note: Primary order creation happens in addOrder method, not here
-
-        break;
-
-      case 'payment_intent.payment_failed':
-        const failedPaymentIntent = event.data.object;
-        console.log(
-          '❌ Payment intent failed via webhook:',
-          failedPaymentIntent.id
-        );
-
-        // Optional: Handle failed payments
-        // Note: This is supplementary to main order processing
-
-        break;
-
-      default:
-        console.log(`📋 Unhandled webhook event type: ${event.type}`);
-    }
-  } catch (error) {
-    console.error(`❌ Error processing webhook: ${error.message}`);
-    // Don't fail the webhook response - just log the error
-  }
-
-  // Always respond with success to acknowledge webhook receipt
-  res.status(200).json({ received: true });
-};
-
 /**
  * Build comprehensive payment intent data from Stripe payment intent
  * @param {Object} paymentIntent - Stripe payment intent object
@@ -1452,6 +1392,37 @@ exports.getPaymentDetails = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error getting payment details:', error);
+    next(error);
+  }
+};
+
+/**
+ * Trigger feedback email for delivered order (Admin only)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+exports.triggerFeedbackEmail = async (req, res, next) => {
+  const orderId = req.params.id; // Order ID from URL parameter
+
+  try {
+    // Schedule feedback email with 3-minute delay
+    const result = await scheduleFeedbackEmail(orderId);
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        scheduledAt: result.scheduledAt,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+  } catch (error) {
+    console.error('Error in triggerFeedbackEmail controller:', error);
     next(error);
   }
 };

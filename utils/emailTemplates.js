@@ -1200,9 +1200,138 @@ const orderCancellationTemplate = (order, config) => {
   });
 };
 
+/**
+ * Feedback email template with embedded review form
+ * @param {Object} order - Order data
+ * @param {Object} config - Configuration
+ * @param {string} reviewToken - Secure token for review submission
+ * @returns {string} - Complete HTML template
+ */
+const feedbackEmailTemplate = (order, config, reviewToken) => {
+  const {
+    _id,
+    orderId,
+    name,
+    email,
+    cart = [],
+    totalAmount = 0,
+    shippingDetails = {},
+  } = order || {};
+
+  const {
+    storeName = 'EWO Store',
+    supportEmail = 'support@example.com',
+    clientUrl = 'https://example.com',
+  } = config;
+
+  // Format delivery date
+  const formatDeliveredDate = () => {
+    const date = shippingDetails.deliveredDate
+      ? new Date(shippingDetails.deliveredDate)
+      : new Date();
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  // Generate product list
+  const productList = cart
+    .map(
+      item => `
+    <div style="display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+      <img src="${item.img || '/placeholder.png'}" alt="${item.title}"
+           style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
+      <div>
+        <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;">${
+          item.title
+        }</h4>
+        <p style="margin: 0; color: #666; font-size: 14px;">Quantity: ${
+          item.quantity
+        }</p>
+        <p style="margin: 0; color: #007bff; font-size: 14px; font-weight: bold;">$${
+          item.price
+        }</p>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>How was your order? - ${storeName}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; }
+        .container { max-width: 500px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 40px 30px; text-align: center; color: white; }
+        .content { padding: 40px 30px; }
+        .review-section { background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin: 20px 0; text-align: center; }
+        .star-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 25px 0; max-width: 450px; margin-left: auto; margin-right: auto; }
+        .star-button { background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%); color: white; border: none; padding: 20px 10px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: bold; text-decoration: none; display: block; transition: all 0.2s; box-shadow: 0 3px 6px rgba(0,0,0,0.15); text-align: center; }
+        .star-button:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,0.25); background: linear-gradient(135deg, #ffb300 0%, #ffa000 100%); }
+        .star-button:active { transform: translateY(0px); }
+        .rating-text { font-size: 18px; margin-bottom: 20px; color: #333; font-weight: bold; }
+        .instruction { font-size: 14px; color: #666; margin-bottom: 20px; }
+        .footer { background-color: #f8f9fa; padding: 25px; text-align: center; color: #666; font-size: 14px; }
+        @media (max-width: 600px) {
+          .container { margin: 10px; }
+          .header, .content { padding: 25px 15px; }
+          .star-buttons { grid-template-columns: 1fr; gap: 10px; max-width: 300px; }
+          .star-button { padding: 18px 12px; font-size: 14px; }
+          .review-section { padding: 20px 15px; }
+          .rating-text { font-size: 16px; }
+          .instruction { font-size: 13px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>⭐ How was your order?</h1>
+          <p style="margin-top: 15px; opacity: 0.9; font-size: 16px;">We'd love to hear about your experience</p>
+        </div>
+
+        <div class="content">
+          <div class="review-section">
+            <div class="rating-text">Please rate your experience:</div>
+            <div class="instruction">Click the button below to rate and review your order</div>
+
+            <div style="margin-top: 20px; text-align: center;">
+              <a href="http://localhost:8000/api/review/unified-feedback?token=${reviewToken}"
+                 style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 4px 8px rgba(0,123,255,0.3);">
+                ⭐ Rate & Review Your Order
+              </a>
+            </div>
+
+            <div style="margin-top: 15px; text-align: center;">
+              <p style="font-size: 12px; color: #666; margin: 0;">
+                Takes less than 2 minutes • Help other customers
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for choosing ${storeName}!</p>
+          <p style="margin-top: 10px;">Need help? Contact us at <a href="mailto:${supportEmail}" style="color: #007bff; text-decoration: none;">${supportEmail}</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
   orderCancellationTemplate,
+  feedbackEmailTemplate,
 };

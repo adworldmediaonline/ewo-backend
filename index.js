@@ -27,15 +27,15 @@ const cartRoutes = require('./routes/cart.routes');
 const cartTrackingRoutes = require('./routes/cartTracking.routes');
 const shippingRoutes = require('./routes/shipping.routes');
 const metaConversionsRoutes = require('./routes/metaConversions.routes');
-const { handleStripeWebhook } = require('./controller/order.controller');
+// const { handleStripeWebhook } = require('./controller/order.controller');
 
 // IMPORTANT: Stripe webhook route must be defined before other middleware
 // that parses the request body
-app.post(
-  '/api/order/webhook',
-  express.raw({ type: 'application/json' }),
-  handleStripeWebhook
-);
+// app.post(
+//   '/api/order/webhook',
+//   express.raw({ type: 'application/json' }),
+//   handleStripeWebhook
+// );
 
 // middleware
 app.use(cors());

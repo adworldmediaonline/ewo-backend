@@ -319,6 +319,38 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    deliveryNotificationSent: {
+      type: Boolean,
+      default: false,
+    },
+    feedbackEmailSent: {
+      type: Boolean,
+      default: false,
+    },
+    feedbackEmailScheduledAt: {
+      type: Date,
+      required: false,
+    },
+    feedbackEmailSentAt: {
+      type: Date,
+      required: false,
+    },
+    feedbackEmailProcessed: {
+      type: Boolean,
+      default: false,
+    },
+    feedbackSubmittedAt: {
+      type: Date,
+      required: false,
+    },
+    feedbackSubmissionIP: {
+      type: String,
+      required: false,
+    },
+    feedbackSubmissionUserAgent: {
+      type: String,
+      required: false,
+    },
     shippingDetails: {
       trackingNumber: {
         type: String,

@@ -87,9 +87,9 @@ exports.getSingleProduct = async (req, res, next) => {
     let product;
 
     if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
-      product = await Product.findById(idOrSlug);
+      product = await Product.findById(idOrSlug).populate('reviews');
     } else {
-      product = await Product.findOne({ slug: idOrSlug });
+      product = await Product.findOne({ slug: idOrSlug }).populate('reviews');
     }
 
     if (!product) {
