@@ -8,6 +8,8 @@ const {
   sendDeliveryNotificationWithTracking,
   sendOrderCancellation,
   scheduleFeedbackEmail,
+  diagnoseFeedbackEmail,
+  verifyEmailConfig,
 } = require('../services/emailService');
 const CartTrackingService = require('../services/cartTracking.service');
 
@@ -1423,6 +1425,45 @@ exports.triggerFeedbackEmail = async (req, res, next) => {
     }
   } catch (error) {
     console.error('Error in triggerFeedbackEmail controller:', error);
+    next(error);
+  }
+};
+
+// Diagnostic function for troubleshooting feedback email issues
+exports.diagnoseFeedbackEmail = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`🔍 Diagnostic request for order: ${id}`);
+
+    const diagnostic = await diagnoseFeedbackEmail(id);
+
+    res.status(200).json({
+      success: true,
+      diagnostic,
+    });
+  } catch (error) {
+    console.error('Error in diagnoseFeedbackEmail controller:', error);
+    next(error);
+  }
+};
+
+// Verify email configuration
+exports.verifyEmailConfiguration = async (req, res, next) => {
+  try {
+    console.log('🔍 Verifying email configuration...');
+
+    const isValid = await verifyEmailConfig();
+
+    res.status(200).json({
+      success: true,
+      emailConfigValid: isValid,
+      message: isValid
+        ? 'Email configuration is valid'
+        : 'Email configuration has issues',
+    });
+  } catch (error) {
+    console.error('Error in verifyEmailConfiguration controller:', error);
     next(error);
   }
 };

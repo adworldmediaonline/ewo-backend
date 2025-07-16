@@ -12,6 +12,8 @@ const {
   cancelOrder,
   getPaymentDetails,
   triggerFeedbackEmail,
+  diagnoseFeedbackEmail,
+  verifyEmailConfiguration,
 } = require('../controller/order.controller');
 
 // router
@@ -44,5 +46,9 @@ router.get('/payment-details/:orderId', getPaymentDetails);
 
 // trigger feedback email for delivered order (Admin only)
 router.post('/trigger-feedback/:id', triggerFeedbackEmail);
+
+// Diagnostic routes for troubleshooting
+router.get('/diagnose-feedback/:id', diagnoseFeedbackEmail);
+router.get('/verify-email-config', verifyEmailConfiguration);
 
 module.exports = router;

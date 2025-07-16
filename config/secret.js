@@ -28,4 +28,5 @@ module.exports.secret = {
 
   store_name: process.env.STORE_NAME,
   support_email: process.env.SUPPORT_EMAIL,
+  api_base_url: process.env.API_BASE_URL,
 };
