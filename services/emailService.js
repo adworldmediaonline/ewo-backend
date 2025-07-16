@@ -434,7 +434,7 @@ const sendDeliveryNotificationWithTracking = async (
           error
         );
       }
-    }, 2 * 60 * 1000); // 2 minutes in milliseconds
+    }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
     return {
       success: true,
@@ -748,12 +748,12 @@ const scheduleFeedbackEmail = async orderId => {
           error
         );
       }
-    }, 2 * 60 * 1000); // 2 minutes in milliseconds
+    }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
     return {
       success: true,
       message:
-        'Feedback email scheduled successfully. It will be sent in 2 minutes.',
+        'Feedback email scheduled successfully. It will be sent in 3 minutes.',
       scheduledAt: scheduledAt,
     };
   } catch (error) {
