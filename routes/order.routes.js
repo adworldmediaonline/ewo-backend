@@ -11,6 +11,7 @@ const {
   processRefund,
   cancelOrder,
   getPaymentDetails,
+  triggerFeedbackEmail,
 } = require('../controller/order.controller');
 
 // router
@@ -40,5 +41,8 @@ router.post('/refund/:orderId', processRefund);
 router.post('/cancel/:orderId', cancelOrder);
 // get payment details for an order
 router.get('/payment-details/:orderId', getPaymentDetails);
+
+// trigger feedback email for delivered order (Admin only)
+router.post('/trigger-feedback/:id', triggerFeedbackEmail);
 
 module.exports = router;
