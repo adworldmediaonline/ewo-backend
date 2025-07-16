@@ -32,6 +32,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Verify transporter configuration
+const verifyEmailConfig = async () => {
+  try {
+    console.log('🔍 Verifying email configuration...');
+    await transporter.verify();
+    console.log('✅ Email configuration verified successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Email configuration verification failed:', {
+      error: error.message,
+      code: error.code,
+      service: secret.email_service,
+      host: secret.email_host,
+      port: secret.email_port,
+      user: secret.email_user
+        ? secret.email_user.substring(0, 5) + '***'
+        : 'undefined',
+    });
+    return false;
+  }
+};
+
+// Verify email config on startup
+verifyEmailConfig();
+
 // Configuration for email templates
 const emailConfig = {
   storeName: secret.store_name || 'EWO Store',
@@ -46,7 +71,19 @@ const emailConfig = {
  */
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    await transporter.sendMail({
+    console.log(`📧 Attempting to send email to: ${to}`);
+    console.log(`📧 Subject: ${subject}`);
+    console.log(`📧 Email service config:`, {
+      service: secret.email_service,
+      host: secret.email_host,
+      port: secret.email_port,
+      user: secret.email_user
+        ? secret.email_user.substring(0, 5) + '***'
+        : 'undefined',
+      secure: true,
+    });
+
+    const result = await transporter.sendMail({
       from: `"${emailConfig.storeName}" <${secret.email_user}>`,
       to,
       subject,
@@ -60,10 +97,31 @@ const sendEmail = async ({ to, subject, html }) => {
       },
     });
 
-    console.log(`Email sent to ${to}`);
+    console.log(`✅ Email sent successfully to ${to}`, {
+      messageId: result.messageId,
+      response: result.response,
+    });
     return true;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('❌ Failed to send email:', {
+      error: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      to,
+      subject,
+    });
+
+    // Log specific error types for debugging
+    if (error.code === 'EAUTH') {
+      console.error('❌ Authentication failed - check email credentials');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('❌ Connection failed - check network/firewall settings');
+    } else if (error.code === 'ETIMEDOUT') {
+      console.error('❌ Connection timeout - check server connectivity');
+    }
+
     return false;
   }
 };
@@ -376,7 +434,7 @@ const sendDeliveryNotificationWithTracking = async (
           error
         );
       }
-    }, 15 * 1000); // 15 seconds in milliseconds
+    }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
     return {
       success: true,
@@ -466,6 +524,8 @@ const generateFeedbackToken = (orderId, email) => {
  */
 const sendFeedbackEmailAfterDelay = async orderId => {
   try {
+    console.log(`🔄 Processing feedback email for order: ${orderId}`);
+
     // Import Order model here to avoid circular dependency
     const Order = require('../model/Order');
 
@@ -473,29 +533,41 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     const order = await Order.findById(orderId).populate('user');
 
     if (!order) {
-      console.error(`Order not found for feedback email: ${orderId}`);
+      console.error(`❌ Order not found for feedback email: ${orderId}`);
       return false;
     }
 
+    console.log(`📋 Order found:`, {
+      orderId: order._id,
+      email: order.email,
+      status: order.status,
+      feedbackEmailSent: order.feedbackEmailSent,
+      deliveredAt: order.deliveredAt,
+    });
+
     if (!order.email) {
-      console.error(`Order has no email address: ${orderId}`);
+      console.error(`❌ Order has no email address: ${orderId}`);
       return false;
     }
 
     if (order.status !== 'delivered') {
       console.error(
-        `Order is not delivered, cannot send feedback email: ${orderId}`
+        `❌ Order is not delivered, cannot send feedback email: ${orderId} (status: ${order.status})`
       );
       return false;
     }
 
     if (order.feedbackEmailSent) {
-      console.log(`Feedback email already sent for order: ${orderId}`);
+      console.log(`⚠️ Feedback email already sent for order: ${orderId}`);
       return false;
     }
 
+    console.log(`🔐 Generating feedback token for order: ${orderId}`);
+
     // Generate secure token for review submission
     const reviewToken = generateFeedbackToken(orderId, order.email);
+
+    console.log(`📝 Generating email template for order: ${orderId}`);
 
     // Generate email HTML from template
     const html = feedbackEmailTemplate(order, emailConfig, reviewToken);
@@ -503,6 +575,8 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     // Create subject line
     const orderNumber = order.orderId || order._id;
     const subject = `⭐ How was your order? Share your experience - ${emailConfig.storeName}`;
+
+    console.log(`📧 Sending feedback email for order: ${orderId}`);
 
     // Send the email
     const emailSent = await sendEmail({
@@ -512,6 +586,8 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     });
 
     if (emailSent) {
+      console.log(`💾 Updating order record for: ${orderId}`);
+
       // Mark feedback email as sent
       await Order.findByIdAndUpdate(orderId, {
         feedbackEmailSent: true,
@@ -522,11 +598,15 @@ const sendFeedbackEmailAfterDelay = async orderId => {
       console.log(`✅ Feedback email sent successfully for order ${orderId}`);
       return true;
     } else {
-      console.error(`Failed to send feedback email for order ${orderId}`);
+      console.error(`❌ Failed to send feedback email for order ${orderId}`);
       return false;
     }
   } catch (error) {
-    console.error('Error sending feedback email after delay:', error);
+    console.error('❌ Error sending feedback email after delay:', {
+      orderId,
+      error: error.message,
+      stack: error.stack,
+    });
     return false;
   }
 };
@@ -668,12 +748,12 @@ const scheduleFeedbackEmail = async orderId => {
           error
         );
       }
-    }, 15 * 1000); // 15 seconds in milliseconds
+    }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
     return {
       success: true,
       message:
-        'Feedback email scheduled successfully. It will be sent in 15 seconds.',
+        'Feedback email scheduled successfully. It will be sent in 3 minutes.',
       scheduledAt: scheduledAt,
     };
   } catch (error) {
@@ -681,6 +761,119 @@ const scheduleFeedbackEmail = async orderId => {
     return {
       success: false,
       message: error.message || 'Failed to schedule feedback email',
+    };
+  }
+};
+
+/**
+ * Diagnostic function for troubleshooting email issues
+ * @param {string} orderId - Order ID to diagnose
+ * @returns {Object} - Diagnostic information
+ */
+const diagnoseFeedbackEmail = async orderId => {
+  try {
+    console.log(`🔍 Starting diagnostic for order: ${orderId}`);
+
+    const Order = require('../model/Order');
+    const order = await Order.findById(orderId).populate('user');
+
+    const diagnostic = {
+      orderId,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'unknown',
+      emailConfig: {
+        service: secret.email_service,
+        host: secret.email_host,
+        port: secret.email_port,
+        user: secret.email_user
+          ? secret.email_user.substring(0, 5) + '***'
+          : 'undefined',
+        hasPassword: !!secret.email_pass,
+        storeUrl: secret.client_url,
+        storeName: secret.store_name,
+      },
+      order: null,
+      issues: [],
+      recommendations: [],
+    };
+
+    // Check order existence
+    if (!order) {
+      diagnostic.issues.push('Order not found in database');
+      diagnostic.recommendations.push('Verify order ID is correct');
+      return diagnostic;
+    }
+
+    diagnostic.order = {
+      id: order._id,
+      orderId: order.orderId,
+      email: order.email,
+      status: order.status,
+      feedbackEmailSent: order.feedbackEmailSent,
+      feedbackEmailSentAt: order.feedbackEmailSentAt,
+      deliveredAt: order.deliveredAt,
+      createdAt: order.createdAt,
+    };
+
+    // Check email configuration
+    if (!secret.email_user || !secret.email_pass) {
+      diagnostic.issues.push('Email credentials missing');
+      diagnostic.recommendations.push(
+        'Check EMAIL_USER and EMAIL_PASS environment variables'
+      );
+    }
+
+    if (!secret.email_service && !secret.email_host) {
+      diagnostic.issues.push('Email service/host not configured');
+      diagnostic.recommendations.push(
+        'Set either SERVICE or HOST environment variable'
+      );
+    }
+
+    // Check order status
+    if (order.status !== 'delivered') {
+      diagnostic.issues.push(
+        `Order status is '${order.status}', not 'delivered'`
+      );
+      diagnostic.recommendations.push(
+        'Order must be delivered to send feedback email'
+      );
+    }
+
+    // Check email address
+    if (!order.email) {
+      diagnostic.issues.push('Order has no email address');
+      diagnostic.recommendations.push('Ensure order has valid email address');
+    }
+
+    // Check if already sent
+    if (order.feedbackEmailSent) {
+      diagnostic.issues.push('Feedback email already sent');
+      diagnostic.recommendations.push(
+        'Email was already sent on ' + order.feedbackEmailSentAt
+      );
+    }
+
+    // Test email configuration
+    try {
+      await transporter.verify();
+      diagnostic.emailConfigValid = true;
+    } catch (error) {
+      diagnostic.emailConfigValid = false;
+      diagnostic.issues.push(`Email configuration invalid: ${error.message}`);
+      diagnostic.recommendations.push(
+        'Check email service credentials and settings'
+      );
+    }
+
+    console.log('🔍 Diagnostic complete:', diagnostic);
+    return diagnostic;
+  } catch (error) {
+    console.error('❌ Diagnostic failed:', error);
+    return {
+      orderId,
+      error: error.message,
+      timestamp: new Date().toISOString(),
     };
   }
 };
@@ -694,4 +887,6 @@ module.exports = {
   sendOrderCancellation,
   scheduleFeedbackEmail,
   sendFeedbackEmailAfterDelay,
+  diagnoseFeedbackEmail,
+  verifyEmailConfig,
 };

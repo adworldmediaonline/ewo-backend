@@ -317,7 +317,7 @@ exports.detailedFeedback = async (req, res, next) => {
               submitBtn.disabled = true;
 
                              try {
-                 const response = await fetch('http://localhost:8000/api/review/submit-detailed-feedback', {
+                 const response = await fetch('${secret.api_base_url}/api/review/submit-detailed-feedback', {
                    method: 'POST',
                    headers: { 'Content-Type': 'application/json' },
                    body: JSON.stringify({
@@ -669,7 +669,7 @@ exports.getUnifiedFeedback = async (req, res, next) => {
               submitBtn.disabled = true;
 
               try {
-                const response = await fetch('http://localhost:8000/api/review/submit-unified-feedback', {
+                const response = await fetch('${secret.api_base_url}/api/review/submit-unified-feedback', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({

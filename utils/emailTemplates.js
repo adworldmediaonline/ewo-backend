@@ -1304,7 +1304,7 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
             <div class="instruction">Click the button below to rate and review your order</div>
 
             <div style="margin-top: 20px; text-align: center;">
-              <a href="http://localhost:8000/api/review/unified-feedback?token=${reviewToken}"
+              <a href="${secret.api_base_url}/api/review/unified-feedback?token=${reviewToken}"
                  style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 4px 8px rgba(0,123,255,0.3);">
                 ⭐ Rate & Review Your Order
               </a>
