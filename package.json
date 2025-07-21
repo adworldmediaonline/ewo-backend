@@ -14,6 +14,7 @@
     "update-price-percentage": "node scripts/update-price-percentage.js",
     "update:sku-arrangement": "node scripts/update-sku-arrangement.js",
     "update:calculated-prices": "node scripts/update-calculated-prices.js",
+    "generate:reviews": "node scripts/generate-reviews.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
