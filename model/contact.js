@@ -87,7 +87,7 @@ contactSchema.virtual('formattedDate').get(function () {
     minute: '2-digit',
   });
 });
-
+//
 // Pre-save middleware to capture additional info
 contactSchema.pre('save', function (next) {
   if (this.isNew) {
