@@ -9,21 +9,43 @@ const createContact = async (req, res, next) => {
 
     // Basic validation
     if (!name || !email || !subject || !message) {
-      return next(new ApiError('All required fields must be provided', 400));
+      return next(
+        new ApiError(
+          400,
+          'Please fill in all required fields: Name, Email, Subject, and Message.'
+        )
+      );
     }
 
-    // Rate limiting check - prevent spam (max 3 submissions per email per hour)
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return next(new ApiError(400, 'Please enter a valid email address.'));
+    }
+
+    // Length validation
+    if (name.length > 100) {
+      return next(new ApiError(400, 'Name cannot exceed 100 characters.'));
+    }
+    if (subject.length > 200) {
+      return next(new ApiError(400, 'Subject cannot exceed 200 characters.'));
+    }
+    if (message.length > 2000) {
+      return next(new ApiError(400, 'Message cannot exceed 2000 characters.'));
+    }
+
+    // Rate limiting check - prevent spam (max 5 submissions per email per hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentSubmissions = await Contact.countDocuments({
       email: email.toLowerCase(),
       createdAt: { $gte: oneHourAgo },
     });
 
-    if (recentSubmissions >= 3) {
+    if (recentSubmissions >= 5) {
       return next(
         new ApiError(
-          'Too many submissions. Please wait before submitting again.',
-          429
+          429,
+          'You have reached the submission limit of 5 messages per hour. Please wait before submitting again.'
         )
       );
     }
@@ -43,9 +65,22 @@ const createContact = async (req, res, next) => {
       userAgent,
     });
 
+    // Prepare contact data with formatted date for emails
+    const contactForEmail = {
+      ...contact.toObject(),
+      formattedDate: contact.createdAt.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }),
+    };
+
     // Send notification email to admin
     try {
-      await emailService.sendContactNotification(contact);
+      await emailService.sendContactNotification(contactForEmail);
     } catch (emailError) {
       console.error('Failed to send contact notification email:', emailError);
       // Don't fail the request if email fails
@@ -53,7 +88,7 @@ const createContact = async (req, res, next) => {
 
     // Send confirmation email to user
     try {
-      await emailService.sendContactConfirmation(contact);
+      await emailService.sendContactConfirmation(contactForEmail);
     } catch (emailError) {
       console.error('Failed to send contact confirmation email:', emailError);
       // Don't fail the request if email fails
@@ -143,7 +178,7 @@ const getContact = async (req, res, next) => {
     );
 
     if (!contact) {
-      return next(new ApiError('Contact not found', 404));
+      return next(new ApiError(404, 'Contact not found'));
     }
 
     // Mark as read when viewed
@@ -170,7 +205,7 @@ const updateContact = async (req, res, next) => {
     const contact = await Contact.findById(id);
 
     if (!contact) {
-      return next(new ApiError('Contact not found', 404));
+      return next(new ApiError(404, 'Contact not found'));
     }
 
     // Update fields
@@ -202,7 +237,7 @@ const deleteContact = async (req, res, next) => {
     const contact = await Contact.findByIdAndDelete(id);
 
     if (!contact) {
-      return next(new ApiError('Contact not found', 404));
+      return next(new ApiError(404, 'Contact not found'));
     }
 
     res.status(200).json({
