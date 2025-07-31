@@ -1,7 +1,7 @@
 const Contact = require('../model/Contact');
 const ApiError = require('../errors/api-error');
 const emailService = require('../services/emailService');
-
+//
 // Create new contact submission
 const createContact = async (req, res, next) => {
   try {
