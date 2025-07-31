@@ -1,13 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const contactController = require('../controller/contact.controller');
+const {
+  createContact,
+  getAllContacts,
+  getContact,
+  updateContact,
+  deleteContact,
+  getContactStats,
+} = require('../controller/contact.controller');
+const rateLimiter = require('../middleware/rateLimiter');
 
-// Public routes
-router.post('/submit', contactController.submitContact);
-
-router.get('/', contactController.getAllContacts);
-router.get('/:id', contactController.getContact);
-router.patch('/:id/status', contactController.updateContactStatus);
-router.delete('/:id', contactController.deleteContact);
+// Public routes - no authentication required
+router.post('/', rateLimiter.contactSubmission, createContact);
+router.get('/', getAllContacts);
+router.get('/stats', getContactStats);
+router.get('/:id', getContact);
+router.patch('/:id', updateContact);
+router.delete('/:id', deleteContact);
 
 module.exports = router;

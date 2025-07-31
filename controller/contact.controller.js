@@ -1,25 +1,130 @@
-const contactService = require('../services/contact.service');
+const Contact = require('../model/Contact');
+const ApiError = require('../errors/api-error');
+const emailService = require('../services/emailService');
 
-exports.submitContact = async (req, res, next) => {
+// Create new contact submission
+const createContact = async (req, res, next) => {
   try {
-    const contact = await contactService.createContact(req.body);
+    const { name, email, phone, subject, message } = req.body;
+
+    // Basic validation
+    if (!name || !email || !subject || !message) {
+      return next(new ApiError('All required fields must be provided', 400));
+    }
+
+    // Rate limiting check - prevent spam (max 3 submissions per email per hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentSubmissions = await Contact.countDocuments({
+      email: email.toLowerCase(),
+      createdAt: { $gte: oneHourAgo },
+    });
+
+    if (recentSubmissions >= 3) {
+      return next(
+        new ApiError(
+          'Too many submissions. Please wait before submitting again.',
+          429
+        )
+      );
+    }
+
+    // Get client info
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    // Create contact entry
+    const contact = await Contact.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone?.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+      ipAddress,
+      userAgent,
+    });
+
+    // Send notification email to admin
+    try {
+      await emailService.sendContactNotification(contact);
+    } catch (emailError) {
+      console.error('Failed to send contact notification email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    // Send confirmation email to user
+    try {
+      await emailService.sendContactConfirmation(contact);
+    } catch (emailError) {
+      console.error('Failed to send contact confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.status(201).json({
       status: 'success',
-      data: contact,
+      message: 'Contact form submitted successfully',
+      data: {
+        id: contact._id,
+        submittedAt: contact.createdAt,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
 
-exports.getAllContacts = async (req, res, next) => {
+// Get all contacts (Admin only)
+const getAllContacts = async (req, res, next) => {
   try {
-    const contacts = await contactService.getAllContacts();
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      priority,
+      isRead,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+    if (isRead !== undefined) filter.isRead = isRead === 'true';
+
+    // Search functionality
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } },
+        { message: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+    const contacts = await Contact.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('respondedBy', 'name email');
+
+    const total = await Contact.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
       status: 'success',
       results: contacts.length,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalResults: total,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
       data: contacts,
     });
   } catch (error) {
@@ -27,32 +132,24 @@ exports.getAllContacts = async (req, res, next) => {
   }
 };
 
-exports.getContact = async (req, res, next) => {
+// Get single contact (Admin only)
+const getContact = async (req, res, next) => {
   try {
-    const contact = await contactService.getContactById(req.params.id);
+    const { id } = req.params;
 
-    if (!contact) {
-      return next(new AppError('Contact not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: contact,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.updateContactStatus = async (req, res, next) => {
-  try {
-    const contact = await contactService.updateContactStatus(
-      req.params.id,
-      req.body.status
+    const contact = await Contact.findById(id).populate(
+      'respondedBy',
+      'name email'
     );
 
     if (!contact) {
-      return next(new AppError('Contact not found', 404));
+      return next(new ApiError('Contact not found', 404));
+    }
+
+    // Mark as read when viewed
+    if (!contact.isRead) {
+      contact.isRead = true;
+      await contact.save();
     }
 
     res.status(200).json({
@@ -64,19 +161,126 @@ exports.updateContactStatus = async (req, res, next) => {
   }
 };
 
-exports.deleteContact = async (req, res, next) => {
+// Update contact status (Admin only)
+const updateContact = async (req, res, next) => {
   try {
-    const contact = await contactService.deleteContact(req.params.id);
+    const { id } = req.params;
+    const { status, priority, adminNotes, respondedBy } = req.body;
+
+    const contact = await Contact.findById(id);
 
     if (!contact) {
-      return next(new AppError('Contact not found', 404));
+      return next(new ApiError('Contact not found', 404));
     }
 
-    res.status(204).json({
+    // Update fields
+    if (status) contact.status = status;
+    if (priority) contact.priority = priority;
+    if (adminNotes) contact.adminNotes = adminNotes;
+    if (respondedBy) {
+      contact.respondedBy = respondedBy;
+      contact.respondedAt = new Date();
+    }
+
+    await contact.save();
+
+    res.status(200).json({
       status: 'success',
-      data: null,
+      message: 'Contact updated successfully',
+      data: contact,
     });
   } catch (error) {
     next(error);
   }
+};
+
+// Delete contact (Admin only)
+const deleteContact = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const contact = await Contact.findByIdAndDelete(id);
+
+    if (!contact) {
+      return next(new ApiError('Contact not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Contact deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get contact statistics (Admin only)
+const getContactStats = async (req, res, next) => {
+  try {
+    const stats = await Contact.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          new: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } },
+          inProgress: {
+            $sum: { $cond: [{ $eq: ['$status', 'in-progress'] }, 1, 0] },
+          },
+          resolved: {
+            $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] },
+          },
+          closed: { $sum: { $cond: [{ $eq: ['$status', 'closed'] }, 1, 0] } },
+          unread: { $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] } },
+          highPriority: {
+            $sum: { $cond: [{ $eq: ['$priority', 'high'] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const monthlyStats = await Contact.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { '_id.year': -1, '_id.month': -1 },
+      },
+      {
+        $limit: 12,
+      },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        overview: stats[0] || {
+          total: 0,
+          new: 0,
+          inProgress: 0,
+          resolved: 0,
+          closed: 0,
+          unread: 0,
+          highPriority: 0,
+        },
+        monthly: monthlyStats,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  createContact,
+  getAllContacts,
+  getContact,
+  updateContact,
+  deleteContact,
+  getContactStats,
 };

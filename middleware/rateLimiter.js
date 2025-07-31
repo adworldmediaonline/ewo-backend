@@ -71,7 +71,39 @@ const feedbackFormLimiter = rateLimit({
   },
 });
 
+// Rate limiter for contact form submissions
+const contactSubmissionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // limit each IP to 3 contact submissions per hour
+  message: {
+    success: false,
+    message: 'Too many contact form submissions from this IP. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req, res) => {
+    const trustedIPs = ['127.0.0.1', '::1'];
+    return trustedIPs.includes(req.ip);
+  },
+  handler: (req, res) => {
+    console.warn('🚨 Rate limit exceeded for contact submission:', {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString(),
+      path: req.path,
+      body: req.body?.email || 'unknown email',
+    });
+
+    res.status(429).json({
+      success: false,
+      message: 'Too many contact submissions. Please wait before submitting again.',
+      retryAfter: Math.ceil(req.rateLimit.resetTime / 1000),
+    });
+  },
+});
+
 module.exports = {
   reviewSubmissionLimiter,
   feedbackFormLimiter,
+  contactSubmission: contactSubmissionLimiter,
 };

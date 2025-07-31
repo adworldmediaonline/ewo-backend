@@ -878,6 +878,138 @@ const diagnoseFeedbackEmail = async orderId => {
   }
 };
 
+// Send contact notification to admin
+const sendContactNotification = async (contact) => {
+  try {
+    const mailOptions = {
+      from: {
+        name: 'EWO Contact Form',
+        address: secret.email_user,
+      },
+      to: secret.admin_email || 'info@eastwestoffroad.com',
+      subject: `🔔 New Contact Form Submission - ${contact.subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+          <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #2c3e50; margin: 0; font-size: 24px;">New Contact Form Submission</h1>
+              <div style="width: 50px; height: 3px; background-color: #3498db; margin: 10px auto;"></div>
+            </div>
+            
+            <div style="background-color: #f1f3f4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Contact Details</h3>
+              <p style="margin: 5px 0; color: #555;"><strong>Name:</strong> ${contact.name}</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> <a href="mailto:${contact.email}">${contact.email}</a></p>
+              ${contact.phone ? `<p style="margin: 5px 0; color: #555;"><strong>Phone:</strong> <a href="tel:${contact.phone}">${contact.phone}</a></p>` : ''}
+              <p style="margin: 5px 0; color: #555;"><strong>Priority:</strong> <span style="color: ${contact.priority === 'high' ? '#e74c3c' : contact.priority === 'medium' ? '#f39c12' : '#27ae60'}; font-weight: bold; text-transform: uppercase;">${contact.priority}</span></p>
+              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${contact.formattedDate}</p>
+            </div>
+
+            <div style="background-color: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #2c3e50; margin: 0 0 10px 0;">Subject</h3>
+              <p style="color: #555; margin: 0; font-weight: 500;">${contact.subject}</p>
+            </div>
+
+            <div style="background-color: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+              <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Message</h3>
+              <div style="color: #555; line-height: 1.6; white-space: pre-wrap;">${contact.message}</div>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="${process.env.ADMIN_URL || 'http://localhost:3001'}/contacts/${contact._id}" 
+                 style="display: inline-block; background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                View in Admin Panel
+              </a>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #888; font-size: 12px;">
+              <p>East West Offroad Products LLC | Contact Management System</p>
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Contact notification email sent successfully');
+  } catch (error) {
+    console.error('❌ Failed to send contact notification email:', error);
+    throw error;
+  }
+};
+
+// Send confirmation email to user
+const sendContactConfirmation = async (contact) => {
+  try {
+    const mailOptions = {
+      from: {
+        name: 'East West Offroad',
+        address: secret.email_user,
+      },
+      to: contact.email,
+      subject: 'Thank you for contacting East West Offroad',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+          <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #2c3e50; margin: 0; font-size: 24px;">Thank You for Contacting Us!</h1>
+              <div style="width: 50px; height: 3px; background-color: #3498db; margin: 10px auto;"></div>
+            </div>
+            
+            <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
+              Hi <strong>${contact.name}</strong>,
+            </p>
+            
+            <p style="color: #555; line-height: 1.6; margin-bottom: 20px;">
+              Thank you for reaching out to East West Offroad! We've received your message and our team will review it promptly.
+            </p>
+
+            <div style="background-color: #f1f3f4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Your Message Summary</h3>
+              <p style="margin: 5px 0; color: #555;"><strong>Subject:</strong> ${contact.subject}</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${contact.formattedDate}</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Reference ID:</strong> ${contact._id}</p>
+            </div>
+
+            <div style="background-color: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #2c3e50; font-weight: 500;">
+                💡 <strong>What's Next?</strong>
+              </p>
+              <p style="margin: 10px 0 0 0; color: #555;">
+                Our customer service team typically responds within 24-48 hours during business days. For urgent matters, please call us at <strong>1-866-396-7623 (EWO ROAD)</strong>.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="color: #555; margin-bottom: 15px;">Need immediate assistance?</p>
+              <a href="tel:1-866-396-7623" 
+                 style="display: inline-block; background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-right: 10px;">
+                📞 Call Us
+              </a>
+              <a href="mailto:info@eastwestoffroad.com" 
+                 style="display: inline-block; background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                ✉️ Email Us
+              </a>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #888; font-size: 12px;">
+              <p><strong>East West Offroad Products LLC</strong></p>
+              <p>Phone: 1-866-396-7623 (EWO ROAD) | Email: info@eastwestoffroad.com</p>
+              <p>PO Box 2644, Everett, WA 98213</p>
+            </div>
+          </div>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Contact confirmation email sent successfully');
+  } catch (error) {
+    console.error('❌ Failed to send contact confirmation email:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendShippingConfirmation,
@@ -889,4 +1021,6 @@ module.exports = {
   sendFeedbackEmailAfterDelay,
   diagnoseFeedbackEmail,
   verifyEmailConfig,
+  sendContactNotification,
+  sendContactConfirmation,
 };
