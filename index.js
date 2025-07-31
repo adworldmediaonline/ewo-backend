@@ -63,6 +63,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/cart-tracking', cartTrackingRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/meta-conversions', metaConversionsRoutes);
+app.use('/api/contact', contactRoutes);
 
 // root route
 app.get('/', (req, res) => res.send('Apps worked successfully'));
