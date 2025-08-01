@@ -1,6 +1,6 @@
 const CartTracking = require('../model/CartTracking');
 const User = require('../model/User');
-const Product = require('../model/Products');
+const Product = require('../model/Product');
 const metaConversionsApi = require('./metaConversionsApi.service');
 const { secret } = require('../config/secret');
 
@@ -270,7 +270,7 @@ class CartTrackingService {
           },
         },
         {
-          $sort: { eventType: 1 },
+          $sort: { count: -1, eventType: 1 },
         },
       ]);
 
@@ -475,9 +475,10 @@ class CartTrackingService {
           count: { $sum: 1 },
           totalQuantity: { $sum: '$quantity' },
           avgPrice: { $avg: '$finalPrice' },
+          latestActivity: { $max: '$createdAt' },
         },
       },
-      { $sort: { count: -1 } },
+      { $sort: { count: -1, latestActivity: -1 } },
       { $limit: limit },
     ]);
   }
@@ -490,9 +491,10 @@ class CartTrackingService {
           _id: '$source',
           count: { $sum: 1 },
           percentage: { $sum: 1 },
+          latestActivity: { $max: '$createdAt' },
         },
       },
-      { $sort: { count: -1 } },
+      { $sort: { count: -1, latestActivity: -1 } },
     ]);
   }
 
@@ -503,9 +505,10 @@ class CartTrackingService {
         $group: {
           _id: '$device.type',
           count: { $sum: 1 },
+          latestActivity: { $max: '$createdAt' },
         },
       },
-      { $sort: { count: -1 } },
+      { $sort: { count: -1, latestActivity: -1 } },
     ]);
   }
 
@@ -516,9 +519,10 @@ class CartTrackingService {
         $group: {
           _id: { $hour: '$createdAt' },
           count: { $sum: 1 },
+          latestActivity: { $max: '$createdAt' },
         },
       },
-      { $sort: { _id: 1 } },
+      { $sort: { latestActivity: -1, _id: -1 } },
     ]);
   }
 
@@ -589,7 +593,7 @@ class CartTrackingService {
           lastAdded: 1,
         },
       },
-      { $sort: { totalAdds: -1 } },
+      { $sort: { totalAdds: -1, lastAdded: -1 } },
       { $limit: limit },
     ]);
   }
@@ -609,19 +613,23 @@ class CartTrackingService {
    */
   static async sendToMetaAsync(trackingRecord, eventName, requestData = {}) {
     try {
-      console.log(`🔄 [META API] sendToMetaAsync called for event: ${eventName}`);
+      console.log(
+        `🔄 [META API] sendToMetaAsync called for event: ${eventName}`
+      );
       console.log(`🔧 [META API] Request data:`, {
         clientIpAddress: requestData.clientIpAddress,
         clientUserAgent: requestData.clientUserAgent?.substring(0, 50) + '...',
-        eventSourceUrl: requestData.eventSourceUrl
+        eventSourceUrl: requestData.eventSourceUrl,
       });
-      
+
       // Check if Meta service is configured
       const metaStatus = metaConversionsApi.getStatus();
       console.log(`⚙️ [META API] Configuration status:`, metaStatus);
-      
+
       if (!metaStatus.configured) {
-        console.log('❌ [META API] Meta Conversions API not configured, skipping event');
+        console.log(
+          '❌ [META API] Meta Conversions API not configured, skipping event'
+        );
         return { success: false, error: 'Not configured' };
       }
 
@@ -636,8 +644,10 @@ class CartTrackingService {
         zipCode: trackingRecord.zipCode,
         country: trackingRecord.country || 'US',
         externalId: trackingRecord.userId,
-        clientIpAddress: trackingRecord.ipAddress || requestData.clientIpAddress,
-        clientUserAgent: trackingRecord.userAgent || requestData.clientUserAgent
+        clientIpAddress:
+          trackingRecord.ipAddress || requestData.clientIpAddress,
+        clientUserAgent:
+          trackingRecord.userAgent || requestData.clientUserAgent,
       };
 
       // Prepare product data
@@ -645,37 +655,51 @@ class CartTrackingService {
         productId: trackingRecord.productId,
         price: trackingRecord.price,
         currency: trackingRecord.currency || 'USD',
-        value: trackingRecord.price
+        value: trackingRecord.price,
       };
 
       // Prepare client info
       const clientInfo = {
         ip: requestData.clientIpAddress || trackingRecord.ipAddress,
         userAgent: requestData.clientUserAgent || trackingRecord.userAgent,
-        eventSourceUrl: requestData.eventSourceUrl || secret.store_name
+        eventSourceUrl: requestData.eventSourceUrl || secret.store_name,
       };
 
       console.log(`📤 [META API] Sending ${eventName} event with:`, {
         userData: { ...userData, email: userData.email ? '[REDACTED]' : null },
         productData,
-        clientInfo: { ...clientInfo, ip: '[REDACTED]' }
+        clientInfo: { ...clientInfo, ip: '[REDACTED]' },
       });
 
       let result;
       if (eventName === 'AddToCart') {
         console.log(`🛒 [META API] Calling sendAddToCart...`);
-        result = await metaConversionsApi.sendAddToCart(userData, productData, clientInfo);
+        result = await metaConversionsApi.sendAddToCart(
+          userData,
+          productData,
+          clientInfo
+        );
       } else {
         console.log(`📡 [META API] Calling sendEvent for ${eventName}...`);
-        result = await metaConversionsApi.sendEvent(eventName, userData, productData, clientInfo);
+        result = await metaConversionsApi.sendEvent(
+          eventName,
+          userData,
+          productData,
+          clientInfo
+        );
       }
 
-      console.log(`✅ [META API] Meta ${eventName} sent via static method:`, result.success);
+      console.log(
+        `✅ [META API] Meta ${eventName} sent via static method:`,
+        result.success
+      );
       console.log(`📋 [META API] Full result:`, result);
       return result;
-
     } catch (error) {
-      console.error('❌ [META API] Meta API static call failed:', error.message);
+      console.error(
+        '❌ [META API] Meta API static call failed:',
+        error.message
+      );
       console.error('❌ [META API] Full error:', error);
       return { success: false, error: error.message };
     }
@@ -690,7 +714,9 @@ class CartTrackingService {
     try {
       // Check if Meta service is configured
       if (!metaConversionsApi.getStatus().configured) {
-        console.log('Meta Conversions API not configured, skipping purchase event');
+        console.log(
+          'Meta Conversions API not configured, skipping purchase event'
+        );
         return { success: false, error: 'Not configured' };
       }
 
@@ -706,7 +732,7 @@ class CartTrackingService {
         country: orderData.shippingAddress?.country || 'US',
         externalId: orderData.userId,
         clientIpAddress: requestData.clientIpAddress,
-        clientUserAgent: requestData.clientUserAgent
+        clientUserAgent: requestData.clientUserAgent,
       };
 
       // Prepare purchase data - ensure value is never negative for Meta API
@@ -716,21 +742,25 @@ class CartTrackingService {
         value: purchaseValue,
         total: purchaseValue,
         currency: orderData.currency || 'USD',
-        productIds: orderData.items?.map(item => item.productId) || []
+        productIds: orderData.items?.map(item => item.productId) || [],
       };
 
       // Prepare client info
       const clientInfo = {
         ip: requestData.clientIpAddress,
         userAgent: requestData.clientUserAgent,
-        eventSourceUrl: requestData.eventSourceUrl || `${secret.store_name}/checkout/success`
+        eventSourceUrl:
+          requestData.eventSourceUrl || `${secret.store_name}/checkout/success`,
       };
 
-      const result = await metaConversionsApi.sendPurchase(userData, purchaseData, clientInfo);
+      const result = await metaConversionsApi.sendPurchase(
+        userData,
+        purchaseData,
+        clientInfo
+      );
 
       console.log(`✅ Meta Purchase sent via static method:`, result.success);
       return result;
-
     } catch (error) {
       console.error('❌ Meta Purchase API static call failed:', error.message);
       return { success: false, error: error.message };
@@ -740,87 +770,98 @@ class CartTrackingService {
   async trackEvent(eventType, data, req = null) {
     try {
       console.log(`🚀 [CART TRACKING] Starting trackEvent for: ${eventType}`);
-      console.log(`📊 [CART TRACKING] Received data:`, JSON.stringify(data, null, 2));
-      
+      console.log(
+        `📊 [CART TRACKING] Received data:`,
+        JSON.stringify(data, null, 2)
+      );
+
       // Generate session ID if not provided (for guest users)
-      const sessionId = data.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+      const sessionId =
+        data.sessionId ||
+        `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       // Extract client information
-      const clientIP = req?.ip || req?.connection?.remoteAddress || req?.headers['x-forwarded-for']?.split(',')[0] || '127.0.0.1';
+      const clientIP =
+        req?.ip ||
+        req?.connection?.remoteAddress ||
+        req?.headers['x-forwarded-for']?.split(',')[0] ||
+        '127.0.0.1';
       const userAgent = req?.headers['user-agent'] || 'Unknown';
-      
-      console.log(`🌐 [CART TRACKING] Client info - IP: ${clientIP}, User-Agent: ${userAgent}`);
-      
+
+      console.log(
+        `🌐 [CART TRACKING] Client info - IP: ${clientIP}, User-Agent: ${userAgent}`
+      );
+
       // Create cart tracking record with all required fields
       const cartTrackingData = {
         // User Information (allow null for guest users)
         userId: data.userId || null,
         sessionId: sessionId,
         userEmail: data.email || data.userEmail,
-        
+
         // Product Information (all required)
         productId: data.productId,
         productTitle: data.productTitle || data.title || 'Unknown Product',
         productSku: data.productSku || data.sku,
         productCategory: data.productCategory || data.category,
         productBrand: data.productBrand || data.brand,
-        
+
         // Pricing Information (all required)
         originalPrice: parseFloat(data.originalPrice || data.price) || 0,
         markedUpPrice: parseFloat(data.markedUpPrice || data.price) || 0,
         finalPrice: parseFloat(data.finalPrice || data.price) || 0,
         discountPercentage: parseFloat(data.discountPercentage) || 0,
-        
+
         // Cart Context
         quantity: parseInt(data.quantity) || 1,
         selectedOption: data.selectedOption,
         cartItemsCount: parseInt(data.cartItemsCount) || 0,
         cartTotalValue: parseFloat(data.cartTotalValue) || 0,
-        
+
         // User Behavior
         timeOnProductPage: parseInt(data.timeOnProductPage) || 0,
         source: data.source || 'product-page', // Required field with default
         referrer: data.referrer || req?.headers['referer'],
-        
+
         // Technical Information
         device: {
           type: data.device?.type || this.parseDeviceType(userAgent),
           browser: data.device?.browser || this.parseBrowser(userAgent),
           os: data.device?.os || this.parseOS(userAgent),
-          screenResolution: data.device?.screenResolution
+          screenResolution: data.device?.screenResolution,
         },
         location: {
           country: data.country || 'US',
           city: data.city,
-          timezone: data.timezone
+          timezone: data.timezone,
         },
         ipAddress: this.anonymizeIP(clientIP),
-        
+
         // Conversion Tracking
         isFirstTimeUser: data.isFirstTimeUser || false,
         isReturningCustomer: data.isReturningCustomer || false,
         previousPurchases: parseInt(data.previousPurchases) || 0,
-        
+
         // Event Type
         eventType: eventType,
-        
+
         // UTM Parameters
         utmParams: {
           source: data.utm_source,
           medium: data.utm_medium,
           campaign: data.utm_campaign,
           term: data.utm_term,
-          content: data.utm_content
+          content: data.utm_content,
         },
-        
+
         // Metadata
         campaignSource: data.campaignSource,
         campaignMedium: data.campaignMedium,
         campaignName: data.campaignName,
-        
+
         // Processing Status
         isProcessed: false,
-        processingErrors: []
+        processingErrors: [],
       };
 
       // Add optional user information if available
@@ -833,13 +874,15 @@ class CartTrackingService {
         productTitle: cartTrackingData.productTitle,
         eventType: cartTrackingData.eventType,
         userId: cartTrackingData.userId,
-        sessionId: cartTrackingData.sessionId
+        sessionId: cartTrackingData.sessionId,
       });
 
       // Save to database
       const cartTracking = new CartTracking(cartTrackingData);
       await cartTracking.save();
-      console.log(`✅ [CART TRACKING] Database save successful, ID: ${cartTracking._id}`);
+      console.log(
+        `✅ [CART TRACKING] Database save successful, ID: ${cartTracking._id}`
+      );
 
       // Send to Meta Conversions API asynchronously (fire-and-forget)
       if (eventType === 'add_to_cart') {
@@ -848,27 +891,33 @@ class CartTrackingService {
           CartTrackingService.sendToMetaAsync(cartTrackingData, 'AddToCart', {
             clientIpAddress: clientIP,
             clientUserAgent: userAgent,
-            eventSourceUrl: req?.headers['referer'] || secret.store_name
+            eventSourceUrl: req?.headers['referer'] || secret.store_name,
           }).catch(error => {
-            console.error('❌ [META API] Meta API call failed (non-blocking):', error.message);
+            console.error(
+              '❌ [META API] Meta API call failed (non-blocking):',
+              error.message
+            );
           });
         });
       }
 
-      console.log(`✅ Cart tracking event saved: ${eventType} for ${data.userId ? 'user ' + data.userId : 'guest'}`);
-      
+      console.log(
+        `✅ Cart tracking event saved: ${eventType} for ${
+          data.userId ? 'user ' + data.userId : 'guest'
+        }`
+      );
+
       return {
         success: true,
         trackingId: cartTracking._id,
         eventType: eventType,
-        timestamp: cartTracking.createdAt
+        timestamp: cartTracking.createdAt,
       };
-
     } catch (error) {
       console.error('❌ Cart tracking error:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -877,7 +926,12 @@ class CartTrackingService {
   parseDeviceType(userAgent) {
     if (!userAgent) return 'unknown';
     const ua = userAgent.toLowerCase();
-    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) return 'mobile';
+    if (
+      ua.includes('mobile') ||
+      ua.includes('android') ||
+      ua.includes('iphone')
+    )
+      return 'mobile';
     if (ua.includes('tablet') || ua.includes('ipad')) return 'tablet';
     return 'desktop';
   }
@@ -899,7 +953,8 @@ class CartTrackingService {
     if (ua.includes('mac')) return 'macos';
     if (ua.includes('linux')) return 'linux';
     if (ua.includes('android')) return 'android';
-    if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) return 'ios';
+    if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad'))
+      return 'ios';
     return 'unknown';
   }
 

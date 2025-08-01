@@ -1,43 +1,34 @@
 const CartTrackingService = require('../services/cartTracking.service');
+const Product = require('../model/Product');
 
 // Track add to cart event
 exports.trackAddToCart = async (req, res, next) => {
   try {
-    console.log(`🎯 [CONTROLLER] trackAddToCart endpoint called`);
-    console.log(`📥 [CONTROLLER] Request body:`, JSON.stringify(req.body, null, 2));
-    console.log(`🌐 [CONTROLLER] Request headers:`, {
-      'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
-      'referer': req.headers['referer'],
-      'x-forwarded-for': req.headers['x-forwarded-for'],
-      'origin': req.headers['origin']
-    });
-    
     const cartTrackingService = new CartTrackingService();
-    const result = await cartTrackingService.trackEvent('add_to_cart', req.body, req);
-    
-    console.log(`📊 [CONTROLLER] Service result:`, result);
-    
+    const result = await cartTrackingService.trackEvent(
+      'add_to_cart',
+      req.body,
+      req
+    );
+
     if (result.success) {
-      console.log(`✅ [CONTROLLER] Tracking successful, sending 201 response`);
       res.status(201).json({
         success: true,
         message: 'Add to cart event tracked successfully',
-        data: result
+        data: result,
       });
     } else {
-      console.log(`❌ [CONTROLLER] Tracking failed:`, result.error);
       res.status(400).json({
         success: false,
         message: 'Failed to track add to cart event',
-        error: result.error
+        error: result.error,
       });
     }
   } catch (error) {
-    console.error('Add to cart tracking error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -61,7 +52,6 @@ exports.trackCartAction = async (req, res, next) => {
       data: { action, sessionId, timestamp: new Date() },
     });
   } catch (error) {
-    console.error('Error tracking cart action:', error);
     next(error);
   }
 };
@@ -97,7 +87,6 @@ exports.getCartAnalytics = async (req, res, next) => {
       data: analytics.data,
     });
   } catch (error) {
-    console.error('Error getting cart analytics:', error);
     next(error);
   }
 };
@@ -121,7 +110,6 @@ exports.getCartConversionFunnel = async (req, res, next) => {
       data: funnel.data,
     });
   } catch (error) {
-    console.error('Error getting cart conversion funnel:', error);
     next(error);
   }
 };
@@ -152,7 +140,6 @@ exports.getPopularProducts = async (req, res, next) => {
       data: popularProducts,
     });
   } catch (error) {
-    console.error('Error getting popular products:', error);
     next(error);
   }
 };
@@ -177,7 +164,7 @@ exports.getUserCartJourney = async (req, res, next) => {
 
     const CartTracking = require('../model/CartTracking');
     const journey = await CartTracking.find(query)
-      .populate('productId', 'title price category brand')
+      .populate('productId', 'title price category.name sku')
       .sort({ createdAt: 1 })
       .lean();
 
@@ -187,7 +174,6 @@ exports.getUserCartJourney = async (req, res, next) => {
       data: journey,
     });
   } catch (error) {
-    console.error('Error getting user cart journey:', error);
     next(error);
   }
 };
@@ -218,7 +204,6 @@ exports.markAsConverted = async (req, res, next) => {
       data: { orderId, timestamp: new Date() },
     });
   } catch (error) {
-    console.error('Error marking as converted:', error);
     next(error);
   }
 };
@@ -247,7 +232,6 @@ exports.getCartTrackingStats = async (req, res, next) => {
       data: stats,
     });
   } catch (error) {
-    console.error('Error getting cart tracking stats:', error);
     next(error);
   }
 };
@@ -272,7 +256,6 @@ exports.bulkTrackCartEvents = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    console.error('Error in bulk tracking:', error);
     next(error);
   }
 };
@@ -382,7 +365,7 @@ exports.getCartTrackingEvents = async (req, res, next) => {
 
     const [events, total] = await Promise.all([
       CartTracking.find(filter)
-        .populate('productId', 'title price category brand')
+        .populate('productId', 'title price category.name sku')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
