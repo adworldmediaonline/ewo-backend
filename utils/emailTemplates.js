@@ -134,7 +134,7 @@ const orderConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td style="padding: 12px; text-align: right;">
-            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            Coupon Applied: <strong>${coupon.couponCode}</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
               coupon.title
             } (${discountText})</div>
@@ -149,7 +149,7 @@ const orderConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td style="padding: 12px; text-align: right;">
-            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
                 .map(c => `${c.couponCode} (${c.title})`)
@@ -244,7 +244,7 @@ const orderConfirmationTemplate = (order, config) => {
       couponSuccessMessage = `
       <!-- Single Coupon Success Message -->
       <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
-        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
+        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">Coupon Applied Successfully!</h4>
         <p style="color: #075985; margin: 0; line-height: 1.6;">
           <strong>${coupon.couponCode}</strong> - ${coupon.title}<br>
           <span style="font-size: 14px;">You saved ${formatPrice(
@@ -260,7 +260,7 @@ const orderConfirmationTemplate = (order, config) => {
       couponSuccessMessage = `
       <!-- Multiple Coupons Success Message -->
       <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
-        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 ${
+        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">${
           appliedCoupons.length
         } Coupons Applied Successfully!</h4>
         <div style="color: #075985; margin: 0; line-height: 1.6;">
@@ -280,7 +280,7 @@ const orderConfirmationTemplate = (order, config) => {
     couponSuccessMessage = `
     <!-- Coupon Success Message -->
     <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
-      <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">🎫 Coupon Applied Successfully!</h4>
+              <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">Coupon Applied Successfully!</h4>
       <p style="color: #075985; margin: 0; line-height: 1.6;">
         <strong>${appliedCoupon.couponCode}</strong> - ${
       appliedCoupon.title
@@ -528,7 +528,7 @@ const shippingConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
-            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            Coupon Applied: <strong>${coupon.couponCode}</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
               coupon.title
             } (${discountText})</div>
@@ -543,7 +543,7 @@ const shippingConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
-            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
                 .map(c => `${c.couponCode} (${c.title})`)
@@ -825,7 +825,7 @@ const deliveryConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
-            🎫 Coupon Applied: <strong>${coupon.couponCode}</strong>
+            Coupon Applied: <strong>${coupon.couponCode}</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
               coupon.title
             } (${discountText})</div>
@@ -840,7 +840,7 @@ const deliveryConfirmationTemplate = (order, config) => {
       couponDiscountHtml = `
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
-            🎫 <strong>${appliedCoupons.length} Coupons Applied</strong>
+            <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
                 .map(c => `${c.couponCode} (${c.title})`)
