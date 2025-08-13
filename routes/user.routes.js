@@ -14,6 +14,8 @@ router.patch('/confirm-forget-password', userController.confirmForgetPassword);
 router.patch('/change-password', userController.changePassword);
 // confirmEmail
 router.get('/confirmEmail/:token', userController.confirmEmail);
+// resendVerification
+router.post('/resend-verification', userController.resendVerification);
 // updateUser
 router.put('/update-user/:id', userController.updateUser);
 // register or login with google

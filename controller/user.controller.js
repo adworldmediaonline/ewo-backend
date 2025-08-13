@@ -11,10 +11,20 @@ exports.signup = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Email already exists',
-      });
+      if (user.status === 'active') {
+        return res.status(400).json({
+          status: 'fail',
+          error:
+            'An account with this email already exists and is active. Please try logging in instead.',
+        });
+      } else {
+        return res.status(400).json({
+          status: 'fail',
+          error:
+            'An account with this email exists but is not activated. Please check your email for the verification link or request a new one.',
+          resendAvailable: true,
+        });
+      }
     } else {
       console.log('req.body', req.body);
       const saved_user = await User.create(req.body);
@@ -118,7 +128,8 @@ module.exports.login = async (req, res, next) => {
     if (user.status != 'active') {
       return res.status(401).json({
         status: 'fail',
-        error: 'Your account is not active yet.',
+        error:
+          'Please check your email and click the activation link to activate your account before logging in.',
       });
     }
 
@@ -179,6 +190,107 @@ exports.confirmEmail = async (req, res, next) => {
         token: accessToken,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// resendVerification
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        status: 'fail',
+        error: 'Email is required',
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        error: 'No account found with this email address',
+      });
+    }
+
+    if (user.status === 'active') {
+      return res.status(400).json({
+        status: 'fail',
+        error: 'Account is already activated',
+      });
+    }
+
+    // Check if user recently requested verification (rate limiting)
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    if (
+      user.confirmationTokenExpires &&
+      user.confirmationTokenExpires > oneMinuteAgo
+    ) {
+      const timeLeft = Math.ceil(
+        (user.confirmationTokenExpires - oneMinuteAgo) / 1000
+      );
+      return res.status(429).json({
+        status: 'fail',
+        error: `Please wait ${timeLeft} seconds before requesting another verification email`,
+      });
+    }
+
+    // Generate new verification token
+    const token = user.generateConfirmationToken();
+    await user.save({ validateBeforeSave: false });
+
+    const mailData = {
+      from: {
+        name: 'EWO Support',
+        address: secret.email_user,
+      },
+      to: email,
+      subject: 'EWO Account Verification - Resent',
+      html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Your Account</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          <tr>
+            <td style="padding: 20px; background-color: #f7f7f7; text-align: center;">
+              <h2 style="margin: 0; color: #0989FF;">Hello ${user.name}</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px;">
+              <p>We've sent you a new verification link as requested. Please verify your email address to access your EWO account.</p>
+              <p>This verification link will expire in <strong>10 minutes</strong>.</p>
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="${secret.client_url}/email-verify/${token}" style="background-color: #0989FF; color: white; text-decoration: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; display: inline-block;">Verify My Account</a>
+              </p>
+              <p style="font-size: 13px; color: #666;">If you did not request this verification email, please disregard this email.</p>
+              <p style="font-size: 13px; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
+              <p style="font-size: 13px; word-break: break-all;"><a href="${secret.client_url}/email-verify/${token}" style="color: #0989FF;">${secret.client_url}/email-verify/${token}</a></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px; background-color: #f7f7f7; text-align: center; font-size: 13px;">
+              <p style="margin-bottom: 5px;">Thank you for choosing EWO</p>
+              <p style="margin-top: 0; font-weight: bold;">The EWO Team</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+      `,
+    };
+
+    const message =
+      'Verification email sent successfully! Please check your email to activate your account.';
+    sendEmail(mailData, res, message);
   } catch (error) {
     next(error);
   }

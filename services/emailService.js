@@ -1025,7 +1025,7 @@ const sendContactConfirmation = async contact => {
                 💡 <strong>What's Next?</strong>
               </p>
               <p style="margin: 10px 0 0 0; color: #555;">
-                Our customer service team typically responds within 24-48 hours during business days. For urgent matters, please call us at <strong>1-866-396-7623 (EWO ROAD)</strong>.
+                Our customer service team typically responds within 24-48 hours during business days. For urgent matters, please call us at <strong>1-866-EWO-ROAD (396-7623)</strong>.
               </p>
             </div>
 
@@ -1043,7 +1043,7 @@ const sendContactConfirmation = async contact => {
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #888; font-size: 12px;">
               <p><strong>East West Offroad Products LLC</strong></p>
-              <p>Phone: 1-866-396-7623 (EWO ROAD) | Email: info@eastwestoffroad.com</p>
+              <p>Phone: 1-866-EWO-ROAD (396-7623) | Email: info@eastwestoffroad.com</p>
               <p>PO Box 2644, Everett, WA 98213</p>
             </div>
           </div>
