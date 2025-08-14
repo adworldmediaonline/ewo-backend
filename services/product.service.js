@@ -46,7 +46,78 @@ exports.addAllProductService = async data => {
   return products;
 };
 
-// get product data
+// get product data with pagination, filtering, and search
+exports.getPaginatedProductsService = async (filters = {}) => {
+  const {
+    page = 1,
+    limit = 15,
+    search = '',
+    category = '',
+    minPrice = '',
+    maxPrice = '',
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+  } = filters;
+
+  // Build query
+  const query = {};
+
+  // Search functionality
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    query.$or = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { sku: searchRegex },
+      { 'category.name': searchRegex },
+    ];
+  }
+
+  // Category filter
+  if (category) {
+    query['category.name'] = new RegExp(category, 'i');
+  }
+
+  // Price range filter
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseFloat(minPrice);
+    if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+  }
+
+  // Build sort object
+  const sortQuery = {};
+  sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  // Calculate skip value
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Execute query with pagination
+  const [products, total] = await Promise.all([
+    Product.find(query)
+      .populate('reviews')
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select(
+        'title slug img imageURLs price finalPriceDiscount category status quantity'
+      ),
+    Product.countDocuments(query),
+  ]);
+
+  return {
+    products,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalProducts: total,
+      hasNextPage: skip + products.length < total,
+      hasPrevPage: parseInt(page) > 1,
+    },
+  };
+};
+
+// get all product data
 exports.getAllProductsService = async () => {
   const products = await Product.find({})
     .populate('reviews')

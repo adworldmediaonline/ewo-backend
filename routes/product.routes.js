@@ -13,6 +13,8 @@ router.post('/add', productController.addProduct);
 router.post('/add-all', productController.addAllProducts);
 // get all products
 router.get('/all', productController.getAllProducts);
+// get paginated products with filters
+router.get('/paginated', productController.getPaginatedProducts);
 // get offer timer product
 router.get('/offer', productController.getOfferTimerProducts);
 // top rated products

@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 
 // add product
 exports.addProduct = async (req, res, next) => {
-  console.log('product--->', req.body);
   try {
     const result = await productServices.createProductService({
       ...req.body,
@@ -14,8 +13,6 @@ exports.addProduct = async (req, res, next) => {
         : [req.body.img],
     });
 
-    console.log('product-result', result);
-
     res.status(200).json({
       success: true,
       status: 'success',
@@ -23,7 +20,6 @@ exports.addProduct = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
@@ -35,6 +31,32 @@ module.exports.addAllProducts = async (req, res, next) => {
     res.json({
       message: 'Products added successfully',
       result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// get paginated products with filters and search
+exports.getPaginatedProducts = async (req, res, next) => {
+  try {
+    const filters = {
+      page: req.query.page || 1,
+      limit: req.query.limit || 15,
+      search: req.query.search || '',
+      category: req.query.category || '',
+      minPrice: req.query.minPrice || '',
+      maxPrice: req.query.maxPrice || '',
+      sortBy: req.query.sortBy || 'createdAt',
+      sortOrder: req.query.sortOrder || 'desc',
+    };
+
+    const result = await productServices.getPaginatedProductsService(filters);
+
+    res.status(200).json({
+      success: true,
+      data: result.products,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);
@@ -230,8 +252,6 @@ exports.getProductSuggestions = async (req, res) => {
       { $limit: 10 },
       { $sort: { createdAt: -1 } },
     ]);
-
-    console.log('Found suggestions with images:', suggestions);
 
     return res.status(200).json({
       success: true,
