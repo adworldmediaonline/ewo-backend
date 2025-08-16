@@ -55,8 +55,8 @@ exports.getPaginatedProductsService = async (filters = {}) => {
     category = '',
     minPrice = '',
     maxPrice = '',
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
+    sortBy = 'skuArrangementOrderNo',
+    sortOrder = 'asc',
   } = filters;
 
   // Build query
@@ -100,7 +100,7 @@ exports.getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount category status quantity'
+        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity'
       ),
     Product.countDocuments(query),
   ]);
