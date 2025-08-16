@@ -50,9 +50,10 @@ exports.addAllProductService = async data => {
 exports.getPaginatedProductsService = async (filters = {}) => {
   const {
     page = 1,
-    limit = 15,
+    limit = 8,
     search = '',
     category = '',
+    subcategory = '',
     minPrice = '',
     maxPrice = '',
     sortBy = 'skuArrangementOrderNo',
@@ -75,7 +76,101 @@ exports.getPaginatedProductsService = async (filters = {}) => {
 
   // Category filter
   if (category) {
-    query['category.name'] = new RegExp(category, 'i');
+    // Convert slug back to readable format for better matching
+    // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
+    // Also handle cases where "and" is naturally part of the category name
+    let categoryPattern = category
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+    // Create a more flexible pattern that can match both versions
+    const flexiblePattern = category
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+    console.log('Category filter:', {
+      original: category,
+      pattern: categoryPattern,
+      flexiblePattern: flexiblePattern,
+    });
+
+    // Use a more flexible regex that can match both & and 'and'
+    query['category.name'] = new RegExp(flexiblePattern, 'i');
+  }
+
+  // Subcategory filter
+  if (subcategory) {
+    // Convert slug back to readable format for better matching
+    // Handle both old format (dana-60) and new format (dana-60)
+    const subcategoryPattern = subcategory
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
+      .replace(/\b\w/g, l => l.toUpperCase());
+    console.log('Subcategory filter:', {
+      original: subcategory,
+      pattern: subcategoryPattern,
+    });
+
+    try {
+      // Step 1: Find the Category document that matches our parent + children criteria
+      let categoryQuery = {};
+
+      if (category) {
+        // If we have a main category, find categories where parent matches it
+        // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
+        // Also handle cases where "and" is naturally part of the category name
+        const categoryPattern = category
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
+          .replace(/\b\w/g, l => l.toUpperCase());
+        categoryQuery.parent = new RegExp(categoryPattern, 'i');
+      }
+
+      // Add children filter
+      categoryQuery.children = new RegExp(subcategoryPattern, 'i');
+
+      console.log(
+        'Category query for subcategory:',
+        JSON.stringify(categoryQuery, null, 2)
+      );
+
+      // Find the matching category
+      const matchingCategory = await Category.findOne(categoryQuery);
+
+      if (matchingCategory) {
+        console.log('Found matching category:', {
+          id: matchingCategory._id,
+          name: matchingCategory.name,
+          parent: matchingCategory.parent,
+          children: matchingCategory.children,
+        });
+
+        // Step 2: Filter products by this category ID
+        // Clear any existing category filters and use the found category ID
+        delete query['category.name'];
+        query['category.id'] = matchingCategory._id;
+
+        console.log('Updated query after subcategory filter:', {
+          removedCategoryName: true,
+          addedCategoryId: matchingCategory._id,
+          newQuery: JSON.stringify(query, null, 2),
+        });
+      } else {
+        console.log('No matching category found for subcategory filter');
+        console.log(
+          'Category query used:',
+          JSON.stringify(categoryQuery, null, 2)
+        );
+        // If no category found, return no results
+        query._id = null; // This will ensure no products are returned
+      }
+    } catch (error) {
+      console.error('Error in subcategory filtering:', error);
+      // If there's an error, return no results
+      query._id = null;
+    }
   }
 
   // Price range filter
@@ -88,6 +183,66 @@ exports.getPaginatedProductsService = async (filters = {}) => {
   // Build sort object
   const sortQuery = {};
   sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  // Log the final query for debugging
+  console.log('Final query:', JSON.stringify(query, null, 2));
+  console.log('Sort query:', JSON.stringify(sortQuery, null, 2));
+  console.log('Query explanation:', {
+    hasCategory: !!category,
+    hasSubcategory: !!subcategory,
+    categoryPattern: category
+      ? category
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)')
+          .replace(/\b\w/g, l => l.toUpperCase())
+      : null,
+    subcategoryPattern: subcategory
+      ? subcategory
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)')
+          .replace(/\b\w/g, l => l.toUpperCase())
+      : null,
+    queryType: subcategory
+      ? 'Subcategory filtering with Category lookup'
+      : 'Direct category filtering',
+    patternConversion: {
+      originalCategory: category,
+      originalSubcategory: subcategory,
+      convertedCategory: category
+        ? category
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+      convertedSubcategory: subcategory
+        ? subcategory
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+      flexiblePattern: category
+        ? category
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+    },
+  });
+
+  // Check if query is invalid (e.g., _id: null from subcategory filtering)
+  if (query._id === null) {
+    console.log('Query is invalid, returning empty results');
+    return {
+      products: [],
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: 0,
+        totalProducts: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
 
   // Calculate skip value
   const skip = (parseInt(page) - 1) * parseInt(limit);

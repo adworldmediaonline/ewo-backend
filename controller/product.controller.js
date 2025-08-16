@@ -42,14 +42,19 @@ exports.getPaginatedProducts = async (req, res, next) => {
   try {
     const filters = {
       page: req.query.page || 1,
-      limit: req.query.limit || 15,
+      limit: req.query.limit || 8,
       search: req.query.search || '',
       category: req.query.category || '',
+      subcategory: req.query.subcategory || req.query.subCategory || '',
       minPrice: req.query.minPrice || '',
       maxPrice: req.query.maxPrice || '',
-      sortBy: req.query.sortBy || 'createdAt',
-      sortOrder: req.query.sortOrder || 'desc',
+      sortBy: req.query.sortBy || 'skuArrangementOrderNo',
+      sortOrder: req.query.sortOrder || 'asc',
     };
+
+    // Debug logging
+    console.log('Controller received filters:', filters);
+    console.log('Raw query params:', req.query);
 
     const result = await productServices.getPaginatedProductsService(filters);
 
