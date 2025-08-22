@@ -1,11 +1,11 @@
-const mongoose = require('mongoose');
-const Order = require('../model/Order');
-const dayjs = require('dayjs');
-const customParseFormat = require('dayjs/plugin/customParseFormat');
-const isToday = require('dayjs/plugin/isToday');
-const isYesterday = require('dayjs/plugin/isYesterday');
-const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
-const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
+import mongoose from 'mongoose';
+import Order from '../model/Order.js';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat.js';
+import isToday from 'dayjs/plugin/isToday.js';
+import isYesterday from 'dayjs/plugin/isYesterday.js';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 
 // Apply necessary plugins to dayjs
 dayjs.extend(customParseFormat);
@@ -15,7 +15,7 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 // get all orders user
-module.exports.getOrderByUser = async (req, res, next) => {
+export const getOrderByUser = async (req, res, next) => {
   // console.log(req.user)
   try {
     const { page, limit } = req.query;
@@ -143,7 +143,7 @@ module.exports.getOrderByUser = async (req, res, next) => {
 };
 
 // getOrderById
-module.exports.getOrderById = async (req, res, next) => {
+export const getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     res.status(200).json({
@@ -156,7 +156,7 @@ module.exports.getOrderById = async (req, res, next) => {
 };
 
 // getDashboardAmount
-exports.getDashboardAmount = async (req, res, next) => {
+export const getDashboardAmount = async (req, res, next) => {
   try {
     const todayStart = dayjs().startOf('day');
     const todayEnd = dayjs().endOf('day');
@@ -234,7 +234,7 @@ exports.getDashboardAmount = async (req, res, next) => {
   }
 };
 // get sales report
-exports.getSalesReport = async (req, res, next) => {
+export const getSalesReport = async (req, res, next) => {
   try {
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - 7);
@@ -268,7 +268,7 @@ exports.getSalesReport = async (req, res, next) => {
 };
 
 // Most Selling Category
-exports.mostSellingCategory = async (req, res, next) => {
+export const mostSellingCategory = async (req, res, next) => {
   try {
     const categoryData = await Order.aggregate([
       {
@@ -295,7 +295,7 @@ exports.mostSellingCategory = async (req, res, next) => {
 };
 
 // dashboard recent order
-exports.getDashboardRecentOrder = async (req, res, next) => {
+export const getDashboardRecentOrder = async (req, res, next) => {
   try {
     const { page, limit } = req.query;
 

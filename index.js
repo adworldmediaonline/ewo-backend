@@ -5,7 +5,18 @@ import dotenv from 'dotenv';
 import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
+import { fileURLToPath } from 'url';
 dotenv.config();
+
+// ES module __dirname workaround
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import connectDB from './config/db.js';
+import { secret } from './config/secret.js';
+
+const app = express();
+const PORT = secret.port || 8090;
 
 // Configure CORS middleware
 app.use(
@@ -15,11 +26,6 @@ app.use(
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
 );
-import connectDB from './config/db.js';
-import { secret } from './config/secret.js';
-
-const app = express();
-const PORT = secret.port || 8090;
 
 // better auth config
 // Mount Better Auth routes

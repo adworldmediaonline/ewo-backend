@@ -1,13 +1,13 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../model/User');
-const { sendEmail } = require('../config/email');
-const { generateToken, tokenForVerify } = require('../utils/token');
-const { secret } = require('../config/secret');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../model/User.js';
+import { sendEmail } from '../config/email.js';
+import { generateToken, tokenForVerify } from '../utils/token.js';
+import { secret } from '../config/secret.js';
 
 // register user
 // sign up
-exports.signup = async (req, res, next) => {
+export const signup = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
@@ -96,7 +96,7 @@ exports.signup = async (req, res, next) => {
  * 8. generate token
  * 9. send user and token
  */
-module.exports.login = async (req, res, next) => {
+export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -151,7 +151,7 @@ module.exports.login = async (req, res, next) => {
 };
 
 // confirmEmail
-exports.confirmEmail = async (req, res, next) => {
+export const confirmEmail = async (req, res, next) => {
   try {
     const { token } = req.params;
     const user = await User.findOne({ confirmationToken: token });
@@ -196,7 +196,7 @@ exports.confirmEmail = async (req, res, next) => {
 };
 
 // resendVerification
-exports.resendVerification = async (req, res, next) => {
+export const resendVerification = async (req, res, next) => {
   try {
     const { email } = req.body;
 
@@ -297,7 +297,7 @@ exports.resendVerification = async (req, res, next) => {
 };
 
 // forgetPassword
-exports.forgetPassword = async (req, res, next) => {
+export const forgetPassword = async (req, res, next) => {
   try {
     const { verifyEmail } = req.body;
     const user = await User.findOne({ email: verifyEmail });
@@ -366,7 +366,7 @@ exports.forgetPassword = async (req, res, next) => {
 };
 
 // confirm-forget-password
-exports.confirmForgetPassword = async (req, res, next) => {
+export const confirmForgetPassword = async (req, res, next) => {
   try {
     const { token, password } = req.body;
     const user = await User.findOne({ confirmationToken: token });
@@ -408,7 +408,7 @@ exports.confirmForgetPassword = async (req, res, next) => {
 };
 
 // change password
-exports.changePassword = async (req, res, next) => {
+export const changePassword = async (req, res, next) => {
   try {
     const { email, password, googleSignIn, newPassword } = req.body || {};
     const user = await User.findOne({ email: email });
@@ -434,7 +434,7 @@ exports.changePassword = async (req, res, next) => {
 };
 
 // update a profile
-exports.updateUser = async (req, res, next) => {
+export const updateUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
     const user = await User.findById(userId);
@@ -461,7 +461,7 @@ exports.updateUser = async (req, res, next) => {
 };
 
 // signUpWithProvider
-exports.signUpWithProvider = async (req, res, next) => {
+export const signUpWithProvider = async (req, res, next) => {
   try {
     const user = jwt.decode(req.params.token);
     const isAdded = await User.findOne({ email: user.email });
@@ -513,7 +513,7 @@ exports.signUpWithProvider = async (req, res, next) => {
 };
 
 // Get all users (for admin panel)
-exports.getAllUsers = async (req, res, next) => {
+export const getAllUsers = async (req, res, next) => {
   try {
     // Exclude password and sensitive fields
     const users = await User.find(
@@ -530,7 +530,7 @@ exports.getAllUsers = async (req, res, next) => {
 };
 
 // Get a single user by ID
-exports.getUserById = async (req, res, next) => {
+export const getUserById = async (req, res, next) => {
   try {
     const userId = req.params.id;
     // Exclude password and sensitive fields

@@ -1,28 +1,40 @@
-const express = require('express');
+import express from 'express';
+import {
+  signup,
+  login,
+  forgetPassword,
+  confirmForgetPassword,
+  changePassword,
+  confirmEmail,
+  resendVerification,
+  updateUser,
+  signUpWithProvider,
+  getAllUsers,
+  getUserById,
+} from '../controller/user.controller.js';
 const router = express.Router();
-const userController = require('../controller/user.controller');
 
 // add a user
-router.post('/signup', userController.signup);
+router.post('/signup', signup);
 // login
-router.post('/login', userController.login);
+router.post('/login', login);
 // forget-password
-router.patch('/forget-password', userController.forgetPassword);
+router.patch('/forget-password', forgetPassword);
 // confirm-forget-password
-router.patch('/confirm-forget-password', userController.confirmForgetPassword);
+router.patch('/confirm-forget-password', confirmForgetPassword);
 // change password
-router.patch('/change-password', userController.changePassword);
+router.patch('/change-password', changePassword);
 // confirmEmail
-router.get('/confirmEmail/:token', userController.confirmEmail);
+router.get('/confirmEmail/:token', confirmEmail);
 // resendVerification
-router.post('/resend-verification', userController.resendVerification);
+router.post('/resend-verification', resendVerification);
 // updateUser
-router.put('/update-user/:id', userController.updateUser);
+router.put('/update-user/:id', updateUser);
 // register or login with google
-router.post('/register/:token', userController.signUpWithProvider);
+router.post('/register/:token', signUpWithProvider);
 // get all users
-router.get('/all', userController.getAllUsers);
+router.get('/all', getAllUsers);
 // get user by id
-router.get('/:id', userController.getUserById);
+router.get('/:id', getUserById);
 
-module.exports = router;
+export default router;
