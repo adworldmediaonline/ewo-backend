@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 const { ObjectId } = mongoose.Schema.Types;
 // schema design
-const validator = require('validator');
+import validator from 'validator';
 
 const productsSchema = mongoose.Schema(
   {
@@ -193,7 +193,6 @@ const productsSchema = mongoose.Schema(
       metaTitle: {
         type: String,
         trim: true,
-
       },
       metaDescription: {
         type: String,
@@ -212,4 +211,4 @@ const productsSchema = mongoose.Schema(
 
 const Products = mongoose.model('Products', productsSchema);
 
-module.exports = Products;
+export default Products;

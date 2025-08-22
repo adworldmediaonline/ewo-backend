@@ -1,7 +1,7 @@
-const ShippingService = require('../services/shippingService');
-const Order = require('../model/Order');
+import ShippingService from '../services/shippingService.js';
+import Order from '../model/Order.js';
 
-const shipOrder = async (req, res, next) => {
+export const shipOrder = async (req, res, next) => {
   try {
     const orderId = req.params.id; // Order ID from URL parameter
     const { trackingNumber, carrier, estimatedDelivery } = req.body; // Admin provides tracking info
@@ -43,7 +43,7 @@ const shipOrder = async (req, res, next) => {
   }
 };
 
-const updateTracking = async (req, res, next) => {
+export const updateTracking = async (req, res, next) => {
   try {
     const orderId = req.params.id;
     const trackingData = req.body;
@@ -61,7 +61,7 @@ const updateTracking = async (req, res, next) => {
   }
 };
 
-const getShippingStatus = async (req, res, next) => {
+export const getShippingStatus = async (req, res, next) => {
   try {
     const orderId = req.params.id;
     const result = await ShippingService.getShippingStatus(orderId);
@@ -77,7 +77,7 @@ const getShippingStatus = async (req, res, next) => {
   }
 };
 
-const getShippableOrders = async (req, res, next) => {
+export const getShippableOrders = async (req, res, next) => {
   try {
     const orders = await Order.find({
       status: { $in: ['pending', 'processing'] },
@@ -115,7 +115,7 @@ const getShippableOrders = async (req, res, next) => {
   }
 };
 
-const getShippedOrders = async (req, res, next) => {
+export const getShippedOrders = async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
@@ -158,7 +158,7 @@ const getShippedOrders = async (req, res, next) => {
   }
 };
 
-const bulkShipOrders = async (req, res, next) => {
+export const bulkShipOrders = async (req, res, next) => {
   try {
     const { orderIds, shippingData } = req.body;
 
@@ -217,13 +217,4 @@ const bulkShipOrders = async (req, res, next) => {
     console.error('Error in bulkShipOrders controller:', error);
     next(error);
   }
-};
-
-module.exports = {
-  shipOrder,
-  updateTracking,
-  getShippingStatus,
-  getShippableOrders,
-  getShippedOrders,
-  bulkShipOrders,
 };

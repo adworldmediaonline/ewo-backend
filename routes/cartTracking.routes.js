@@ -1,5 +1,5 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   trackAddToCart,
   trackCartAction,
   getCartAnalytics,
@@ -13,11 +13,11 @@ const {
   getCartTrackingEvents,
   getConversionFunnelForAdmin,
   getPopularProductsForAdmin,
-} = require('../controller/cartTracking.controller');
+} from '../controller/cartTracking.controller.js';
 
 // Import middleware for authentication and authorization
-const verifyToken = require('../middleware/verifyToken');
-const roleAuth = require('../middleware/roleAuth');
+import verifyToken from '../middleware/verifyToken.js';
+import roleAuth from '../middleware/roleAuth.js';
 
 const router = express.Router();
 
@@ -46,4 +46,4 @@ router.get('/events', getCartTrackingEvents);
 router.get('/analytics/conversion-funnel', getConversionFunnelForAdmin);
 router.get('/analytics/popular-products', getPopularProductsForAdmin);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,4 @@
-const fs = require('fs');
-const { cloudinaryServices } = require('../services/cloudinary.service');
+import { cloudinaryServices } from '../services/cloudinary.service.js';
 
 // add image
 const saveImageCloudinary = async (req, res, next) => {
@@ -92,7 +91,7 @@ const cloudinaryDeleteController = async (req, res) => {
   }
 };
 
-exports.cloudinaryController = {
+export const cloudinaryController = {
   cloudinaryDeleteController,
   saveImageCloudinary,
   addMultipleImageCloudinary,

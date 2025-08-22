@@ -1,7 +1,7 @@
-const jwt = require("jsonwebtoken");
-const { secret } = require("../config/secret");
+import jwt from 'jsonwebtoken';
+import { secret } from '../config/secret.js';
 
-exports.generateToken = (userInfo) => {
+export const generateToken = userInfo => {
   const payload = {
     _id: userInfo._id,
     name: userInfo.name,
@@ -9,15 +9,15 @@ exports.generateToken = (userInfo) => {
     role: userInfo.role,
   };
 
-  const token = jwt.sign(payload,secret.token_secret, {
-    expiresIn: "2d",
+  const token = jwt.sign(payload, secret.token_secret, {
+    expiresIn: '2d',
   });
 
   return token;
 };
 
 // tokenForVerify
-exports.tokenForVerify = (user) => {
+export const tokenForVerify = user => {
   return jwt.sign(
     {
       _id: user._id,
@@ -26,6 +26,6 @@ exports.tokenForVerify = (user) => {
       password: user.password,
     },
     secret.jwt_secret_for_verify,
-    { expiresIn: "10m" }
+    { expiresIn: '10m' }
   );
 };

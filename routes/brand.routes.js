@@ -1,21 +1,29 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 // internal
-const brandController = require('../controller/brand.controller');
+import {
+  addBrand,
+  addAllBrand,
+  getAllBrands,
+  deleteBrand,
+  getActiveBrands,
+  getSingleBrand,
+  updateBrand,
+} from '../controller/brand.controller.js';
 
 // add Brand
-router.post('/add',brandController.addBrand);
+router.post('/add', addBrand);
 // add All Brand
-router.post('/add-all',brandController.addAllBrand);
+router.post('/add-all', addAllBrand);
 // get Active Brands
-router.get('/active',brandController.getActiveBrands);
+router.get('/active', getActiveBrands);
 // get all Brands
-router.get('/all',brandController.getAllBrands);
+router.get('/all', getAllBrands);
 // delete brand
-router.delete('/delete/:id',brandController.deleteBrand);
+router.delete('/delete/:id', deleteBrand);
 // get single
-router.get('/get/:id', brandController.getSingleBrand);
+router.get('/get/:id', getSingleBrand);
 // delete product
-router.patch('/edit/:id', brandController.updateBrand);
+router.patch('/edit/:id', updateBrand);
 
-module.exports = router;
+export default router;

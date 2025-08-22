@@ -1,23 +1,32 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 // internal
-const categoryController = require('../controller/category.controller');
+import {
+  getSingleCategory,
+  addCategory,
+  addAllCategory,
+  getAllCategory,
+  getProductTypeCategory,
+  getShowCategory,
+  deleteCategory,
+  updateCategory,
+} from '../controller/category.controller.js';
 
 // get
-router.get('/get/:id', categoryController.getSingleCategory);
+router.get('/get/:id', getSingleCategory);
 // add
-router.post('/add', categoryController.addCategory);
+router.post('/add', addCategory);
 // add All Category
-router.post('/add-all', categoryController.addAllCategory);
+router.post('/add-all', addAllCategory);
 // get all Category
-router.get('/all', categoryController.getAllCategory);
+router.get('/all', getAllCategory);
 // get Product Type Category
-router.get('/show/:type', categoryController.getProductTypeCategory);
+router.get('/show/:type', getProductTypeCategory);
 // get Show Category
-router.get('/show', categoryController.getShowCategory);
+router.get('/show', getShowCategory);
 // delete category
-router.delete('/delete/:id', categoryController.deleteCategory);
+router.delete('/delete/:id', deleteCategory);
 // delete product
-router.patch('/edit/:id', categoryController.updateCategory);
+router.patch('/edit/:id', updateCategory);
 
-module.exports = router;
+export default router;

@@ -1,22 +1,22 @@
-const ApiError = require('../errors/api-error');
-const Category = require('../model/Category');
-const Products = require('../model/Products');
+import ApiError from '../errors/api-error.js';
+import Category from '../model/Category.js';
+import Products from '../model/Products.js';
 
 // create category service
-exports.createCategoryService = async data => {
+export const createCategoryService = async data => {
   const category = await Category.create(data);
   return category;
 };
 
 // create all category service
-exports.addAllCategoryService = async data => {
+export const addAllCategoryService = async data => {
   await Category.deleteMany();
   const category = await Category.insertMany(data);
   return category;
 };
 
 // get all show category service
-exports.getShowCategoryServices = async () => {
+export const getShowCategoryServices = async () => {
   const category = await Category.find({ status: 'Show' })
     .populate('products')
     // .sort({ updatedAt: -1 });
@@ -25,13 +25,13 @@ exports.getShowCategoryServices = async () => {
 };
 
 // get all category
-exports.getAllCategoryServices = async () => {
+export const getAllCategoryServices = async () => {
   const category = await Category.find({});
   return category;
 };
 
 // get type of category service
-exports.getCategoryTypeService = async param => {
+export const getCategoryTypeService = async param => {
   const categories = await Category.find({ productType: param }).populate(
     'products'
   );
@@ -39,13 +39,13 @@ exports.getCategoryTypeService = async param => {
 };
 
 // get type of category service
-exports.deleteCategoryService = async id => {
+export const deleteCategoryService = async id => {
   const result = await Category.findByIdAndDelete(id);
   return result;
 };
 
 // update category
-exports.updateCategoryService = async (id, payload) => {
+export const updateCategoryService = async (id, payload) => {
   const isExist = await Category.findOne({ _id: id });
 
   if (!isExist) {
@@ -79,7 +79,7 @@ exports.updateCategoryService = async (id, payload) => {
 };
 
 // get single category
-exports.getSingleCategoryService = async id => {
+export const getSingleCategoryService = async id => {
   const result = await Category.findById(id);
   return result;
 };

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const couponUsageSchema = new mongoose.Schema(
   {
@@ -23,7 +23,7 @@ const couponUsageSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
-    
+
     // Usage Details
     discountAmount: {
       type: Number,
@@ -39,7 +39,7 @@ const couponUsageSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    
+
     // Metadata
     userAgent: {
       type: String,
@@ -64,15 +64,19 @@ couponUsageSchema.index({ couponId: 1, createdAt: -1 });
 couponUsageSchema.index({ userId: 1, createdAt: -1 });
 
 // Static methods for analytics
-couponUsageSchema.statics.getCouponUsageStats = function(couponId, startDate, endDate) {
+couponUsageSchema.statics.getCouponUsageStats = function (
+  couponId,
+  startDate,
+  endDate
+) {
   const matchStage = { couponId: mongoose.Types.ObjectId(couponId) };
-  
+
   if (startDate || endDate) {
     matchStage.createdAt = {};
     if (startDate) matchStage.createdAt.$gte = new Date(startDate);
     if (endDate) matchStage.createdAt.$lte = new Date(endDate);
   }
-  
+
   return this.aggregate([
     { $match: matchStage },
     {
@@ -84,7 +88,7 @@ couponUsageSchema.statics.getCouponUsageStats = function(couponId, startDate, en
         avgOrderValue: { $avg: '$orderTotal' },
         avgDiscount: { $avg: '$discountAmount' },
         uniqueUsers: { $addToSet: '$userId' },
-      }
+      },
     },
     {
       $project: {
@@ -94,12 +98,12 @@ couponUsageSchema.statics.getCouponUsageStats = function(couponId, startDate, en
         avgOrderValue: { $round: ['$avgOrderValue', 2] },
         avgDiscount: { $round: ['$avgDiscount', 2] },
         uniqueUsers: { $size: '$uniqueUsers' },
-      }
-    }
+      },
+    },
   ]);
 };
 
-couponUsageSchema.statics.getUserUsageCount = function(couponId, userId) {
+couponUsageSchema.statics.getUserUsageCount = function (couponId, userId) {
   const query = { couponId: mongoose.Types.ObjectId(couponId) };
   if (userId) {
     query.userId = mongoose.Types.ObjectId(userId);
@@ -107,5 +111,7 @@ couponUsageSchema.statics.getUserUsageCount = function(couponId, userId) {
   return this.countDocuments(query);
 };
 
-const CouponUsage = mongoose.models.CouponUsage || mongoose.model('CouponUsage', couponUsageSchema);
-module.exports = CouponUsage; 
+const CouponUsage =
+  mongoose.models.CouponUsage ||
+  mongoose.model('CouponUsage', couponUsageSchema);
+export default CouponUsage;

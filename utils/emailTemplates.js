@@ -3,7 +3,7 @@
  * Provides reusable email templates for different types of emails
  */
 
-const { secret } = require('../config/secret');
+import { secret } from '../config/secret.js';
 
 // Format currency helper function
 const formatPrice = amount => `$${parseFloat(amount || 0).toFixed(2)}`;
@@ -1328,7 +1328,7 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
   `;
 };
 
-module.exports = {
+export {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,

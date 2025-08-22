@@ -1,4 +1,4 @@
-const handleCastError = (error) => {
+const handleCastError = error => {
   const errors = [
     {
       path: error.path,
@@ -14,4 +14,4 @@ const handleCastError = (error) => {
   };
 };
 
-module.exports = handleCastError;
+export default handleCastError;

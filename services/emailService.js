@@ -1,13 +1,13 @@
-const nodemailer = require('nodemailer');
-const { secret } = require('../config/secret');
-const jwt = require('jsonwebtoken');
-const {
+import nodemailer from 'nodemailer';
+import { secret } from '../config/secret.js';
+import jwt from 'jsonwebtoken';
+import {
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
   deliveryConfirmationTemplate,
   orderCancellationTemplate,
   feedbackEmailTemplate,
-} = require('../utils/emailTemplates');
+} from '../utils/emailTemplates.js';
 
 // Create nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -227,7 +227,7 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
 const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
   try {
     // Import Order model here to avoid circular dependency
-    const Order = require('../model/Order');
+    const Order = (await import('../model/Order.js')).default;
 
     // Find the order and populate user if available
     const order = await Order.findById(orderId).populate('user');
@@ -364,7 +364,7 @@ const sendDeliveryNotificationWithTracking = async (
 ) => {
   try {
     // Import Order model here to avoid circular dependency
-    const Order = require('../model/Order');
+    const Order = (await import('../model/Order.js')).default;
 
     // Find the order
     const order = await Order.findById(orderId).populate('user');
@@ -527,7 +527,7 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     console.log(`🔄 Processing feedback email for order: ${orderId}`);
 
     // Import Order model here to avoid circular dependency
-    const Order = require('../model/Order');
+    const Order = (await import('../model/Order.js')).default;
 
     // Find the order
     const order = await Order.findById(orderId).populate('user');
@@ -670,7 +670,7 @@ const sendFeedbackEmail = async order => {
 const scheduleFeedbackEmail = async orderId => {
   try {
     // Import Order model here to avoid circular dependency
-    const Order = require('../model/Order');
+    const Order = (await import('../model/Order.js')).default;
 
     // Find the order
     const order = await Order.findById(orderId).populate('user');
@@ -774,7 +774,7 @@ const diagnoseFeedbackEmail = async orderId => {
   try {
     console.log(`🔍 Starting diagnostic for order: ${orderId}`);
 
-    const Order = require('../model/Order');
+    const Order = (await import('../model/Order.js')).default;
     const order = await Order.findById(orderId).populate('user');
 
     const diagnostic = {
@@ -1059,7 +1059,7 @@ const sendContactConfirmation = async contact => {
   }
 };
 
-module.exports = {
+export {
   sendOrderConfirmation,
   sendShippingConfirmation,
   sendShippingNotificationWithTracking,

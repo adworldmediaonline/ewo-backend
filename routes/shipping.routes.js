@@ -1,12 +1,12 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   shipOrder,
   updateTracking,
   getShippingStatus,
   getShippableOrders,
   getShippedOrders,
   bulkShipOrders,
-} = require('../controller/shipping.controller');
+} from '../controller/shipping.controller.js';
 
 const router = express.Router();
 
@@ -17,4 +17,4 @@ router.post('/ship/:id', shipOrder);
 router.patch('/tracking/:id', updateTracking);
 router.post('/bulk-ship', bulkShipOrders);
 
-module.exports = router;
+export default router;

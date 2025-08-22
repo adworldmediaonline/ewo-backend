@@ -1,8 +1,8 @@
-const Coupon = require('../model/Coupon');
-const CouponUsage = require('../model/CouponUsage');
-const Product = require('../model/Products');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
+import Coupon from '../model/Coupon.js';
+import CouponUsage from '../model/CouponUsage.js';
+import Product from '../model/Products.js';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 
 // addCoupon
@@ -847,7 +847,7 @@ const getAllActiveCoupons = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   addCoupon,
   addAllCoupon,
   getAllCoupons,

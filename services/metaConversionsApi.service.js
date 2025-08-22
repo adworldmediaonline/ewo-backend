@@ -1,5 +1,5 @@
-const bizSdk = require('facebook-nodejs-business-sdk');
-const crypto = require('crypto');
+import bizSdk from 'facebook-nodejs-business-sdk';
+import crypto from 'crypto';
 
 // Initialize Facebook Business SDK
 const Content = bizSdk.Content;
@@ -15,20 +15,25 @@ class MetaConversionsApiService {
     this.pixelId = process.env.META_PIXEL_ID;
     this.accessToken = process.env.META_ACCESS_TOKEN;
     this.apiVersion = process.env.META_API_VERSION || 'v23.0';
-    
+
     this.isConfigured = !!(this.pixelId && this.accessToken);
-    
+
     if (this.isConfigured) {
       try {
         // Initialize Facebook Business SDK v23.0 (no getInstance method)
         this.api = bizSdk.FacebookAdsApi.init(this.accessToken);
         console.log('✅ Meta Conversions API initialized successfully');
       } catch (error) {
-        console.error('❌ Meta Conversions API initialization failed:', error.message);
+        console.error(
+          '❌ Meta Conversions API initialization failed:',
+          error.message
+        );
         this.isConfigured = false;
       }
     } else {
-      console.warn('⚠️ Meta Conversions API not configured - missing environment variables');
+      console.warn(
+        '⚠️ Meta Conversions API not configured - missing environment variables'
+      );
     }
   }
 
@@ -39,11 +44,11 @@ class MetaConversionsApiService {
    */
   hashData(data) {
     if (data === null || data === undefined) return null;
-    
+
     try {
       // Convert to string and handle different types
       let stringData;
-      
+
       if (typeof data === 'string') {
         stringData = data;
       } else if (typeof data === 'number') {
@@ -58,22 +63,36 @@ class MetaConversionsApiService {
         // Fallback to String constructor
         stringData = String(data);
       }
-      
+
       // Final validation that we have a string
-      if (typeof stringData !== 'string' || stringData === 'null' || stringData === 'undefined') {
-        console.warn('hashData: Unable to convert to valid string:', typeof data, data);
+      if (
+        typeof stringData !== 'string' ||
+        stringData === 'null' ||
+        stringData === 'undefined'
+      ) {
+        console.warn(
+          'hashData: Unable to convert to valid string:',
+          typeof data,
+          data
+        );
         return null;
       }
-      
+
       // Clean and hash the string
       const cleanedData = stringData.toLowerCase().trim();
       if (cleanedData === '') {
         return null;
       }
-      
+
       return crypto.createHash('sha256').update(cleanedData).digest('hex');
     } catch (error) {
-      console.error('hashData error:', error.message, 'for data:', typeof data, data);
+      console.error(
+        'hashData error:',
+        error.message,
+        'for data:',
+        typeof data,
+        data
+      );
       return null;
     }
   }
@@ -85,17 +104,17 @@ class MetaConversionsApiService {
    */
   normalizePhone(phone) {
     if (!phone) return null;
-    
+
     // Remove all non-digits
     const cleaned = phone.replace(/\D/g, '');
-    
+
     // Add country code if missing (assuming US for now)
     if (cleaned.length === 10) {
       return `1${cleaned}`;
     } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
       return cleaned;
     }
-    
+
     return cleaned.length >= 10 ? cleaned : null;
   }
 
@@ -111,26 +130,40 @@ class MetaConversionsApiService {
       hasContextualData: false,
       identifierCount: 0,
       missingFields: [],
-      recommendations: []
+      recommendations: [],
     };
 
     // Check for strong identifiers (required for good matching)
     const hasEmail = !!(userData.email || userData.em);
     const hasPhone = !!(userData.phone || userData.ph);
-    
+
     if (hasEmail || hasPhone) {
       validation.hasStrongIdentifier = true;
       validation.identifierCount++;
     } else {
       validation.missingFields.push('email', 'phone');
-      validation.recommendations.push('Add email or phone number for better event matching');
+      validation.recommendations.push(
+        'Add email or phone number for better event matching'
+      );
     }
 
     // Check for contextual data
-    const hasName = !!(userData.firstName || userData.lastName || userData.fn || userData.ln);
-    const hasLocation = !!(userData.city || userData.state || userData.zipCode || userData.country);
-    const hasClientInfo = !!(userData.clientIpAddress || userData.clientUserAgent);
-    
+    const hasName = !!(
+      userData.firstName ||
+      userData.lastName ||
+      userData.fn ||
+      userData.ln
+    );
+    const hasLocation = !!(
+      userData.city ||
+      userData.state ||
+      userData.zipCode ||
+      userData.country
+    );
+    const hasClientInfo = !!(
+      userData.clientIpAddress || userData.clientUserAgent
+    );
+
     if (hasName || hasLocation || hasClientInfo) {
       validation.hasContextualData = true;
     }
@@ -138,17 +171,24 @@ class MetaConversionsApiService {
     // Check for client information (required for website events in v23.0)
     if (!userData.clientIpAddress) {
       validation.missingFields.push('clientIpAddress');
-      validation.recommendations.push('Include client IP address for website events');
+      validation.recommendations.push(
+        'Include client IP address for website events'
+      );
     }
-    
+
     if (!userData.clientUserAgent) {
       validation.missingFields.push('clientUserAgent');
-      validation.recommendations.push('Include client user agent for website events');
+      validation.recommendations.push(
+        'Include client user agent for website events'
+      );
     }
 
     // Overall validation
-    validation.isValid = validation.hasStrongIdentifier && validation.hasContextualData && 
-                       userData.clientIpAddress && userData.clientUserAgent;
+    validation.isValid =
+      validation.hasStrongIdentifier &&
+      validation.hasContextualData &&
+      userData.clientIpAddress &&
+      userData.clientUserAgent;
 
     return validation;
   }
@@ -161,7 +201,7 @@ class MetaConversionsApiService {
   createUserData(userData, clientInfo = {}) {
     try {
       const user = new UserData();
-      
+
       // Email (required for strong matching)
       if (userData.email) {
         const hashedEmail = this.hashData(userData.email);
@@ -178,7 +218,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // Phone (required for strong matching)
       if (userData.phone) {
         const hashedPhone = this.hashData(userData.phone);
@@ -195,7 +235,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // Name fields
       if (userData.firstName) {
         const hashedFirstName = this.hashData(userData.firstName);
@@ -211,7 +251,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       if (userData.lastName) {
         const hashedLastName = this.hashData(userData.lastName);
         if (hashedLastName) {
@@ -226,7 +266,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // Location fields
       if (userData.city) {
         const hashedCity = this.hashData(userData.city);
@@ -242,7 +282,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       if (userData.state) {
         const hashedState = this.hashData(userData.state);
         if (hashedState) {
@@ -257,7 +297,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       if (userData.zipCode) {
         const hashedZip = this.hashData(userData.zipCode);
         if (hashedZip) {
@@ -272,7 +312,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // Country
       if (userData.country) {
         const hashedCountry = this.hashData(userData.country);
@@ -292,7 +332,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // External ID (for logged-in users)
       if (userData.externalId) {
         const hashedExternalId = this.hashData(userData.externalId);
@@ -308,7 +348,7 @@ class MetaConversionsApiService {
           }
         }
       }
-      
+
       // Browser identifiers (not hashed)
       if (userData.fbp) {
         try {
@@ -317,7 +357,7 @@ class MetaConversionsApiService {
           console.warn('Could not set fbp:', e.message);
         }
       }
-      
+
       if (userData.fbc) {
         try {
           user.setFbc(userData.fbc);
@@ -325,7 +365,7 @@ class MetaConversionsApiService {
           console.warn('Could not set fbc:', e.message);
         }
       }
-      
+
       // Client information (required for website events in v23.0)
       if (clientInfo.ip || userData.clientIpAddress) {
         try {
@@ -334,15 +374,17 @@ class MetaConversionsApiService {
           console.warn('Could not set clientIpAddress:', e.message);
         }
       }
-      
+
       if (clientInfo.userAgent || userData.clientUserAgent) {
         try {
-          user.setClientUserAgent(clientInfo.userAgent || userData.clientUserAgent);
+          user.setClientUserAgent(
+            clientInfo.userAgent || userData.clientUserAgent
+          );
         } catch (e) {
           console.warn('Could not set clientUserAgent:', e.message);
         }
       }
-      
+
       return user;
     } catch (error) {
       console.error('❌ Error creating UserData:', error.message);
@@ -358,17 +400,18 @@ class MetaConversionsApiService {
   createCustomData(customData = {}) {
     try {
       const custom = new CustomData();
-      
+
       if (customData.currency) custom.setCurrency(customData.currency);
       if (customData.value) custom.setValue(customData.value);
       if (customData.contentIds) custom.setContentIds(customData.contentIds);
       if (customData.contentType) custom.setContentType(customData.contentType);
       if (customData.contents) custom.setContents(customData.contents);
       if (customData.contentName) custom.setContentName(customData.contentName);
-      if (customData.contentCategory) custom.setContentCategory(customData.contentCategory);
+      if (customData.contentCategory)
+        custom.setContentCategory(customData.contentCategory);
       if (customData.numItems) custom.setNumItems(customData.numItems);
       if (customData.orderId) custom.setOrderId(customData.orderId);
-      
+
       return custom;
     } catch (error) {
       console.error('❌ Error creating CustomData:', error.message);
@@ -387,12 +430,20 @@ class MetaConversionsApiService {
    */
   async sendEvent(eventName, userData = {}, customData = {}, clientInfo = {}) {
     console.log(`🚀 [META CORE] sendEvent called for: ${eventName}`);
-    console.log(`👤 [META CORE] Input userData:`, { ...userData, email: userData.email ? '[REDACTED]' : null });
+    console.log(`👤 [META CORE] Input userData:`, {
+      ...userData,
+      email: userData.email ? '[REDACTED]' : null,
+    });
     console.log(`📊 [META CORE] Input customData:`, customData);
-    console.log(`🌐 [META CORE] Input clientInfo:`, { ...clientInfo, ip: '[REDACTED]' });
-    
+    console.log(`🌐 [META CORE] Input clientInfo:`, {
+      ...clientInfo,
+      ip: '[REDACTED]',
+    });
+
     if (!this.isConfigured) {
-      console.log('⚠️ [META CORE] Meta Conversions API not configured, skipping event');
+      console.log(
+        '⚠️ [META CORE] Meta Conversions API not configured, skipping event'
+      );
       return { success: false, error: 'Not configured' };
     }
 
@@ -400,13 +451,19 @@ class MetaConversionsApiService {
       console.log(`🔧 [META CORE] Enhancing user data...`);
       // Enhance userData with fallback strategies for guest users
       const enhancedUserData = this.enhanceUserData(userData, clientInfo);
-      console.log(`✨ [META CORE] Enhanced userData:`, { ...enhancedUserData, email: enhancedUserData.email ? '[REDACTED]' : null });
-      
+      console.log(`✨ [META CORE] Enhanced userData:`, {
+        ...enhancedUserData,
+        email: enhancedUserData.email ? '[REDACTED]' : null,
+      });
+
       // Validate customer data quality
       const validation = this.validateCustomerData(enhancedUserData);
-      
+
       if (!validation.isValid) {
-        console.log(`Meta Conversions API: Event ${eventName} may have poor matching due to insufficient customer data`, validation);
+        console.log(
+          `Meta Conversions API: Event ${eventName} may have poor matching due to insufficient customer data`,
+          validation
+        );
       }
 
       // Get current timestamp (as per official example)
@@ -414,7 +471,7 @@ class MetaConversionsApiService {
 
       // Create UserData object (following official example structure)
       const user = new UserData();
-      
+
       // Set emails and phones as arrays (official v23.0 structure)
       if (enhancedUserData.email) {
         const hashedEmail = this.hashData(enhancedUserData.email);
@@ -422,7 +479,7 @@ class MetaConversionsApiService {
           user.setEmails([hashedEmail]);
         }
       }
-      
+
       if (enhancedUserData.phone) {
         const hashedPhone = this.hashData(enhancedUserData.phone);
         if (hashedPhone) {
@@ -432,18 +489,22 @@ class MetaConversionsApiService {
 
       // Set client IP and User Agent (recommended for Conversions API Events)
       if (clientInfo.ip || enhancedUserData.clientIpAddress) {
-        user.setClientIpAddress(clientInfo.ip || enhancedUserData.clientIpAddress);
+        user.setClientIpAddress(
+          clientInfo.ip || enhancedUserData.clientIpAddress
+        );
       }
-      
+
       if (clientInfo.userAgent || enhancedUserData.clientUserAgent) {
-        user.setClientUserAgent(clientInfo.userAgent || enhancedUserData.clientUserAgent);
+        user.setClientUserAgent(
+          clientInfo.userAgent || enhancedUserData.clientUserAgent
+        );
       }
 
       // Set Facebook browser identifiers if available
       if (enhancedUserData.fbp) {
         user.setFbp(enhancedUserData.fbp);
       }
-      
+
       if (enhancedUserData.fbc) {
         user.setFbc(enhancedUserData.fbc);
       }
@@ -490,25 +551,25 @@ class MetaConversionsApiService {
         const content = new Content()
           .setId(customData.contentIds[0])
           .setQuantity(customData.numItems || 1);
-          
+
         if (customData.deliveryCategory) {
           content.setDeliveryCategory(customData.deliveryCategory);
         }
-        
+
         contents = [content];
       }
 
       // Create CustomData object (following official example structure)
       const custom = new CustomData();
-      
+
       if (contents.length > 0) {
         custom.setContents(contents);
       }
-      
+
       if (customData.currency) {
         custom.setCurrency(customData.currency.toLowerCase()); // Currency should be lowercase
       }
-      
+
       if (customData.value !== undefined && customData.value !== null) {
         const numericValue = parseFloat(customData.value);
         // Ensure value is never negative or NaN for Meta API
@@ -519,7 +580,8 @@ class MetaConversionsApiService {
       // Set additional custom data fields
       if (customData.contentType) custom.setContentType(customData.contentType);
       if (customData.contentName) custom.setContentName(customData.contentName);
-      if (customData.contentCategory) custom.setContentCategory(customData.contentCategory);
+      if (customData.contentCategory)
+        custom.setContentCategory(customData.contentCategory);
       if (customData.orderId) custom.setOrderId(customData.orderId);
 
       // Create ServerEvent (following official example structure)
@@ -536,55 +598,76 @@ class MetaConversionsApiService {
       }
 
       // Add test event code for Meta testing (only in development/testing)
-      if (process.env.NODE_ENV !== 'production' || process.env.META_TEST_EVENT_CODE) {
+      if (
+        process.env.NODE_ENV !== 'production' ||
+        process.env.META_TEST_EVENT_CODE
+      ) {
         const testEventCode = process.env.META_TEST_EVENT_CODE || 'TEST75064';
         try {
           if (typeof serverEvent.setTestEventCode === 'function') {
             serverEvent.setTestEventCode(testEventCode);
-            console.log(`🧪 [META CORE] Added test event code: ${testEventCode}`);
+            console.log(
+              `🧪 [META CORE] Added test event code: ${testEventCode}`
+            );
           } else {
-            console.log(`⚠️ [META CORE] setTestEventCode method not available in this SDK version`);
+            console.log(
+              `⚠️ [META CORE] setTestEventCode method not available in this SDK version`
+            );
           }
         } catch (error) {
-          console.log(`⚠️ [META CORE] Could not set test event code: ${error.message}`);
+          console.log(
+            `⚠️ [META CORE] Could not set test event code: ${error.message}`
+          );
         }
       }
 
-      console.log(`📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`);
-      console.log(`🔑 [META CORE] Using access token: ${this.accessToken ? '[REDACTED]' : 'MISSING'}`);
-      
+      console.log(
+        `📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`
+      );
+      console.log(
+        `🔑 [META CORE] Using access token: ${
+          this.accessToken ? '[REDACTED]' : 'MISSING'
+        }`
+      );
+
       // Create and execute EventRequest (following official example structure)
       const eventsData = [serverEvent];
       console.log(`🎯 [META CORE] Created ${eventsData.length} server events`);
-      
-      const eventRequest = new EventRequest(this.accessToken, this.pixelId)
-        .setEvents(eventsData);
+
+      const eventRequest = new EventRequest(
+        this.accessToken,
+        this.pixelId
+      ).setEvents(eventsData);
       console.log(`📤 [META CORE] EventRequest created, executing...`);
 
       const response = await eventRequest.execute();
       console.log(`📨 [META CORE] EventRequest executed successfully`);
       console.log(`📋 [META CORE] Response:`, response);
-      
-      console.log(`✅ Meta ${eventName} sent for ${enhancedUserData.externalId || 'guest'}:`, { 
-        success: true, 
-        validation: validation.isValid ? 'GOOD' : 'POOR',
-        identifierCount: validation.identifierCount 
-      });
-      
-      return { 
-        success: true, 
+
+      console.log(
+        `✅ Meta ${eventName} sent for ${
+          enhancedUserData.externalId || 'guest'
+        }:`,
+        {
+          success: true,
+          validation: validation.isValid ? 'GOOD' : 'POOR',
+          identifierCount: validation.identifierCount,
+        }
+      );
+
+      return {
+        success: true,
         response: response,
         validation: validation.isValid ? 'GOOD' : 'POOR',
-        identifierCount: validation.identifierCount
+        identifierCount: validation.identifierCount,
       };
-
     } catch (error) {
       console.error(`❌ Meta Conversions API Error:`, {
         eventName,
         error: error.message,
-        userData: Object.keys(userData || {})
+        userData: Object.keys(userData || {}),
       });
-      
+
       return { success: false, error: error.message };
     }
   }
@@ -592,11 +675,11 @@ class MetaConversionsApiService {
   // Enhanced user data with fallback strategies for guest users
   enhanceUserData(userData, clientInfo) {
     const enhanced = { ...userData };
-    
+
     // Add client information
     if (clientInfo.ip) enhanced.clientIpAddress = clientInfo.ip;
     if (clientInfo.userAgent) enhanced.clientUserAgent = clientInfo.userAgent;
-    
+
     // For guest users without email/phone, use session-based identifiers
     if (!enhanced.email && !enhanced.phone) {
       // Use session ID or generate a temporary identifier
@@ -604,18 +687,23 @@ class MetaConversionsApiService {
         enhanced.externalId = `session_${clientInfo.sessionId}`;
       } else if (clientInfo.ip && clientInfo.userAgent) {
         // Create a temporary identifier from IP + UserAgent (for same session tracking)
-        const tempId = crypto.createHash('md5').update(`${clientInfo.ip}_${clientInfo.userAgent}`).digest('hex');
+        const tempId = crypto
+          .createHash('md5')
+          .update(`${clientInfo.ip}_${clientInfo.userAgent}`)
+          .digest('hex');
         enhanced.externalId = `temp_${tempId}`;
       }
-      
-      console.log('Meta Conversions API: No email or phone found, using fallback identifiers');
+
+      console.log(
+        'Meta Conversions API: No email or phone found, using fallback identifiers'
+      );
     }
-    
+
     // Add default country if missing
     if (!enhanced.country) {
       enhanced.country = 'US'; // Default fallback
     }
-    
+
     return enhanced;
   }
 
@@ -631,7 +719,7 @@ class MetaConversionsApiService {
       currency: productData.currency || 'USD',
       value: productData.value || productData.price || 0,
       contentType: 'product',
-      contentIds: [productData.productId || productData.id]
+      contentIds: [productData.productId || productData.id],
     };
 
     return await this.sendEvent('AddToCart', userData, customData, clientInfo);
@@ -649,7 +737,7 @@ class MetaConversionsApiService {
       currency: orderData.currency || 'USD',
       value: orderData.value || orderData.total || 0,
       contentType: 'product',
-      contentIds: orderData.productIds || []
+      contentIds: orderData.productIds || [],
     };
 
     return await this.sendEvent('Purchase', userData, customData, clientInfo);
@@ -665,10 +753,15 @@ class MetaConversionsApiService {
   async trackViewContent(userData, contentData, clientInfo = {}) {
     const customData = {
       contentType: contentData.contentType || 'product',
-      contentIds: [contentData.contentId || contentData.id]
+      contentIds: [contentData.contentId || contentData.id],
     };
 
-    return await this.sendEvent('ViewContent', userData, customData, clientInfo);
+    return await this.sendEvent(
+      'ViewContent',
+      userData,
+      customData,
+      clientInfo
+    );
   }
 
   /**
@@ -692,7 +785,7 @@ class MetaConversionsApiService {
   async trackLead(userData, leadData, clientInfo = {}) {
     const customData = {
       currency: leadData.currency || 'USD',
-      value: leadData.value || 0
+      value: leadData.value || 0,
     };
 
     return await this.sendEvent('Lead', userData, customData, clientInfo);
@@ -710,10 +803,15 @@ class MetaConversionsApiService {
       currency: checkoutData.currency || 'USD',
       value: checkoutData.value || checkoutData.total || 0,
       contentType: 'product',
-      contentIds: checkoutData.productIds || []
+      contentIds: checkoutData.productIds || [],
     };
 
-    return await this.sendEvent('InitiateCheckout', userData, customData, clientInfo);
+    return await this.sendEvent(
+      'InitiateCheckout',
+      userData,
+      customData,
+      clientInfo
+    );
   }
 
   /**
@@ -723,9 +821,14 @@ class MetaConversionsApiService {
    */
   async sendBatch(events) {
     const results = [];
-    
+
     for (const event of events) {
-      const result = await this.sendEvent(event.eventName, event.userData, event.customData, event.clientInfo);
+      const result = await this.sendEvent(
+        event.eventName,
+        event.userData,
+        event.customData,
+        event.clientInfo
+      );
       results.push(result);
     }
 
@@ -733,7 +836,7 @@ class MetaConversionsApiService {
       success: results.every(r => r.success),
       results: results,
       successCount: results.filter(r => r.success).length,
-      totalCount: results.length
+      totalCount: results.length,
     };
   }
 
@@ -746,16 +849,17 @@ class MetaConversionsApiService {
       pixelId: !!this.pixelId,
       accessToken: !!this.accessToken,
       apiVersion: this.apiVersion,
-      configured: !!(this.pixelId && this.accessToken)
+      configured: !!(this.pixelId && this.accessToken),
     };
   }
 
   // Test event with configuration validation
   async testEvent() {
     if (!this.isConfigured) {
-      return { 
-        success: false, 
-        error: 'Meta Conversions API not configured. Please set META_PIXEL_ID and META_ACCESS_TOKEN environment variables.' 
+      return {
+        success: false,
+        error:
+          'Meta Conversions API not configured. Please set META_PIXEL_ID and META_ACCESS_TOKEN environment variables.',
       };
     }
 
@@ -768,20 +872,20 @@ class MetaConversionsApiService {
         state: 'CA',
         country: 'US',
         clientIpAddress: '127.0.0.1',
-        clientUserAgent: 'Test User Agent'
+        clientUserAgent: 'Test User Agent',
       };
 
       const validation = this.validateCustomerData(testUserData);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: 'Meta Conversions API is properly configured',
         validation: validation,
         config: {
           pixelId: this.pixelId,
           apiVersion: this.apiVersion,
-          hasAccessToken: !!this.accessToken
-        }
+          hasAccessToken: !!this.accessToken,
+        },
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -794,7 +898,7 @@ class MetaConversionsApiService {
       configured: this.isConfigured,
       pixelId: this.pixelId,
       apiVersion: this.apiVersion,
-      hasAccessToken: !!this.accessToken
+      hasAccessToken: !!this.accessToken,
     };
   }
 
@@ -804,7 +908,7 @@ class MetaConversionsApiService {
       currency: orderData.currency || 'USD',
       value: orderData.value || orderData.total || 0,
       contentType: 'product',
-      contentIds: orderData.productIds || []
+      contentIds: orderData.productIds || [],
     };
 
     return this.sendEvent('Purchase', userData, customData, clientInfo);
@@ -812,30 +916,41 @@ class MetaConversionsApiService {
 
   async sendAddToCart(userData, productData, clientInfo = {}) {
     console.log(`🛒 [META SERVICE] sendAddToCart called`);
-    console.log(`👤 [META SERVICE] User data:`, { ...userData, email: userData.email ? '[REDACTED]' : null });
+    console.log(`👤 [META SERVICE] User data:`, {
+      ...userData,
+      email: userData.email ? '[REDACTED]' : null,
+    });
     console.log(`📦 [META SERVICE] Product data:`, productData);
-    console.log(`🌐 [META SERVICE] Client info:`, { ...clientInfo, ip: '[REDACTED]' });
-    
+    console.log(`🌐 [META SERVICE] Client info:`, {
+      ...clientInfo,
+      ip: '[REDACTED]',
+    });
+
     const customData = {
       currency: productData.currency || 'USD',
       value: productData.value || productData.price || 0,
       contentType: 'product',
-      contentIds: [productData.productId || productData.id]
+      contentIds: [productData.productId || productData.id],
     };
 
     console.log(`📊 [META SERVICE] Custom data prepared:`, customData);
     console.log(`📡 [META SERVICE] Calling sendEvent with AddToCart...`);
-    
-    const result = await this.sendEvent('AddToCart', userData, customData, clientInfo);
+
+    const result = await this.sendEvent(
+      'AddToCart',
+      userData,
+      customData,
+      clientInfo
+    );
     console.log(`📋 [META SERVICE] sendEvent result:`, result);
-    
+
     return result;
   }
 
   async sendViewContent(userData, contentData, clientInfo = {}) {
     const customData = {
       contentType: contentData.contentType || 'product',
-      contentIds: [contentData.contentId || contentData.id]
+      contentIds: [contentData.contentId || contentData.id],
     };
 
     return this.sendEvent('ViewContent', userData, customData, clientInfo);
@@ -848,7 +963,7 @@ class MetaConversionsApiService {
   async sendLead(userData, leadData, clientInfo = {}) {
     const customData = {
       currency: leadData.currency || 'USD',
-      value: leadData.value || 0
+      value: leadData.value || 0,
     };
 
     return this.sendEvent('Lead', userData, customData, clientInfo);
@@ -859,7 +974,7 @@ class MetaConversionsApiService {
       currency: checkoutData.currency || 'USD',
       value: checkoutData.value || checkoutData.total || 0,
       contentType: 'product',
-      contentIds: checkoutData.productIds || []
+      contentIds: checkoutData.productIds || [],
     };
 
     return this.sendEvent('InitiateCheckout', userData, customData, clientInfo);
@@ -868,26 +983,32 @@ class MetaConversionsApiService {
   // Batch event sending
   async sendEvents(events) {
     if (!this.isConfigured) {
-      console.log('⚠️ Meta Conversions API not configured, skipping batch events');
+      console.log(
+        '⚠️ Meta Conversions API not configured, skipping batch events'
+      );
       return { success: false, error: 'Not configured' };
     }
 
     try {
       const serverEvents = events.map(event => {
         const user = this.createUserData(event.userData, event.clientInfo);
-        
+
         const custom = new bizSdk.CustomData();
         if (event.customData) {
           Object.keys(event.customData).forEach(key => {
             if (custom[`set${key.charAt(0).toUpperCase() + key.slice(1)}`]) {
-              custom[`set${key.charAt(0).toUpperCase() + key.slice(1)}`](event.customData[key]);
+              custom[`set${key.charAt(0).toUpperCase() + key.slice(1)}`](
+                event.customData[key]
+              );
             }
           });
         }
 
         const serverEvent = new bizSdk.ServerEvent();
         serverEvent.setEventName(event.eventName);
-        serverEvent.setEventTime(event.eventTime || Math.floor(Date.now() / 1000));
+        serverEvent.setEventTime(
+          event.eventTime || Math.floor(Date.now() / 1000)
+        );
         serverEvent.setUserData(user);
         serverEvent.setCustomData(custom);
         serverEvent.setActionSource('website');
@@ -895,14 +1016,16 @@ class MetaConversionsApiService {
         return serverEvent;
       });
 
-      const eventRequest = new bizSdk.EventRequest(this.accessToken, this.pixelId);
+      const eventRequest = new bizSdk.EventRequest(
+        this.accessToken,
+        this.pixelId
+      );
       eventRequest.setEvents(serverEvents);
 
       const response = await eventRequest.execute();
-      
+
       console.log(`✅ Meta batch events sent: ${events.length} events`);
       return { success: true, response: response };
-
     } catch (error) {
       console.error('❌ Meta Conversions API Batch Error:', error.message);
       return { success: false, error: error.message };
@@ -935,4 +1058,4 @@ class MetaConversionsApiService {
   }
 }
 
-module.exports = new MetaConversionsApiService(); 
+export default new MetaConversionsApiService();

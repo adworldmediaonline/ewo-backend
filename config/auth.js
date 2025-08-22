@@ -1,7 +1,8 @@
-require('dotenv').config();
-const jwt = require('jsonwebtoken');
-const Admin = require('../model/Admin');
-const { secret } = require('./secret');
+import dotenv from 'dotenv';
+dotenv.config();
+import jwt from 'jsonwebtoken';
+import Admin from '../model/Admin.js';
+import { secret } from './secret.js';
 
 const signInToken = user => {
   return jwt.sign(
@@ -74,9 +75,4 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  signInToken,
-  tokenForVerify,
-  isAuth,
-  isAdmin,
-};
+export { signInToken, tokenForVerify, isAuth, isAdmin };

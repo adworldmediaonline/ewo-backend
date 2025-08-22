@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   addCoupon,
   addAllCoupon,
   getAllCoupons,
@@ -17,17 +16,11 @@ const {
   getCouponsByProduct,
   getOverallAnalytics,
   getAllActiveCoupons,
-} = require('../controller/coupon.controller');
-
-// Import Coupon model for debug endpoint
-const Coupon = require('../model/Coupon');
-
-// get all coupons
-router.get('/list-all', getAllActiveCoupons);
-
-// Import middleware for authentication and authorization
-const verifyToken = require('../middleware/verifyToken');
-const roleAuth = require('../middleware/roleAuth');
+} from '../controller/coupon.controller.js';
+import Coupon from '../model/Coupon.js';
+import verifyToken from '../middleware/verifyToken.js';
+import roleAuth from '../middleware/roleAuth.js';
+const router = express.Router();
 
 // Check if coupon code is available
 router.get(
@@ -221,4 +214,4 @@ router.get(
   }
 );
 
-module.exports = router;
+export default router;

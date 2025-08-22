@@ -1,9 +1,10 @@
-require('dotenv').config();
-const nodemailer = require('nodemailer');
-const { secret } = require('./secret');
+import dotenv from 'dotenv';
+dotenv.config();
+import nodemailer from 'nodemailer';
+import { secret } from './secret.js';
 
 // sendEmail
-module.exports.sendEmail = (body, res, message) => {
+export const sendEmail = (body, res, message) => {
   // Add essential email headers to improve deliverability
   const enhancedBody = {
     ...body,

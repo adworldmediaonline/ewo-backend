@@ -1,5 +1,5 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   trackMetaAddToCart,
   trackMetaPurchase,
   trackMetaViewContent,
@@ -9,13 +9,10 @@ const {
   trackMetaCustomEvent,
   trackMetaBatchEvents,
   getMetaConfigStatus,
-  testMetaEvent
-} = require('../controller/metaConversions.controller');
-
-// Import middleware for authentication and authorization
-const verifyToken = require('../middleware/verifyToken');
-const roleAuth = require('../middleware/roleAuth');
-
+  testMetaEvent,
+} from '../controller/metaConversions.controller.js';
+import verifyToken from '../middleware/verifyToken.js';
+import roleAuth from '../middleware/roleAuth.js';
 const router = express.Router();
 
 // Public Meta tracking routes (for frontend and webhook usage)
@@ -33,7 +30,12 @@ router.get('/status', getMetaConfigStatus);
 router.post('/test', testMetaEvent);
 
 // Protected configuration routes (admin only)
-router.get('/config/status', verifyToken, roleAuth(['admin']), getMetaConfigStatus);
+router.get(
+  '/config/status',
+  verifyToken,
+  roleAuth(['admin']),
+  getMetaConfigStatus
+);
 router.post('/config/test', verifyToken, roleAuth(['admin']), testMetaEvent);
 
-module.exports = router; 
+export default router;

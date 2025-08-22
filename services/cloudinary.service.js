@@ -1,6 +1,6 @@
-const { secret } = require('../config/secret');
-const cloudinary = require('../utils/cloudinary');
-const { Readable } = require('stream');
+import { secret } from '../config/secret.js';
+import cloudinary from '../utils/cloudinary.js';
+import { Readable } from 'stream';
 
 // cloudinary Image Upload
 // const cloudinaryImageUpload = async (image) => {
@@ -91,7 +91,7 @@ const cloudinaryImageDelete = async public_id => {
   return deletionResult;
 };
 
-exports.cloudinaryServices = {
+export const cloudinaryServices = {
   cloudinaryImageDelete,
   cloudinaryImageUpload,
   cloudinaryMultipleImageUpload,

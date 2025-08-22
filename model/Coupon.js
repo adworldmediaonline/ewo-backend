@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const couponSchema = new mongoose.Schema(
   {
@@ -593,4 +593,4 @@ couponSchema.statics.getAnalytics = function (startDate, endDate) {
 };
 
 const Coupon = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);
-module.exports = Coupon;
+export default Coupon;

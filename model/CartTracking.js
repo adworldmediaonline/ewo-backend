@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const cartTrackingSchema = new mongoose.Schema(
   {
@@ -331,4 +331,4 @@ cartTrackingSchema.pre('save', function (next) {
 
 const CartTracking = mongoose.model('CartTracking', cartTrackingSchema);
 
-module.exports = CartTracking;
+export default CartTracking;

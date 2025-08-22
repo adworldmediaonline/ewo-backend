@@ -1,33 +1,62 @@
-require('dotenv').config();
-const express = require('express');
+import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
+import { auth } from './lib/auth.js';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import morgan from 'morgan';
+import path from 'path';
+dotenv.config();
+
+// Configure CORS middleware
+app.use(
+  cors({
+    origin: 'http://localhost:3000', // Replace with your frontend's origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  })
+);
+import connectDB from './config/db.js';
+import { secret } from './config/secret.js';
+
 const app = express();
-const path = require('path');
-const cors = require('cors');
-const connectDB = require('./config/db');
-const { secret } = require('./config/secret');
-const PORT = secret.port || 8000;
-const morgan = require('morgan');
+const PORT = secret.port || 8090;
+
+// better auth config
+// Mount Better Auth routes
+app.all('/api/auth/*', toNodeHandler(auth));
+app.get('/api/auth/ok', (req, res) => {
+  res.json({ status: 'Better Auth is running' });
+});
+
+app.get('/api/me', async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+  return res.json(session);
+});
+// better auth config end
+
 // error handler
-const globalErrorHandler = require('./middleware/global-error-handler');
+import globalErrorHandler from './middleware/global-error-handler.js';
 // routes
-const contactRoutes = require('./routes/contact.routes');
-const userRoutes = require('./routes/user.routes');
-const categoryRoutes = require('./routes/category.routes');
-const blogCategoryRoutes = require('./routes/blogCategory.routes');
-const blogRoutes = require('./routes/blog.routes');
-const brandRoutes = require('./routes/brand.routes');
-const userOrderRoutes = require('./routes/user.order.routes');
-const productRoutes = require('./routes/product.routes');
-const orderRoutes = require('./routes/order.routes');
-const couponRoutes = require('./routes/coupon.routes');
-const reviewRoutes = require('./routes/review.routes');
-const adminRoutes = require('./routes/admin.routes');
-const cloudinaryRoutes = require('./routes/cloudinary.routes');
-const cartRoutes = require('./routes/cart.routes');
-const cartTrackingRoutes = require('./routes/cartTracking.routes');
-const shippingRoutes = require('./routes/shipping.routes');
-const metaConversionsRoutes = require('./routes/metaConversions.routes');
-// const { handleStripeWebhook } = require('./controller/order.controller');
+
+import contactRoutes from './routes/contact.routes.js';
+import userRoutes from './routes/user.routes.js';
+import categoryRoutes from './routes/category.routes.js';
+
+import brandRoutes from './routes/brand.routes.js';
+import userOrderRoutes from './routes/user.order.routes.js';
+import productRoutes from './routes/product.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import cloudinaryRoutes from './routes/cloudinary.routes.js';
+import cartRoutes from './routes/cart.routes.js';
+import cartTrackingRoutes from './routes/cartTracking.routes.js';
+import shippingRoutes from './routes/shipping.routes.js';
+import metaConversionsRoutes from './routes/metaConversions.routes.js';
+// import { handleStripeWebhook } from './controller/order.controller.js';
 
 // IMPORTANT: Stripe webhook route must be defined before other middleware
 // that parses the request body
@@ -38,7 +67,7 @@ const metaConversionsRoutes = require('./routes/metaConversions.routes');
 // );
 
 // middleware
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -49,8 +78,7 @@ connectDB();
 app.use('/api/contact', contactRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/category', categoryRoutes);
-app.use('/api/blog', blogRoutes);
-app.use('/api/blog-category', blogCategoryRoutes);
+
 app.use('/api/brand', brandRoutes);
 app.use('/api/product', productRoutes);
 app.use('/api/order', orderRoutes);
@@ -87,4 +115,4 @@ app.use((req, res, next) => {
   next();
 });
 
-module.exports = app;
+export default app;

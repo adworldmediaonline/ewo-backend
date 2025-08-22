@@ -1,35 +1,49 @@
-const express = require('express');
+import express from 'express';
+import {
+  addAllProducts,
+  addProduct,
+  deleteProduct,
+  getAllProducts,
+  getOfferTimerProducts,
+  getPaginatedProducts,
+  getProductSuggestions,
+  getRelatedProducts,
+  getSingleProduct,
+  getTopRatedProducts,
+  reviewProducts,
+  searchProducts,
+  stockOutProducts,
+  updateProduct,
+} from '../controller/product.controller.js';
 const router = express.Router();
-// internal
-const productController = require('../controller/product.controller');
 
 // search routes
-router.get('/suggestions', productController.getProductSuggestions);
-router.get('/search', productController.searchProducts);
+router.get('/suggestions', getProductSuggestions);
+router.get('/search', searchProducts);
 
 // add a product
-router.post('/add', productController.addProduct);
+router.post('/add', addProduct);
 // add all product
-router.post('/add-all', productController.addAllProducts);
+router.post('/add-all', addAllProducts);
 // get all products
-router.get('/all', productController.getAllProducts);
+router.get('/all', getAllProducts);
 // get paginated products with filters
-router.get('/paginated', productController.getPaginatedProducts);
+router.get('/paginated', getPaginatedProducts);
 // get offer timer product
-router.get('/offer', productController.getOfferTimerProducts);
+router.get('/offer', getOfferTimerProducts);
 // top rated products
-router.get('/top-rated', productController.getTopRatedProducts);
+router.get('/top-rated', getTopRatedProducts);
 // reviews products
-router.get('/review-product', productController.reviewProducts);
+router.get('/review-product', reviewProducts);
 // get Related Products
-router.get('/related-product/:id', productController.getRelatedProducts);
+router.get('/related-product/:id', getRelatedProducts);
 // get Single Product
-router.get('/single-product/:id', productController.getSingleProduct);
+router.get('/single-product/:id', getSingleProduct);
 // stock Product
-router.get('/stock-out', productController.stockOutProducts);
+router.get('/stock-out', stockOutProducts);
 // get Single Product
-router.patch('/edit-product/:id', productController.updateProduct);
+router.patch('/edit-product/:id', updateProduct);
 // delete product
-router.delete('/:id', productController.deleteProduct);
+router.delete('/:id', deleteProduct);
 
-module.exports = router;
+export default router;

@@ -1,10 +1,10 @@
-const Category = require('../model/Category');
-const Product = require('../model/Products');
-const ApiError = require('../errors/api-error');
-const mongoose = require('mongoose');
+import Category from '../model/Category.js';
+import Product from '../model/Products.js';
+import ApiError from '../errors/api-error.js';
+import mongoose from 'mongoose';
 
 // create product service
-exports.createProductService = async data => {
+export const createProductService = async data => {
   // Calculate updated pricing fields
   if (data.price) {
     data.updatedPrice = Math.round(data.price * 1.2 * 100) / 100;
@@ -27,7 +27,7 @@ exports.createProductService = async data => {
 };
 
 // add all product service
-exports.addAllProductService = async data => {
+export const addAllProductService = async data => {
   await Product.deleteMany({});
   const products = await Product.insertMany(data);
 
@@ -47,7 +47,7 @@ exports.addAllProductService = async data => {
 };
 
 // get product data with pagination, filtering, and search
-exports.getPaginatedProductsService = async (filters = {}) => {
+export const getPaginatedProductsService = async (filters = {}) => {
   const {
     page = 1,
     limit = 8,
@@ -273,7 +273,7 @@ exports.getPaginatedProductsService = async (filters = {}) => {
 };
 
 // get all product data
-exports.getAllProductsService = async () => {
+export const getAllProductsService = async () => {
   const products = await Product.find({})
     .populate('reviews')
     .sort({ skuArrangementOrderNo: 1 });
@@ -281,14 +281,14 @@ exports.getAllProductsService = async () => {
 };
 
 // get offer product service
-exports.getOfferTimerProductService = async () => {
+export const getOfferTimerProductService = async () => {
   const products = await Product.find({
     'offerDate.endDate': { $gt: new Date() },
   }).populate('reviews');
   return products;
 };
 
-exports.getTopRatedProductService = async () => {
+export const getTopRatedProductService = async () => {
   const products = await Product.find({
     reviews: { $exists: true, $ne: [] },
   }).populate('reviews');
@@ -312,7 +312,7 @@ exports.getTopRatedProductService = async () => {
 };
 
 // get product data
-exports.getProductService = async idOrSlug => {
+export const getProductService = async idOrSlug => {
   try {
     let product;
     if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
@@ -342,7 +342,7 @@ exports.getProductService = async idOrSlug => {
 };
 
 // get product data
-exports.getRelatedProductService = async productId => {
+export const getRelatedProductService = async productId => {
   const currentProduct = await Product.findById(productId);
 
   const relatedProducts = await Product.find({
@@ -353,7 +353,7 @@ exports.getRelatedProductService = async productId => {
 };
 
 // update a product
-exports.updateProductService = async (id, currProduct) => {
+export const updateProductService = async (id, currProduct) => {
   const product = await Product.findById(id);
   if (product) {
     // Store the old category ID before updating
@@ -429,7 +429,7 @@ exports.updateProductService = async (id, currProduct) => {
 };
 
 // get Reviews Products
-exports.getReviewsProducts = async () => {
+export const getReviewsProducts = async () => {
   const result = await Product.find({
     reviews: { $exists: true, $ne: [] },
   }).populate({
@@ -443,7 +443,7 @@ exports.getReviewsProducts = async () => {
 };
 
 // get Reviews Products
-exports.getStockOutProducts = async () => {
+export const getStockOutProducts = async () => {
   const result = await Product.find({ status: 'out-of-stock' }).sort({
     createdAt: -1,
   });
@@ -451,7 +451,7 @@ exports.getStockOutProducts = async () => {
 };
 
 // get Reviews Products
-exports.deleteProduct = async id => {
+export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
   return result;
 };

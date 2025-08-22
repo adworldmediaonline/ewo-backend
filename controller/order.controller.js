@@ -1,20 +1,20 @@
-const { secret } = require('../config/secret');
-const stripe = require('stripe')(secret.stripe_key);
-const Order = require('../model/Order');
-const Products = require('../model/Products');
-const {
+import { secret } from '../config/secret.js';
+import Stripe from 'stripe';
+const stripe = new Stripe(secret.stripe_key);
+import Order from '../model/Order.js';
+import Products from '../model/Products.js';
+import {
   sendOrderConfirmation,
   sendShippingNotificationWithTracking,
   sendDeliveryNotificationWithTracking,
   sendOrderCancellation,
   scheduleFeedbackEmail,
-  diagnoseFeedbackEmail,
   verifyEmailConfig,
-} = require('../services/emailService');
-const CartTrackingService = require('../services/cartTracking.service');
+} from '../services/emailService.js';
+import CartTrackingService from '../services/cartTracking.service.js';
 
 // create-payment-intent
-exports.paymentIntent = async (req, res, next) => {
+export const paymentIntent = async (req, res, next) => {
   try {
     const product = req.body;
 
@@ -139,7 +139,7 @@ exports.paymentIntent = async (req, res, next) => {
 };
 
 // addOrder - PRIMARY payment processing method (does not rely on webhooks)
-exports.addOrder = async (req, res, next) => {
+export const addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
 
@@ -414,7 +414,7 @@ exports.addOrder = async (req, res, next) => {
 };
 
 // get Orders
-exports.getOrders = async (req, res, next) => {
+export const getOrders = async (req, res, next) => {
   try {
     const orderItems = await Order.find({})
       .populate('user')
@@ -430,7 +430,7 @@ exports.getOrders = async (req, res, next) => {
 };
 
 // get Orders
-exports.getSingleOrder = async (req, res, next) => {
+export const getSingleOrder = async (req, res, next) => {
   try {
     const orderItem = await Order.findById(req.params.id).populate('user');
     res.status(200).json(orderItem);
@@ -440,7 +440,7 @@ exports.getSingleOrder = async (req, res, next) => {
   }
 };
 
-exports.updateOrderStatus = async (req, res, next) => {
+export const updateOrderStatus = async (req, res, next) => {
   const { status: newStatus } = req.body;
   const orderId = req.params.id;
 
@@ -531,7 +531,7 @@ exports.updateOrderStatus = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.sendShippingNotification = async (req, res, next) => {
+export const sendShippingNotification = async (req, res, next) => {
   const orderId = req.params.id; // Order ID from URL parameter
   const { trackingNumber, carrier, estimatedDelivery } = req.body; // Admin provides tracking info
 
@@ -584,7 +584,7 @@ exports.sendShippingNotification = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.sendDeliveryNotification = async (req, res, next) => {
+export const sendDeliveryNotification = async (req, res, next) => {
   const orderId = req.params.id; // Order ID from URL parameter
   const { deliveredDate } = req.body; // Optional delivery date from admin
 
@@ -646,7 +646,7 @@ exports.sendDeliveryNotification = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.updateShippingDetails = async (req, res, next) => {
+export const updateShippingDetails = async (req, res, next) => {
   const orderId = req.params.id;
   const {
     trackingNumber,
@@ -894,7 +894,7 @@ const extractClientInfo = req => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.processRefund = async (req, res, next) => {
+export const processRefund = async (req, res, next) => {
   try {
     const { orderId } = req.params;
     const { amount, reason = 'requested_by_customer' } = req.body;
@@ -1103,7 +1103,7 @@ exports.processRefund = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.cancelOrder = async (req, res, next) => {
+export const cancelOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
     const { reason = 'requested_by_customer' } = req.body;
@@ -1344,7 +1344,7 @@ exports.cancelOrder = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.getPaymentDetails = async (req, res, next) => {
+export const getPaymentDetails = async (req, res, next) => {
   try {
     const { orderId } = req.params;
 
@@ -1404,7 +1404,7 @@ exports.getPaymentDetails = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-exports.triggerFeedbackEmail = async (req, res, next) => {
+export const triggerFeedbackEmail = async (req, res, next) => {
   const orderId = req.params.id; // Order ID from URL parameter
 
   try {
@@ -1430,7 +1430,7 @@ exports.triggerFeedbackEmail = async (req, res, next) => {
 };
 
 // Diagnostic function for troubleshooting feedback email issues
-exports.diagnoseFeedbackEmail = async (req, res, next) => {
+export const diagnoseFeedbackEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -1449,7 +1449,7 @@ exports.diagnoseFeedbackEmail = async (req, res, next) => {
 };
 
 // Verify email configuration
-exports.verifyEmailConfiguration = async (req, res, next) => {
+export const verifyEmailConfiguration = async (req, res, next) => {
   try {
     console.log('🔍 Verifying email configuration...');
 
