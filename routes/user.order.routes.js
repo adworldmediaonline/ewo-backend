@@ -1,11 +1,11 @@
 import express from 'express';
 import {
   getDashboardAmount,
-  getSalesReport,
-  mostSellingCategory,
   getDashboardRecentOrder,
   getOrderById,
   getOrderByUser,
+  getSalesReport,
+  mostSellingCategory,
 } from '../controller/user.order.controller.js';
 import verifyToken from '../middleware/verifyToken.js';
 const router = express.Router();

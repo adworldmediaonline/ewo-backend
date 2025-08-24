@@ -1,17 +1,17 @@
-import { secret } from '../config/secret.js';
 import Stripe from 'stripe';
-const stripe = new Stripe(secret.stripe_key);
+import { secret } from '../config/secret.js';
 import Order from '../model/Order.js';
 import Products from '../model/Products.js';
+import CartTrackingService from '../services/cartTracking.service.js';
 import {
-  sendOrderConfirmation,
-  sendShippingNotificationWithTracking,
+  scheduleFeedbackEmail,
   sendDeliveryNotificationWithTracking,
   sendOrderCancellation,
-  scheduleFeedbackEmail,
+  sendOrderConfirmation,
+  sendShippingNotificationWithTracking,
   verifyEmailConfig,
 } from '../services/emailService.js';
-import CartTrackingService from '../services/cartTracking.service.js';
+const stripe = new Stripe(secret.stripe_key);
 
 // create-payment-intent
 export const paymentIntent = async (req, res, next) => {
@@ -26,25 +26,13 @@ export const paymentIntent = async (req, res, next) => {
     if (product.orderData && product.orderData.totalAmount) {
       const totalAmount = Number(product.orderData.totalAmount);
       amount = Math.round(totalAmount * 100);
-      console.log(
-        'Using orderData.totalAmount for Stripe payment:',
-        totalAmount
-      );
     } else {
       // Fallback to price
       amount = Math.round(price * 100);
-      console.log('Using price for Stripe payment:', price);
     }
-
-    console.log('Request body:', product);
-    console.log('Final amount in cents for Stripe:', amount);
 
     // Handle zero or negative amounts (free orders due to 100% discounts)
     if (amount <= 0) {
-      console.log(
-        '🎁 Free order detected - amount is $0 or negative:',
-        amount / 100
-      );
       return res.status(200).json({
         success: true,
         isFreeOrder: true,
@@ -55,7 +43,6 @@ export const paymentIntent = async (req, res, next) => {
 
     // Stripe requires minimum $0.50 USD (50 cents)
     if (amount < 50) {
-      console.log('⚠️ Amount too low for Stripe processing:', amount / 100);
       return res.status(400).json({
         success: false,
         message: 'Payment amount must be at least $0.50',
@@ -98,8 +85,6 @@ export const paymentIntent = async (req, res, next) => {
           ? item.productId.toString()
           : null;
 
-        console.log(`Cart item ${item.title} ID: ${id}`);
-
         return {
           _id: id,
           title: item.title,
@@ -111,11 +96,7 @@ export const paymentIntent = async (req, res, next) => {
       // Stringify and limit to Stripe metadata size constraints
       try {
         metadata.order_cart = JSON.stringify(simplifiedCart).substring(0, 500);
-      } catch (error) {
-        console.error('Error stringifying cart:', error);
-      }
-    } else {
-      console.error('⚠️ NO CART DATA FOUND IN REQUEST:');
+      } catch (error) {}
     }
 
     // Create a PaymentIntent with the order amount and currency
@@ -126,14 +107,11 @@ export const paymentIntent = async (req, res, next) => {
       metadata: metadata,
     });
 
-    console.log('Payment intent created successfully:', paymentIntent.id);
-
     res.send({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error('Error creating payment intent:', error);
     next(error);
   }
 };
@@ -142,23 +120,6 @@ export const paymentIntent = async (req, res, next) => {
 export const addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
-
-    // Log the incoming order data for debugging
-    console.log('📋 Processing Order (Primary Payment Flow):', {
-      subTotal: orderData.subTotal,
-      shippingCost: orderData.shippingCost,
-      discount: orderData.discount,
-      firstTimeDiscount: orderData.firstTimeDiscount,
-      totalAmount: orderData.totalAmount,
-      appliedCoupons: orderData.appliedCoupons,
-      appliedCouponsCount: orderData.appliedCoupons?.length || 0,
-      paymentIntentId: orderData.paymentIntentId,
-      paymentMethod: orderData.paymentMethod,
-      hasPaymentInfo: !!orderData.paymentInfo,
-      paymentInfoId: orderData.paymentInfo?.id,
-      isPaid: orderData.isPaid,
-      paidAt: orderData.paidAt,
-    });
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
@@ -175,8 +136,6 @@ export const addOrder = async (req, res, next) => {
       }));
     }
 
-    console.log('🎫 Fixed appliedCoupons data:', orderData.appliedCoupons);
-
     // PRIMARY PAYMENT PROCESSING: Capture and process payment intent data
     // This is the main payment processing flow - does NOT rely on webhooks
     let paymentIntentId = orderData.paymentIntentId;
@@ -184,19 +143,10 @@ export const addOrder = async (req, res, next) => {
     // Handle both paymentIntentId and paymentInfo fields from frontend
     if (!paymentIntentId && orderData.paymentInfo) {
       paymentIntentId = orderData.paymentInfo.id;
-      console.log(
-        '🔄 Extracted payment intent ID from paymentInfo:',
-        paymentIntentId
-      );
     }
 
     if (paymentIntentId && orderData.paymentMethod === 'Card') {
       try {
-        console.log(
-          '💳 Processing Stripe payment intent (Primary Flow):',
-          paymentIntentId
-        );
-
         // Retrieve the payment intent from Stripe to get complete information
         const paymentIntent = await stripe.paymentIntents.retrieve(
           paymentIntentId,
@@ -204,13 +154,6 @@ export const addOrder = async (req, res, next) => {
             expand: ['charges.data.balance_transaction'],
           }
         );
-
-        console.log('🔍 Retrieved payment intent:', {
-          id: paymentIntent.id,
-          status: paymentIntent.status,
-          amount: paymentIntent.amount,
-          charges: paymentIntent.charges?.data?.length || 0,
-        });
 
         // Extract charge information (needed for refunds)
         let chargeData = null;
@@ -276,17 +219,6 @@ export const addOrder = async (req, res, next) => {
             frontendPaymentInfo: orderData.paymentInfo, // Store original frontend data
           },
         };
-
-        console.log(
-          '✅ Enhanced payment intent data prepared (Primary Flow):',
-          {
-            id: orderData.paymentIntent.id,
-            chargeId: orderData.paymentIntent.chargeId,
-            status: orderData.paymentIntent.status,
-            amount: orderData.paymentIntent.amount,
-            receiptUrl: orderData.paymentIntent.receiptUrl,
-          }
-        );
       } catch (stripeError) {
         console.error(
           '❌ Error retrieving payment intent from Stripe:',
@@ -295,7 +227,6 @@ export const addOrder = async (req, res, next) => {
 
         // Fallback: Use payment intent data from frontend if available
         if (orderData.paymentInfo && orderData.paymentInfo.id) {
-          console.log('🔄 Using fallback payment info from frontend');
           orderData.paymentIntent = {
             id: orderData.paymentInfo.id,
             status: orderData.paymentInfo.status || 'succeeded',
@@ -361,30 +292,10 @@ export const addOrder = async (req, res, next) => {
 
     const order = await Order.create(orderData);
 
-    console.log('✅ Order Created in Database (Primary Flow):', {
-      _id: order._id,
-      subTotal: order.subTotal,
-      shippingCost: order.shippingCost,
-      discount: order.discount,
-      firstTimeDiscount: order.firstTimeDiscount,
-      totalAmount: order.totalAmount,
-      appliedCoupons: order.appliedCoupons,
-      appliedCouponsCount: order.appliedCoupons?.length || 0,
-      paymentIntentId: order.paymentIntent?.id,
-      chargeId: order.paymentIntent?.chargeId,
-      paymentMethod: order.paymentMethod,
-    });
-
     // Update product quantities
     await updateProductQuantities(order.cart);
 
     // Send confirmation email using email service
-    console.log('📧 Sending order confirmation email:', {
-      _id: order._id,
-      email: order.email,
-      paymentMethod: order.paymentMethod,
-    });
-
     const emailSent = await sendOrderConfirmation(order);
 
     // Update order to mark email as sent
@@ -395,10 +306,7 @@ export const addOrder = async (req, res, next) => {
     // Send purchase event to Meta Conversions API asynchronously
     setImmediate(() => {
       CartTrackingService.sendPurchaseToMeta(orderData, req).catch(error => {
-        console.error(
-          'Meta Purchase API call failed (non-blocking):',
-          error.message
-        );
+        console.error('Meta Purchase API call failed (non-blocking):', error);
       });
     });
 
@@ -408,7 +316,6 @@ export const addOrder = async (req, res, next) => {
       order: order,
     });
   } catch (error) {
-    console.log('❌ Error in addOrder (Primary Flow):', error);
     next(error);
   }
 };
@@ -424,7 +331,6 @@ export const getOrders = async (req, res, next) => {
       data: orderItems,
     });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
@@ -435,7 +341,6 @@ export const getSingleOrder = async (req, res, next) => {
     const orderItem = await Order.findById(req.params.id).populate('user');
     res.status(200).json(orderItem);
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
@@ -520,7 +425,6 @@ export const updateOrderStatus = async (req, res, next) => {
       emailMessage: emailResult ? emailResult.message : null,
     });
   } catch (error) {
-    console.error('Error updating order status:', error);
     next(error);
   }
 };
@@ -573,7 +477,6 @@ export const sendShippingNotification = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Error in sendShippingNotification controller:', error);
     next(error);
   }
 };
@@ -635,7 +538,6 @@ export const sendDeliveryNotification = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Error in sendDeliveryNotification controller:', error);
     next(error);
   }
 };
@@ -714,7 +616,6 @@ export const updateShippingDetails = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error('Error updating shipping details:', error);
     next(error);
   }
 };
@@ -725,7 +626,6 @@ export const updateShippingDetails = async (req, res, next) => {
  */
 async function updateProductQuantities(cartItems) {
   if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-    console.log('No cart items to update quantities for');
     return;
   }
 
@@ -750,7 +650,6 @@ async function updateProductQuantities(cartItems) {
       const orderQuantity = parseInt(item.orderQuantity || 1, 10);
 
       // First check if product exists with direct find
-      console.log(`Finding product with ID: "${productId}"`);
       const product = await Products.findById(productId);
 
       if (!product) {
@@ -861,7 +760,6 @@ async function buildPaymentIntentData(paymentIntent) {
       },
     };
   } catch (error) {
-    console.error('Error building payment intent data:', error);
     // Return minimal data if processing fails
     return {
       id: paymentIntent.id,
@@ -1133,13 +1031,6 @@ export const cancelOrder = async (req, res, next) => {
       });
     }
 
-    console.log('🚫 Cancelling order:', {
-      orderId: order._id,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      totalAmount: order.totalAmount,
-    });
-
     // Process refund if order was paid by card
     if (
       order.paymentMethod === 'Card' &&
@@ -1150,10 +1041,6 @@ export const cancelOrder = async (req, res, next) => {
 
         if (order.paymentIntent.chargeId) {
           // Preferred method: Use charge ID
-          console.log(
-            '💳 Using charge ID for cancellation refund:',
-            order.paymentIntent.chargeId
-          );
           refund = await stripe.refunds.create({
             charge: order.paymentIntent.chargeId,
             reason: reason,
@@ -1165,10 +1052,6 @@ export const cancelOrder = async (req, res, next) => {
           });
         } else if (order.paymentIntent.id) {
           // Alternative method: Use payment intent ID
-          console.log(
-            '💳 Using payment intent ID for cancellation refund:',
-            order.paymentIntent.id
-          );
 
           // First, retrieve the payment intent to get the charge ID
           const paymentIntent = await stripe.paymentIntents.retrieve(
@@ -1180,10 +1063,6 @@ export const cancelOrder = async (req, res, next) => {
 
           if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
             const chargeId = paymentIntent.charges.data[0].id;
-            console.log(
-              '💳 Retrieved charge ID from payment intent for cancellation:',
-              chargeId
-            );
 
             refund = await stripe.refunds.create({
               charge: chargeId,
@@ -1202,9 +1081,6 @@ export const cancelOrder = async (req, res, next) => {
           } else {
             // For test mode or cases where charges aren't immediately available,
             // try using payment intent ID directly
-            console.log(
-              '⚠️ No charges found for cancellation, trying payment intent refund directly'
-            );
 
             try {
               refund = await stripe.refunds.create({
@@ -1216,9 +1092,6 @@ export const cancelOrder = async (req, res, next) => {
                   cancellation: true,
                 },
               });
-              console.log(
-                '✅ Cancellation refund created using payment intent ID directly'
-              );
             } catch (directRefundError) {
               console.error(
                 '❌ Direct payment intent cancellation refund failed:',
@@ -1230,12 +1103,6 @@ export const cancelOrder = async (req, res, next) => {
             }
           }
         }
-
-        console.log('✅ Cancellation refund processed:', {
-          refundId: refund.id,
-          amount: refund.amount,
-          status: refund.status,
-        });
 
         // Update order with refund information
         const refundData = {
@@ -1257,10 +1124,8 @@ export const cancelOrder = async (req, res, next) => {
         );
 
         // Send cancellation email
-        console.log('📧 Sending order cancellation email...');
         const emailSent = await sendOrderCancellation(updatedOrder);
         if (emailSent) {
-          console.log('✅ Cancellation email sent successfully');
         } else {
           console.log('⚠️ Failed to send cancellation email');
         }
@@ -1277,8 +1142,6 @@ export const cancelOrder = async (req, res, next) => {
           },
         });
       } catch (stripeError) {
-        console.error('Error processing cancellation refund:', stripeError);
-
         // Still cancel the order even if refund fails
         const cancelledOrder = await Order.findByIdAndUpdate(
           orderId,
@@ -1287,13 +1150,7 @@ export const cancelOrder = async (req, res, next) => {
         );
 
         // Send cancellation email even if refund failed
-        console.log('📧 Sending order cancellation email (refund failed)...');
         const emailSent = await sendOrderCancellation(cancelledOrder);
-        if (emailSent) {
-          console.log('✅ Cancellation email sent successfully');
-        } else {
-          console.log('⚠️ Failed to send cancellation email');
-        }
 
         res.status(200).json({
           success: true,
@@ -1314,13 +1171,7 @@ export const cancelOrder = async (req, res, next) => {
       );
 
       // Send cancellation email for non-card orders
-      console.log('📧 Sending order cancellation email (non-card payment)...');
       const emailSent = await sendOrderCancellation(cancelledOrder);
-      if (emailSent) {
-        console.log('✅ Cancellation email sent successfully');
-      } else {
-        console.log('⚠️ Failed to send cancellation email');
-      }
 
       res.status(200).json({
         success: true,
@@ -1333,7 +1184,6 @@ export const cancelOrder = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Error cancelling order:', error);
     next(error);
   }
 };
@@ -1393,7 +1243,6 @@ export const getPaymentDetails = async (req, res, next) => {
       data: paymentDetails,
     });
   } catch (error) {
-    console.error('Error getting payment details:', error);
     next(error);
   }
 };
@@ -1424,7 +1273,6 @@ export const triggerFeedbackEmail = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Error in triggerFeedbackEmail controller:', error);
     next(error);
   }
 };
@@ -1434,8 +1282,6 @@ export const diagnoseFeedbackEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    console.log(`🔍 Diagnostic request for order: ${id}`);
-
     const diagnostic = await diagnoseFeedbackEmail(id);
 
     res.status(200).json({
@@ -1443,7 +1289,6 @@ export const diagnoseFeedbackEmail = async (req, res, next) => {
       diagnostic,
     });
   } catch (error) {
-    console.error('Error in diagnoseFeedbackEmail controller:', error);
     next(error);
   }
 };
@@ -1451,8 +1296,6 @@ export const diagnoseFeedbackEmail = async (req, res, next) => {
 // Verify email configuration
 export const verifyEmailConfiguration = async (req, res, next) => {
   try {
-    console.log('🔍 Verifying email configuration...');
-
     const isValid = await verifyEmailConfig();
 
     res.status(200).json({
@@ -1463,7 +1306,6 @@ export const verifyEmailConfiguration = async (req, res, next) => {
         : 'Email configuration has issues',
     });
   } catch (error) {
-    console.error('Error in verifyEmailConfiguration controller:', error);
     next(error);
   }
 };

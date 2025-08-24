@@ -1,18 +1,18 @@
 import express from 'express';
 import {
-  paymentIntent,
   addOrder,
-  getOrders,
-  updateOrderStatus,
-  getSingleOrder,
-  sendShippingNotification,
-  sendDeliveryNotification,
-  updateShippingDetails,
-  processRefund,
   cancelOrder,
-  getPaymentDetails,
-  triggerFeedbackEmail,
   diagnoseFeedbackEmail,
+  getOrders,
+  getPaymentDetails,
+  getSingleOrder,
+  paymentIntent,
+  processRefund,
+  sendDeliveryNotification,
+  sendShippingNotification,
+  triggerFeedbackEmail,
+  updateOrderStatus,
+  updateShippingDetails,
   verifyEmailConfiguration,
 } from '../controller/order.controller.js';
 const router = express.Router();
