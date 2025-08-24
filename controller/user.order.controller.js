@@ -16,22 +16,25 @@ dayjs.extend(isSameOrAfter);
 
 // get all orders user
 export const getOrderByUser = async (req, res, next) => {
-  // console.log(req.user)
   try {
-    const { page, limit } = req.query;
+    const { page, limit, userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
 
     const pages = Number(page) || 1;
     const limits = Number(limit) || 8;
     const skip = (pages - 1) * limits;
 
-    const totalDoc = await Order.countDocuments({ user: req.user._id });
+    const totalDoc = await Order.countDocuments({ user: userId });
 
     // total padding order count
     const totalPendingOrder = await Order.aggregate([
       {
         $match: {
           status: 'pending',
-          user: new mongoose.Types.ObjectId(req.user._id),
+          user: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -50,7 +53,7 @@ export const getOrderByUser = async (req, res, next) => {
       {
         $match: {
           status: 'processing',
-          user: new mongoose.Types.ObjectId(req.user._id),
+          user: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -68,7 +71,7 @@ export const getOrderByUser = async (req, res, next) => {
       {
         $match: {
           status: 'delivered',
-          user: new mongoose.Types.ObjectId(req.user._id),
+          user: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -87,7 +90,7 @@ export const getOrderByUser = async (req, res, next) => {
       {
         $match: {
           status: 'shipped',
-          user: new mongoose.Types.ObjectId(req.user._id),
+          user: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -106,7 +109,7 @@ export const getOrderByUser = async (req, res, next) => {
       {
         $match: {
           status: 'cancel',
-          user: new mongoose.Types.ObjectId(req.user._id),
+          user: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -123,7 +126,7 @@ export const getOrderByUser = async (req, res, next) => {
     // today order amount
 
     // query for orders
-    const orders = await Order.find({ user: req.user._id }).sort({ _id: -1 });
+    const orders = await Order.find({ user: userId }).sort({ _id: -1 });
 
     res.send({
       orders,

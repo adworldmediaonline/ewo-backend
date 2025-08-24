@@ -1,11 +1,11 @@
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
-import { auth } from './lib/auth.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { auth } from './lib/auth.js';
 dotenv.config();
 
 // ES module __dirname workaround
@@ -38,6 +38,8 @@ app.get('/api/me', async (req, res) => {
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });
+
+  console.log('session', session);
   return res.json(session);
 });
 // better auth config end
@@ -46,22 +48,22 @@ app.get('/api/me', async (req, res) => {
 import globalErrorHandler from './middleware/global-error-handler.js';
 // routes
 
+import categoryRoutes from './routes/category.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import userRoutes from './routes/user.routes.js';
-import categoryRoutes from './routes/category.routes.js';
 
-import brandRoutes from './routes/brand.routes.js';
-import userOrderRoutes from './routes/user.order.routes.js';
-import productRoutes from './routes/product.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import couponRoutes from './routes/coupon.routes.js';
-import reviewRoutes from './routes/review.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import cloudinaryRoutes from './routes/cloudinary.routes.js';
+import brandRoutes from './routes/brand.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import cartTrackingRoutes from './routes/cartTracking.routes.js';
-import shippingRoutes from './routes/shipping.routes.js';
+import cloudinaryRoutes from './routes/cloudinary.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
 import metaConversionsRoutes from './routes/metaConversions.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import productRoutes from './routes/product.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import shippingRoutes from './routes/shipping.routes.js';
+import userOrderRoutes from './routes/user.order.routes.js';
 // import { handleStripeWebhook } from './controller/order.controller.js';
 
 // IMPORTANT: Stripe webhook route must be defined before other middleware

@@ -7,7 +7,6 @@ import {
   getSalesReport,
   mostSellingCategory,
 } from '../controller/user.order.controller.js';
-import verifyToken from '../middleware/verifyToken.js';
 const router = express.Router();
 
 // get dashboard amount
@@ -26,6 +25,6 @@ router.get('/dashboard-recent-order', getDashboardRecentOrder);
 router.get('/:id', getOrderById);
 
 //get all order by a user
-router.get('/', verifyToken, getOrderByUser);
+router.get('/', getOrderByUser);
 
 export default router;

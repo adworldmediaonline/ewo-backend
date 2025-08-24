@@ -32,12 +32,20 @@ const sessionSchema = new mongooseInstance.Schema(
       type: String,
       required: false,
     },
-  },
-  {
-    timestamps: true,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   }
+  // {
+  //   timestamps: true,
+  // }
 );
 
 const Session = mongoose.model('Session', sessionSchema);
 
-module.exports = Session;
+export default Session;
