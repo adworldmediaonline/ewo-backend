@@ -1,5 +1,4 @@
 import bizSdk from 'facebook-nodejs-business-sdk';
-import crypto from 'crypto';
 
 // Initialize Facebook Business SDK
 const Content = bizSdk.Content;
