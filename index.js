@@ -21,10 +21,13 @@ const PORT = secret.port || 8090;
 // Configure CORS middleware
 app.use(
   cors({
-    origin:
+    origin: [
       secret.env === 'development'
         ? secret.frontend_url_local
         : secret.frontend_url_prod,
+      'https://ewo-admin.vercel.app/',
+      'https://ewo-admin.vercel.app',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
