@@ -30,4 +30,14 @@ export const secret = {
   store_name: process.env.STORE_NAME,
   support_email: process.env.SUPPORT_EMAIL,
   api_base_url: process.env.API_BASE_URL,
+
+  // betterAuth
+  backend_url_prod: process.env.BACKEND_URL_PROD,
+  backend_url_local: process.env.BACKEND_URL_LOCAL,
+  frontend_url_prod: process.env.FRONTEND_URL_PROD,
+  frontend_url_local: process.env.FRONTEND_URL_LOCAL,
+
+  // google cloud
+  google_client_id: process.env.GOOGLE_CLIENT_ID,
+  google_client_secret: process.env.GOOGLE_CLIENT_SECRET,
 };
