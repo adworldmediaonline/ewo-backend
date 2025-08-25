@@ -40,7 +40,7 @@ app.use(
       } else {
         // Log blocked origins for debugging
         console.log('CORS blocked origin:', origin);
-        callback(null, true); // Temporarily allow all origins for debugging
+        callback(new Error('Not allowed by CORS'));
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // Added PATCH for admin routes
@@ -58,7 +58,7 @@ app.use(
 );
 
 // better auth config
-// Mount Better Auth routes
+// Mount Better Auth routes BEFORE express.json() middleware
 app.all('/api/auth/*', toNodeHandler(auth));
 
 // Handle CORS preflight for all API routes
@@ -68,12 +68,17 @@ app.get('/api/auth/ok', (req, res) => {
 });
 
 app.get('/api/me', async (req, res) => {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
 
-  console.log('session', session);
-  return res.json(session);
+    console.log('session', session);
+    return res.json(session);
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return res.status(500).json({ error: 'Failed to get session' });
+  }
 });
 // better auth config end
 
@@ -108,6 +113,7 @@ import userOrderRoutes from './routes/user.order.routes.js';
 // );
 
 // middleware
+// IMPORTANT: express.json() must come AFTER Better Auth routes
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
