@@ -37,4 +37,4 @@ const roleAuth = (...allowedRoles) => {
   };
 };
 
-module.exports = roleAuth;
+export default roleAuth;

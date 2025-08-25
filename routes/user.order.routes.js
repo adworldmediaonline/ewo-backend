@@ -1,27 +1,30 @@
-const express = require('express');
+import express from 'express';
+import {
+  getDashboardAmount,
+  getDashboardRecentOrder,
+  getOrderById,
+  getOrderByUser,
+  getSalesReport,
+  mostSellingCategory,
+} from '../controller/user.order.controller.js';
 const router = express.Router();
-const userOrderController = require('../controller/user.order.controller');
-const verifyToken = require('../middleware/verifyToken');
 
 // get dashboard amount
-router.get('/dashboard-amount', userOrderController.getDashboardAmount);
+router.get('/dashboard-amount', getDashboardAmount);
 
 // get sales-report
-router.get('/sales-report', userOrderController.getSalesReport);
+router.get('/sales-report', getSalesReport);
 
 // get sales-report
-router.get('/most-selling-category', userOrderController.mostSellingCategory);
+router.get('/most-selling-category', mostSellingCategory);
 
 // get sales-report
-router.get(
-  '/dashboard-recent-order',
-  userOrderController.getDashboardRecentOrder
-);
+router.get('/dashboard-recent-order', getDashboardRecentOrder);
 
 //get a order by id
-router.get('/:id', userOrderController.getOrderById);
+router.get('/:id', getOrderById);
 
 //get all order by a user
-router.get('/', verifyToken, userOrderController.getOrderByUser);
+router.get('/', getOrderByUser);
 
-module.exports = router;
+export default router;

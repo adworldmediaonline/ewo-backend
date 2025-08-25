@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 // internal
-const uploader = require('../middleware/uploder');
-const { cloudinaryController } = require('../controller/cloudinary.controller');
-const multer = require('multer');
+import uploader from '../middleware/uploder.js';
+import { cloudinaryController } from '../controller/cloudinary.controller.js';
+import multer from 'multer';
 
 const upload = multer();
 //add image
@@ -40,4 +40,4 @@ router.post(
 // delete image
 router.delete('/delete', cloudinaryController.cloudinaryDeleteController);
 
-module.exports = router;
+export default router;

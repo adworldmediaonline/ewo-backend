@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 // Rate limiter for review submissions
 const reviewSubmissionLimiter = rateLimit({
@@ -77,7 +77,8 @@ const contactSubmissionLimiter = rateLimit({
   max: 3, // limit each IP to 3 contact submissions per hour
   message: {
     success: false,
-    message: 'Too many contact form submissions from this IP. Please try again later.',
+    message:
+      'Too many contact form submissions from this IP. Please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -96,14 +97,15 @@ const contactSubmissionLimiter = rateLimit({
 
     res.status(429).json({
       success: false,
-      message: 'Too many contact submissions. Please wait before submitting again.',
+      message:
+        'Too many contact submissions. Please wait before submitting again.',
       retryAfter: Math.ceil(req.rateLimit.resetTime / 1000),
     });
   },
 });
 
-module.exports = {
+export {
   reviewSubmissionLimiter,
   feedbackFormLimiter,
-  contactSubmission: contactSubmissionLimiter,
+  contactSubmissionLimiter as contactSubmission,
 };

@@ -1,9 +1,18 @@
-const categoryServices = require('../services/category.service');
+import {
+  createCategoryService,
+  addAllCategoryService,
+  getShowCategoryServices,
+  getAllCategoryServices,
+  getCategoryTypeService,
+  deleteCategoryService,
+  updateCategoryService,
+  getSingleCategoryService,
+} from '../services/category.service.js';
 
 // add category
-exports.addCategory = async (req, res, next) => {
+export const addCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.createCategoryService(req.body);
+    const result = await createCategoryService(req.body);
     res.status(200).json({
       status: 'success',
       message: 'Category created successfully!',
@@ -16,9 +25,9 @@ exports.addCategory = async (req, res, next) => {
 };
 
 // add all category
-exports.addAllCategory = async (req, res, next) => {
+export const addAllCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.addAllCategoryService(req.body);
+    const result = await addAllCategoryService(req.body);
     res.json({
       message: 'Category added successfully',
       result,
@@ -29,9 +38,9 @@ exports.addAllCategory = async (req, res, next) => {
 };
 
 // add all category
-exports.getShowCategory = async (req, res, next) => {
+export const getShowCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getShowCategoryServices();
+    const result = await getShowCategoryServices();
     res.status(200).json({
       success: true,
       result,
@@ -42,9 +51,9 @@ exports.getShowCategory = async (req, res, next) => {
 };
 
 // add all category
-exports.getAllCategory = async (req, res, next) => {
+export const getAllCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getAllCategoryServices();
+    const result = await getAllCategoryServices();
     res.status(200).json({
       success: true,
       result,
@@ -55,11 +64,9 @@ exports.getAllCategory = async (req, res, next) => {
 };
 
 // add all category
-exports.getProductTypeCategory = async (req, res, next) => {
+export const getProductTypeCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getCategoryTypeService(
-      req.params.type
-    );
+    const result = await getCategoryTypeService(req.params.type);
     res.status(200).json({
       success: true,
       result,
@@ -70,9 +77,9 @@ exports.getProductTypeCategory = async (req, res, next) => {
 };
 
 // delete category
-exports.deleteCategory = async (req, res, next) => {
+export const deleteCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.deleteCategoryService(req.params.id);
+    const result = await deleteCategoryService(req.params.id);
     res.status(200).json({
       success: true,
       result,
@@ -83,12 +90,9 @@ exports.deleteCategory = async (req, res, next) => {
 };
 
 // update category
-exports.updateCategory = async (req, res, next) => {
+export const updateCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.updateCategoryService(
-      req.params.id,
-      req.body
-    );
+    const result = await updateCategoryService(req.params.id, req.body);
 
     res.status(200).json({
       status: 'success',
@@ -101,11 +105,9 @@ exports.updateCategory = async (req, res, next) => {
 };
 
 // get single category
-exports.getSingleCategory = async (req, res, next) => {
+export const getSingleCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getSingleCategoryService(
-      req.params.id
-    );
+    const result = await getSingleCategoryService(req.params.id);
     res.status(200).json(result);
   } catch (error) {
     next(error);

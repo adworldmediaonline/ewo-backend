@@ -1,6 +1,6 @@
-const dotenv = require("dotenv");
-const cloudinaryModule = require("cloudinary");
-const { secret } = require("../config/secret");
+import dotenv from 'dotenv';
+import cloudinaryModule from 'cloudinary';
+import { secret } from '../config/secret.js';
 
 dotenv.config();
 const cloudinary = cloudinaryModule.v2;
@@ -11,4 +11,4 @@ cloudinary.config({
   api_secret: secret.cloudinary_api_secret,
 });
 
-module.exports = cloudinary;
+export default cloudinary;

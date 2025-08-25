@@ -1,8 +1,8 @@
-const CartTrackingService = require('../services/cartTracking.service');
-const Product = require('../model/Product');
+import CartTrackingService from '../services/cartTracking.service.js';
+import Product from '../model/Product.js';
 
 // Track add to cart event
-exports.trackAddToCart = async (req, res, next) => {
+export const trackAddToCart = async (req, res, next) => {
   try {
     const cartTrackingService = new CartTrackingService();
     const result = await cartTrackingService.trackEvent(
@@ -34,7 +34,7 @@ exports.trackAddToCart = async (req, res, next) => {
 };
 
 // Track cart actions - simplified for now
-exports.trackCartAction = async (req, res, next) => {
+export const trackCartAction = async (req, res, next) => {
   try {
     const { action, sessionId } = req.body;
 
@@ -57,7 +57,7 @@ exports.trackCartAction = async (req, res, next) => {
 };
 
 // Get cart analytics
-exports.getCartAnalytics = async (req, res, next) => {
+export const getCartAnalytics = async (req, res, next) => {
   try {
     const {
       startDate,
@@ -92,7 +92,7 @@ exports.getCartAnalytics = async (req, res, next) => {
 };
 
 // Get cart conversion funnel
-exports.getCartConversionFunnel = async (req, res, next) => {
+export const getCartConversionFunnel = async (req, res, next) => {
   try {
     const { startDate, endDate, userId } = req.query;
 
@@ -115,7 +115,7 @@ exports.getCartConversionFunnel = async (req, res, next) => {
 };
 
 // Get popular products - using the new service method
-exports.getPopularProducts = async (req, res, next) => {
+export const getPopularProducts = async (req, res, next) => {
   try {
     const { startDate, endDate, limit = 10 } = req.query;
 
@@ -145,7 +145,7 @@ exports.getPopularProducts = async (req, res, next) => {
 };
 
 // Get user cart journey - simplified
-exports.getUserCartJourney = async (req, res, next) => {
+export const getUserCartJourney = async (req, res, next) => {
   try {
     const { userId, email, sessionId } = req.params;
 
@@ -179,7 +179,7 @@ exports.getUserCartJourney = async (req, res, next) => {
 };
 
 // Mark as converted - simplified
-exports.markAsConverted = async (req, res, next) => {
+export const markAsConverted = async (req, res, next) => {
   try {
     const { userId, email, sessionId, orderId } = req.body;
 
@@ -209,7 +209,7 @@ exports.markAsConverted = async (req, res, next) => {
 };
 
 // Get cart tracking statistics
-exports.getCartTrackingStats = async (req, res, next) => {
+export const getCartTrackingStats = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
 
@@ -237,7 +237,7 @@ exports.getCartTrackingStats = async (req, res, next) => {
 };
 
 // Bulk track cart events
-exports.bulkTrackCartEvents = async (req, res, next) => {
+export const bulkTrackCartEvents = async (req, res, next) => {
   try {
     const { events } = req.body;
 
@@ -261,7 +261,7 @@ exports.bulkTrackCartEvents = async (req, res, next) => {
 };
 
 // Get cart tracking statistics for admin dashboard
-exports.getCartTrackingStatsForAdmin = async (req, res, next) => {
+export const getCartTrackingStatsForAdmin = async (req, res, next) => {
   try {
     const CartTracking = require('../model/CartTracking');
 
@@ -332,7 +332,7 @@ exports.getCartTrackingStatsForAdmin = async (req, res, next) => {
 };
 
 // Get cart tracking events with pagination for admin
-exports.getCartTrackingEvents = async (req, res, next) => {
+export const getCartTrackingEvents = async (req, res, next) => {
   try {
     const {
       page = 1,
@@ -393,7 +393,7 @@ exports.getCartTrackingEvents = async (req, res, next) => {
 };
 
 // Get conversion funnel data for admin
-exports.getConversionFunnelForAdmin = async (req, res, next) => {
+export const getConversionFunnelForAdmin = async (req, res, next) => {
   try {
     const { days = 30, startDate, endDate } = req.query;
 
@@ -486,7 +486,7 @@ exports.getConversionFunnelForAdmin = async (req, res, next) => {
 };
 
 // Get popular products for admin
-exports.getPopularProductsForAdmin = async (req, res, next) => {
+export const getPopularProductsForAdmin = async (req, res, next) => {
   try {
     const { limit = 10, days = 30 } = req.query;
 

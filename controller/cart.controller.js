@@ -1,7 +1,7 @@
-const Cart = require('../model/Cart');
+import Cart from '../model/Cart.js';
 
 // Save guest cart
-exports.saveGuestCart = async (req, res, next) => {
+export const saveGuestCart = async (req, res, next) => {
   try {
     const { email, cartItems } = req.body;
 
@@ -54,7 +54,7 @@ exports.saveGuestCart = async (req, res, next) => {
 };
 
 // Get guest cart by email
-exports.getGuestCart = async (req, res, next) => {
+export const getGuestCart = async (req, res, next) => {
   try {
     const { email } = req.params;
 
@@ -87,7 +87,7 @@ exports.getGuestCart = async (req, res, next) => {
 };
 
 // Delete guest cart
-exports.deleteGuestCart = async (req, res, next) => {
+export const deleteGuestCart = async (req, res, next) => {
   try {
     const { email } = req.params;
 
@@ -115,7 +115,7 @@ exports.deleteGuestCart = async (req, res, next) => {
 };
 
 // Update guest cart items
-exports.updateGuestCart = async (req, res, next) => {
+export const updateGuestCart = async (req, res, next) => {
   try {
     const { email } = req.params;
     const { cartItems } = req.body;
@@ -148,7 +148,7 @@ exports.updateGuestCart = async (req, res, next) => {
 };
 
 // Admin: Get all carts
-exports.getAllCarts = async (req, res, next) => {
+export const getAllCarts = async (req, res, next) => {
   try {
     const {
       page = 1,
@@ -222,7 +222,7 @@ exports.getAllCarts = async (req, res, next) => {
 };
 
 // Admin: Delete cart by ID
-exports.deleteCart = async (req, res, next) => {
+export const deleteCart = async (req, res, next) => {
   try {
     const { id } = req.params;
 

@@ -1,20 +1,28 @@
-const productServices = require('../services/product.service');
-const Product = require('../model/Products');
-const ApiError = require('../errors/api-error');
-const mongoose = require('mongoose');
+import Product from '../model/Products.js';
+import ApiError from '../errors/api-error.js';
+import mongoose from 'mongoose';
+import {
+  addAllProductService,
+  createProductService,
+  getAllProductsService,
+  getOfferTimerProductService,
+  getPaginatedProductsService,
+  getRelatedProductService,
+  getReviewsProducts,
+  getStockOutProducts,
+  getTopRatedProductService,
+  updateProductService,
+} from '../services/product.service.js';
 
 // add product
-exports.addProduct = async (req, res, next) => {
-  console.log('product--->', req.body);
+export const addProduct = async (req, res, next) => {
   try {
-    const result = await productServices.createProductService({
+    const result = await createProductService({
       ...req.body,
       imageURLs: Array.isArray(req.body.imageURLs)
         ? req.body.imageURLs
         : [req.body.img],
     });
-
-    console.log('product-result', result);
 
     res.status(200).json({
       success: true,
@@ -23,15 +31,14 @@ exports.addProduct = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
 
 // add all product
-module.exports.addAllProducts = async (req, res, next) => {
+export const addAllProducts = async (req, res, next) => {
   try {
-    const result = await productServices.addAllProductService(req.body);
+    const result = await addAllProductService(req.body);
     res.json({
       message: 'Products added successfully',
       result,
@@ -41,10 +48,41 @@ module.exports.addAllProducts = async (req, res, next) => {
   }
 };
 
-// get all products
-exports.getAllProducts = async (req, res, next) => {
+// get paginated products with filters and search
+export const getPaginatedProducts = async (req, res, next) => {
   try {
-    const result = await productServices.getAllProductsService();
+    const filters = {
+      page: req.query.page || 1,
+      limit: req.query.limit || 8,
+      search: req.query.search || '',
+      category: req.query.category || '',
+      subcategory: req.query.subcategory || req.query.subCategory || '',
+      minPrice: req.query.minPrice || '',
+      maxPrice: req.query.maxPrice || '',
+      sortBy: req.query.sortBy || 'skuArrangementOrderNo',
+      sortOrder: req.query.sortOrder || 'asc',
+    };
+
+    // Debug logging
+    console.log('Controller received filters:', filters);
+    console.log('Raw query params:', req.query);
+
+    const result = await getPaginatedProductsService(filters);
+
+    res.status(200).json({
+      success: true,
+      data: result.products,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// get all products
+export const getAllProducts = async (req, res, next) => {
+  try {
+    const result = await getAllProductsService();
     res.status(200).json({
       success: true,
       data: result,
@@ -55,9 +93,9 @@ exports.getAllProducts = async (req, res, next) => {
 };
 
 // get offer product controller
-module.exports.getOfferTimerProducts = async (req, res, next) => {
+export const getOfferTimerProducts = async (req, res, next) => {
   try {
-    const result = await productServices.getOfferTimerProductService();
+    const result = await getOfferTimerProductService();
     res.status(200).json({
       success: true,
       data: result,
@@ -68,9 +106,9 @@ module.exports.getOfferTimerProducts = async (req, res, next) => {
 };
 
 // get top rated Products
-module.exports.getTopRatedProducts = async (req, res, next) => {
+export const getTopRatedProducts = async (req, res, next) => {
   try {
-    const result = await productServices.getTopRatedProductService();
+    const result = await getTopRatedProductService();
     res.status(200).json({
       success: true,
       data: result,
@@ -81,7 +119,7 @@ module.exports.getTopRatedProducts = async (req, res, next) => {
 };
 
 // getSingleProduct
-exports.getSingleProduct = async (req, res, next) => {
+export const getSingleProduct = async (req, res, next) => {
   try {
     const idOrSlug = req.params.id;
     let product;
@@ -113,11 +151,9 @@ exports.getSingleProduct = async (req, res, next) => {
 };
 
 // get Related Product
-exports.getRelatedProducts = async (req, res, next) => {
+export const getRelatedProducts = async (req, res, next) => {
   try {
-    const products = await productServices.getRelatedProductService(
-      req.params.id
-    );
+    const products = await getRelatedProductService(req.params.id);
     res.status(200).json({
       success: true,
       data: products,
@@ -128,12 +164,9 @@ exports.getRelatedProducts = async (req, res, next) => {
 };
 
 // update product
-exports.updateProduct = async (req, res, next) => {
+export const updateProduct = async (req, res, next) => {
   try {
-    const product = await productServices.updateProductService(
-      req.params.id,
-      req.body
-    );
+    const product = await updateProductService(req.params.id, req.body);
     res.send({ data: product, message: 'Product updated successfully!' });
   } catch (error) {
     next(error);
@@ -141,9 +174,9 @@ exports.updateProduct = async (req, res, next) => {
 };
 
 // update product
-exports.reviewProducts = async (req, res, next) => {
+export const reviewProducts = async (req, res, next) => {
   try {
-    const products = await productServices.getReviewsProducts();
+    const products = await getReviewsProducts();
     res.status(200).json({
       success: true,
       data: products,
@@ -154,9 +187,9 @@ exports.reviewProducts = async (req, res, next) => {
 };
 
 // update product
-exports.stockOutProducts = async (req, res, next) => {
+export const stockOutProducts = async (req, res, next) => {
   try {
-    const products = await productServices.getStockOutProducts();
+    const products = await getStockOutProducts();
     res.status(200).json({
       success: true,
       data: products,
@@ -167,7 +200,7 @@ exports.stockOutProducts = async (req, res, next) => {
 };
 
 // update product
-exports.deleteProduct = async (req, res, next) => {
+export const deleteProduct = async (req, res, next) => {
   try {
     await productServices.deleteProduct(req.params.id);
     res.status(200).json({
@@ -179,7 +212,7 @@ exports.deleteProduct = async (req, res, next) => {
 };
 
 // Get product suggestions
-exports.getProductSuggestions = async (req, res) => {
+export const getProductSuggestions = async (req, res) => {
   const { term } = req.query;
 
   if (!term || term.length < 2) {
@@ -231,8 +264,6 @@ exports.getProductSuggestions = async (req, res) => {
       { $sort: { createdAt: -1 } },
     ]);
 
-    console.log('Found suggestions with images:', suggestions);
-
     return res.status(200).json({
       success: true,
       message: suggestions.length > 0 ? 'Products found' : 'No products found',
@@ -249,7 +280,7 @@ exports.getProductSuggestions = async (req, res) => {
 };
 
 // Search products
-exports.searchProducts = async (req, res) => {
+export const searchProducts = async (req, res) => {
   try {
     const {
       q: search,

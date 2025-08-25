@@ -1,8 +1,8 @@
-const CartTracking = require('../model/CartTracking');
-const User = require('../model/User');
-const Product = require('../model/Product');
-const metaConversionsApi = require('./metaConversionsApi.service');
-const { secret } = require('../config/secret');
+import CartTracking from '../model/CartTracking.js';
+import User from '../model/User.js';
+import Product from '../model/Product.js';
+import metaConversionsApi from './metaConversionsApi.service.js';
+import { secret } from '../config/secret.js';
 
 class CartTrackingService {
   /**
@@ -974,4 +974,4 @@ class CartTrackingService {
   }
 }
 
-module.exports = CartTrackingService;
+export default CartTrackingService;

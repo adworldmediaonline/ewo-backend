@@ -1,7 +1,7 @@
 // db.js
 // MongoDB connection using Mongoose with best practices
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGO_URI;
 
@@ -17,7 +17,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-async function connectDB() {
+export default async function connectDB() {
   if (cached.conn) {
     return cached.conn;
   }
@@ -35,5 +35,3 @@ async function connectDB() {
   cached.conn = await cached.promise;
   return cached.conn;
 }
-
-module.exports = connectDB;

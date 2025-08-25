@@ -1,22 +1,20 @@
-const express = require('express');
-const {
-  paymentIntent,
+import express from 'express';
+import {
   addOrder,
-  getOrders,
-  updateOrderStatus,
-  getSingleOrder,
-  sendShippingNotification,
-  sendDeliveryNotification,
-  updateShippingDetails,
-  processRefund,
   cancelOrder,
-  getPaymentDetails,
-  triggerFeedbackEmail,
   diagnoseFeedbackEmail,
+  getOrders,
+  getPaymentDetails,
+  getSingleOrder,
+  paymentIntent,
+  processRefund,
+  sendDeliveryNotification,
+  sendShippingNotification,
+  triggerFeedbackEmail,
+  updateOrderStatus,
+  updateShippingDetails,
   verifyEmailConfiguration,
-} = require('../controller/order.controller');
-
-// router
+} from '../controller/order.controller.js';
 const router = express.Router();
 
 // get orders
@@ -51,4 +49,4 @@ router.post('/trigger-feedback/:id', triggerFeedbackEmail);
 router.get('/diagnose-feedback/:id', diagnoseFeedbackEmail);
 router.get('/verify-email-config', verifyEmailConfiguration);
 
-module.exports = router;
+export default router;

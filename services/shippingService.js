@@ -1,5 +1,5 @@
-const { sendShippingNotificationWithTracking } = require('./emailService');
-const Order = require('../model/Order');
+import { sendShippingNotificationWithTracking } from './emailService.js';
+import Order from '../model/Order.js';
 
 /**
  * Shipping service for handling order shipping operations
@@ -224,4 +224,4 @@ class ShippingService {
   }
 }
 
-module.exports = ShippingService;
+export default ShippingService;

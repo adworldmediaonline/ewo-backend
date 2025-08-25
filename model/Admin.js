@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
-const bcrypt = require('bcryptjs');
-const crypto = require("crypto");
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const adminSchema = new mongoose.Schema(
   {
@@ -37,24 +37,19 @@ const adminSchema = new mongoose.Schema(
     status: {
       type: String,
       required: false,
-      default: "Active",
-      enum: ["Active", "Inactive"],
+      default: 'Active',
+      enum: ['Active', 'Inactive'],
     },
     password: {
       type: String,
       required: false,
-      default: bcrypt.hashSync("12345678"),
+      default: bcrypt.hashSync('12345678'),
     },
     role: {
       type: String,
       required: true,
-      default: "Admin",
-      enum: [
-        "Admin",
-        "Super Admin",
-        "Manager",
-        "CEO",
-      ],
+      default: 'Admin',
+      enum: ['Admin', 'Super Admin', 'Manager', 'CEO'],
     },
     joiningDate: {
       type: Date,
@@ -64,13 +59,13 @@ const adminSchema = new mongoose.Schema(
     confirmationTokenExpires: Date,
   },
   {
-    timestamps: true, 
+    timestamps: true,
   }
 );
 
 // generateConfirmationToken
 adminSchema.methods.generateConfirmationToken = function () {
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = crypto.randomBytes(32).toString('hex');
   this.confirmationToken = token;
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -78,6 +73,6 @@ adminSchema.methods.generateConfirmationToken = function () {
   return token;
 };
 
-const Admin = mongoose.model("Admin", adminSchema);
+const Admin = mongoose.model('Admin', adminSchema);
 
-module.exports = Admin;
+export default Admin;

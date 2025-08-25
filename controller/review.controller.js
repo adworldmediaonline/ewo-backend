@@ -1,13 +1,13 @@
-const mongoose = require('mongoose');
-const Order = require('../model/Order');
-const Products = require('../model/Products');
-const Review = require('../model/Review');
-const User = require('../model/User');
-const jwt = require('jsonwebtoken');
-const { secret } = require('../config/secret');
+import mongoose from 'mongoose';
+import Order from '../model/Order.js';
+import Products from '../model/Products.js';
+import Review from '../model/Review.js';
+import User from '../model/User.js';
+import jwt from 'jsonwebtoken';
+import { secret } from '../config/secret.js';
 
 // add a review
-exports.addReview = async (req, res, next) => {
+export const addReview = async (req, res, next) => {
   const { userId, productId, rating, comment } = req.body;
   try {
     // Check if the user has already left a review for this product
@@ -53,7 +53,7 @@ exports.addReview = async (req, res, next) => {
 };
 
 // Quick feedback from email (single click rating)
-exports.quickFeedback = async (req, res, next) => {
+export const quickFeedback = async (req, res, next) => {
   const { token, rating } = req.query;
 
   try {
@@ -183,7 +183,7 @@ exports.quickFeedback = async (req, res, next) => {
 };
 
 // Detailed feedback form
-exports.detailedFeedback = async (req, res, next) => {
+export const detailedFeedback = async (req, res, next) => {
   const { token } = req.query;
 
   try {
@@ -361,7 +361,7 @@ exports.detailedFeedback = async (req, res, next) => {
 };
 
 // Get unified feedback form (combines rating and review)
-exports.getUnifiedFeedback = async (req, res, next) => {
+export const getUnifiedFeedback = async (req, res, next) => {
   const { token } = req.query;
 
   try {
@@ -713,7 +713,7 @@ exports.getUnifiedFeedback = async (req, res, next) => {
 };
 
 // Submit unified feedback
-exports.submitUnifiedFeedback = async (req, res, next) => {
+export const submitUnifiedFeedback = async (req, res, next) => {
   const { token, rating, comment } = req.body;
 
   try {
@@ -883,7 +883,7 @@ exports.submitUnifiedFeedback = async (req, res, next) => {
 };
 
 // Submit detailed feedback
-exports.submitDetailedFeedback = async (req, res, next) => {
+export const submitDetailedFeedback = async (req, res, next) => {
   const { token, rating, comment } = req.body;
 
   try {
@@ -967,7 +967,7 @@ exports.submitDetailedFeedback = async (req, res, next) => {
 };
 
 // delete a review
-exports.deleteReviews = async (req, res, next) => {
+export const deleteReviews = async (req, res, next) => {
   try {
     const productId = req.params.id;
     const result = await Review.deleteMany({ productId: productId });

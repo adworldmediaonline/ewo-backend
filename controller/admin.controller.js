@@ -1,13 +1,13 @@
-const bcrypt = require('bcryptjs');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
+import bcrypt from 'bcryptjs';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
-const jwt = require('jsonwebtoken');
-const { tokenForVerify } = require('../config/auth');
-const Admin = require('../model/Admin');
-const { generateToken } = require('../utils/token');
-const { sendEmail } = require('../config/email');
-const { secret } = require('../config/secret');
+import jwt from 'jsonwebtoken';
+import { tokenForVerify } from '../config/auth.js';
+import Admin from '../model/Admin.js';
+import { generateToken } from '../utils/token.js';
+import { sendEmail } from '../config/email.js';
+import { secret } from '../config/secret.js';
 
 // register
 const registerAdmin = async (req, res, next) => {
@@ -319,7 +319,7 @@ const updatedStatus = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   registerAdmin,
   loginAdmin,
   forgetPassword,

@@ -1,10 +1,10 @@
-const Category = require('../model/Category');
-const Product = require('../model/Products');
-const ApiError = require('../errors/api-error');
-const mongoose = require('mongoose');
+import Category from '../model/Category.js';
+import Product from '../model/Products.js';
+import ApiError from '../errors/api-error.js';
+import mongoose from 'mongoose';
 
 // create product service
-exports.createProductService = async data => {
+export const createProductService = async data => {
   // Calculate updated pricing fields
   if (data.price) {
     data.updatedPrice = Math.round(data.price * 1.2 * 100) / 100;
@@ -27,7 +27,7 @@ exports.createProductService = async data => {
 };
 
 // add all product service
-exports.addAllProductService = async data => {
+export const addAllProductService = async data => {
   await Product.deleteMany({});
   const products = await Product.insertMany(data);
 
@@ -46,8 +46,234 @@ exports.addAllProductService = async data => {
   return products;
 };
 
-// get product data
-exports.getAllProductsService = async () => {
+// get product data with pagination, filtering, and search
+export const getPaginatedProductsService = async (filters = {}) => {
+  const {
+    page = 1,
+    limit = 8,
+    search = '',
+    category = '',
+    subcategory = '',
+    minPrice = '',
+    maxPrice = '',
+    sortBy = 'skuArrangementOrderNo',
+    sortOrder = 'asc',
+  } = filters;
+
+  // Build query
+  const query = {};
+
+  // Search functionality
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    query.$or = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { sku: searchRegex },
+      { 'category.name': searchRegex },
+    ];
+  }
+
+  // Category filter
+  if (category) {
+    // Convert slug back to readable format for better matching
+    // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
+    // Also handle cases where "and" is naturally part of the category name
+    let categoryPattern = category
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+    // Create a more flexible pattern that can match both versions
+    const flexiblePattern = category
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+    console.log('Category filter:', {
+      original: category,
+      pattern: categoryPattern,
+      flexiblePattern: flexiblePattern,
+    });
+
+    // Use a more flexible regex that can match both & and 'and'
+    query['category.name'] = new RegExp(flexiblePattern, 'i');
+  }
+
+  // Subcategory filter
+  if (subcategory) {
+    // Convert slug back to readable format for better matching
+    // Handle both old format (dana-60) and new format (dana-60)
+    const subcategoryPattern = subcategory
+      .replace(/-/g, ' ')
+      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
+      .replace(/\b\w/g, l => l.toUpperCase());
+    console.log('Subcategory filter:', {
+      original: subcategory,
+      pattern: subcategoryPattern,
+    });
+
+    try {
+      // Step 1: Find the Category document that matches our parent + children criteria
+      let categoryQuery = {};
+
+      if (category) {
+        // If we have a main category, find categories where parent matches it
+        // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
+        // Also handle cases where "and" is naturally part of the category name
+        const categoryPattern = category
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
+          .replace(/\b\w/g, l => l.toUpperCase());
+        categoryQuery.parent = new RegExp(categoryPattern, 'i');
+      }
+
+      // Add children filter
+      categoryQuery.children = new RegExp(subcategoryPattern, 'i');
+
+      console.log(
+        'Category query for subcategory:',
+        JSON.stringify(categoryQuery, null, 2)
+      );
+
+      // Find the matching category
+      const matchingCategory = await Category.findOne(categoryQuery);
+
+      if (matchingCategory) {
+        console.log('Found matching category:', {
+          id: matchingCategory._id,
+          name: matchingCategory.name,
+          parent: matchingCategory.parent,
+          children: matchingCategory.children,
+        });
+
+        // Step 2: Filter products by this category ID
+        // Clear any existing category filters and use the found category ID
+        delete query['category.name'];
+        query['category.id'] = matchingCategory._id;
+
+        console.log('Updated query after subcategory filter:', {
+          removedCategoryName: true,
+          addedCategoryId: matchingCategory._id,
+          newQuery: JSON.stringify(query, null, 2),
+        });
+      } else {
+        console.log('No matching category found for subcategory filter');
+        console.log(
+          'Category query used:',
+          JSON.stringify(categoryQuery, null, 2)
+        );
+        // If no category found, return no results
+        query._id = null; // This will ensure no products are returned
+      }
+    } catch (error) {
+      console.error('Error in subcategory filtering:', error);
+      // If there's an error, return no results
+      query._id = null;
+    }
+  }
+
+  // Price range filter
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseFloat(minPrice);
+    if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+  }
+
+  // Build sort object
+  const sortQuery = {};
+  sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  // Log the final query for debugging
+  console.log('Final query:', JSON.stringify(query, null, 2));
+  console.log('Sort query:', JSON.stringify(sortQuery, null, 2));
+  console.log('Query explanation:', {
+    hasCategory: !!category,
+    hasSubcategory: !!subcategory,
+    categoryPattern: category
+      ? category
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)')
+          .replace(/\b\w/g, l => l.toUpperCase())
+      : null,
+    subcategoryPattern: subcategory
+      ? subcategory
+          .replace(/-/g, ' ')
+          .replace(/\band\b/g, '(&|and)')
+          .replace(/\b\w/g, l => l.toUpperCase())
+      : null,
+    queryType: subcategory
+      ? 'Subcategory filtering with Category lookup'
+      : 'Direct category filtering',
+    patternConversion: {
+      originalCategory: category,
+      originalSubcategory: subcategory,
+      convertedCategory: category
+        ? category
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+      convertedSubcategory: subcategory
+        ? subcategory
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+      flexiblePattern: category
+        ? category
+            .replace(/-/g, ' ')
+            .replace(/\band\b/g, '(&|and)')
+            .replace(/\b\w/g, l => l.toUpperCase())
+        : null,
+    },
+  });
+
+  // Check if query is invalid (e.g., _id: null from subcategory filtering)
+  if (query._id === null) {
+    console.log('Query is invalid, returning empty results');
+    return {
+      products: [],
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: 0,
+        totalProducts: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+
+  // Calculate skip value
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Execute query with pagination
+  const [products, total] = await Promise.all([
+    Product.find(query)
+      .populate('reviews')
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select(
+        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping'
+      ),
+    Product.countDocuments(query),
+  ]);
+
+  return {
+    products,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalProducts: total,
+      hasNextPage: skip + products.length < total,
+      hasPrevPage: parseInt(page) > 1,
+    },
+  };
+};
+
+// get all product data
+export const getAllProductsService = async () => {
   const products = await Product.find({})
     .populate('reviews')
     .sort({ skuArrangementOrderNo: 1 });
@@ -55,14 +281,14 @@ exports.getAllProductsService = async () => {
 };
 
 // get offer product service
-exports.getOfferTimerProductService = async () => {
+export const getOfferTimerProductService = async () => {
   const products = await Product.find({
     'offerDate.endDate': { $gt: new Date() },
   }).populate('reviews');
   return products;
 };
 
-exports.getTopRatedProductService = async () => {
+export const getTopRatedProductService = async () => {
   const products = await Product.find({
     reviews: { $exists: true, $ne: [] },
   }).populate('reviews');
@@ -86,7 +312,7 @@ exports.getTopRatedProductService = async () => {
 };
 
 // get product data
-exports.getProductService = async idOrSlug => {
+export const getProductService = async idOrSlug => {
   try {
     let product;
     if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
@@ -116,7 +342,7 @@ exports.getProductService = async idOrSlug => {
 };
 
 // get product data
-exports.getRelatedProductService = async productId => {
+export const getRelatedProductService = async productId => {
   const currentProduct = await Product.findById(productId);
 
   const relatedProducts = await Product.find({
@@ -127,7 +353,7 @@ exports.getRelatedProductService = async productId => {
 };
 
 // update a product
-exports.updateProductService = async (id, currProduct) => {
+export const updateProductService = async (id, currProduct) => {
   const product = await Product.findById(id);
   if (product) {
     // Store the old category ID before updating
@@ -203,7 +429,7 @@ exports.updateProductService = async (id, currProduct) => {
 };
 
 // get Reviews Products
-exports.getReviewsProducts = async () => {
+export const getReviewsProducts = async () => {
   const result = await Product.find({
     reviews: { $exists: true, $ne: [] },
   }).populate({
@@ -217,7 +443,7 @@ exports.getReviewsProducts = async () => {
 };
 
 // get Reviews Products
-exports.getStockOutProducts = async () => {
+export const getStockOutProducts = async () => {
   const result = await Product.find({ status: 'out-of-stock' }).sort({
     createdAt: -1,
   });
@@ -225,7 +451,7 @@ exports.getStockOutProducts = async () => {
 };
 
 // get Reviews Products
-exports.deleteProduct = async id => {
+export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
   return result;
 };

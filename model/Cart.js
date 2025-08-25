@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const cartSchema = new mongoose.Schema(
   {
@@ -58,4 +58,4 @@ cartSchema.index({ isActive: 1 });
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-module.exports = Cart;
+export default Cart;

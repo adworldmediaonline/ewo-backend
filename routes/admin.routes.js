@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   registerAdmin,
   loginAdmin,
   updateStaff,
@@ -10,11 +10,11 @@ const {
   deleteStaff,
   getStaffById,
   forgetPassword,
-  confirmAdminEmail,
+  // confirmAdminEmail,
   confirmAdminForgetPass,
-} = require('../controller/admin.controller');
-const { isAuth } = require('../config/auth');
-const roleAuth = require('../middleware/roleAuth');
+} from '../controller/admin.controller.js';
+import { isAuth } from '../config/auth.js';
+import roleAuth from '../middleware/roleAuth.js';
 
 //register a staff
 router.post('/register', registerAdmin);
@@ -49,4 +49,4 @@ router.patch('/update-stuff/:id', isAuth, roleAuth('Admin'), updateStaff);
 //delete a staff - Only Admin can delete staff
 router.delete('/:id', isAuth, roleAuth('Admin'), deleteStaff);
 
-module.exports = router;
+export default router;

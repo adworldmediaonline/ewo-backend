@@ -1,92 +1,101 @@
-const Brand = require('../model/Brand');
-const brandService = require('../services/brand.service');
+import Brand from '../model/Brand.js';
+import {
+  addAllBrandService,
+  getBrandsService,
+  deleteBrandsService,
+  updateBrandService,
+  getSingleBrandService,
+} from '../services/brand.service.js';
 
-// add a brand 
-exports.addBrand = async (req, res,next) => {
+// add a brand
+export const addBrand = async (req, res, next) => {
   try {
-    const result = await brandService.addBrandService(req.body);
+    const result = await addAllBrandService(req.body);
     res.status(200).json({
-      status: "success",
-      message: "Brand created successfully!",
+      status: 'success',
+      message: 'Brand created successfully!',
       data: result,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // add all Brand
-exports.addAllBrand = async (req,res,next) => {
+export const addAllBrand = async (req, res, next) => {
   try {
-    const result = await brandService.addAllBrandService(req.body);
+    const result = await addAllBrandService(req.body);
     res.json({
-      message:'Brands added successfully',
+      message: 'Brands added successfully',
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // get active Brand
-exports.getAllBrands = async (req,res,next) => {
+export const getAllBrands = async (req, res, next) => {
   try {
-    const result = await Brand.find({},{name:1,email:1,logo:1,website:1,location:1});
+    const result = await Brand.find(
+      {},
+      { name: 1, email: 1, logo: 1, website: 1, location: 1 }
+    );
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // get active Brand
-exports.getActiveBrands = async (req,res,next) => {
+export const getActiveBrands = async (req, res, next) => {
   try {
-    const result = await brandService.getBrandsService();
+    const result = await getBrandsService();
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // delete Brand
-exports.deleteBrand = async (req,res,next) => {
+export const deleteBrand = async (req, res, next) => {
   try {
-    await brandService.deleteBrandsService(req.params.id);
+    await deleteBrandsService(req.params.id);
     res.status(200).json({
-      success:true,
-      message:'Brand delete successfully',
-    })
+      success: true,
+      message: 'Brand delete successfully',
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // update category
-exports.updateBrand = async (req,res,next) => {
+export const updateBrand = async (req, res, next) => {
   try {
-    const result = await brandService.updateBrandService(req.params.id,req.body);
+    const result = await updateBrandService(req.params.id, req.body);
     res.status(200).json({
-      status:true,
-      message:'Brand update successfully',
-      data:result,
-    })
+      status: true,
+      message: 'Brand update successfully',
+      data: result,
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // get single category
-exports.getSingleBrand = async (req,res,next) => {
+export const getSingleBrand = async (req, res, next) => {
   try {
-    const result = await brandService.getSingleBrandService(req.params.id);
-    res.status(200).json(result)
+    const result = await getSingleBrandService(req.params.id);
+    res.status(200).json(result);
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};

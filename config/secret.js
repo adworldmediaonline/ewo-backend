@@ -1,9 +1,10 @@
-const dotenv = require('dotenv');
-const path = require('path');
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+import dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
-module.exports.secret = {
+export const secret = {
   port: process.env.PORT,
   env: process.env.NODE_ENV,
   db_url: process.env.MONGO_URI,

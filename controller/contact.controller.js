@@ -1,6 +1,10 @@
-const Contact = require('../model/Contact');
-const ApiError = require('../errors/api-error');
-const emailService = require('../services/emailService');
+import Contact from '../model/Contact.js';
+import ApiError from '../errors/api-error.js';
+import {
+  sendContactConfirmation,
+  sendContactNotification,
+} from '../services/emailService.js';
+
 //
 // Create new contact submission
 const createContact = async (req, res, next) => {
@@ -80,7 +84,7 @@ const createContact = async (req, res, next) => {
 
     // Send notification email to admin
     try {
-      await emailService.sendContactNotification(contactForEmail);
+      await sendContactNotification(contactForEmail);
     } catch (emailError) {
       console.error('Failed to send contact notification email:', emailError);
       // Don't fail the request if email fails
@@ -88,7 +92,7 @@ const createContact = async (req, res, next) => {
 
     // Send confirmation email to user
     try {
-      await emailService.sendContactConfirmation(contactForEmail);
+      await sendContactConfirmation(contactForEmail);
     } catch (emailError) {
       console.error('Failed to send contact confirmation email:', emailError);
       // Don't fail the request if email fails
@@ -311,7 +315,7 @@ const getContactStats = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createContact,
   getAllContacts,
   getContact,

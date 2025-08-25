@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   addReview,
   deleteReviews,
   quickFeedback,
@@ -8,11 +7,12 @@ const {
   submitDetailedFeedback,
   getUnifiedFeedback,
   submitUnifiedFeedback,
-} = require('../controller/review.controller');
-const {
+} from '../controller/review.controller.js';
+import {
   reviewSubmissionLimiter,
   feedbackFormLimiter,
-} = require('../middleware/rateLimiter');
+} from '../middleware/rateLimiter.js';
+const router = express.Router();
 
 // add a review
 router.post('/add', addReview);
@@ -37,4 +37,4 @@ router.post(
 // delete reviews
 router.delete('/delete/:id', deleteReviews);
 
-module.exports = router;
+export default router;
