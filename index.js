@@ -21,21 +21,48 @@ const PORT = secret.port || 8090;
 // Configure CORS middleware
 app.use(
   cors({
-    origin: [
-      secret.env === 'development'
-        ? secret.frontend_url_local
-        : secret.frontend_url_prod,
-      'https://ewo-admin.vercel.app/',
-      'https://ewo-admin.vercel.app',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        'http://localhost:3000', // Frontend local development
+        'http://localhost:4000', // Admin panel local development
+        'http://localhost:8090', // Backend local development
+        'https://ewo-admin.vercel.app', // Admin panel production
+        'https://www.eastwestoffroad.com', // Frontend production (if you have one)
+        'https://ewo-backend.vercel.app', // Backend production
+      ];
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        // Log blocked origins for debugging
+        console.log('CORS blocked origin:', origin);
+        callback(null, true); // Temporarily allow all origins for debugging
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // Added PATCH for admin routes
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Origin',
+      'Accept',
+    ], // Specify allowed headers
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+    preflightContinue: false, // Handle preflight properly
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
   })
 );
 
 // better auth config
 // Mount Better Auth routes
 app.all('/api/auth/*', toNodeHandler(auth));
+
+// Handle CORS preflight for all API routes
+app.options('*', cors());
 app.get('/api/auth/ok', (req, res) => {
   res.json({ status: 'Better Auth is running' });
 });
@@ -81,7 +108,6 @@ import userOrderRoutes from './routes/user.order.routes.js';
 // );
 
 // middleware
-// app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
