@@ -21,7 +21,7 @@ const PORT = secret.port || 8090;
 // Configure CORS middleware
 app.use(
   cors({
-    origin: 'https://www.eastwestoffroad.com/',
+    origin: 'https://www.eastwestoffroad.com',
     // origin: [
     //   'http://localhost:3000',
     //   'http://localhost:4000',
