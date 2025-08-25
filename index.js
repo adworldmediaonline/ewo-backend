@@ -25,7 +25,7 @@ app.use(
       'http://localhost:3000',
       'http://localhost:4000',
       'https://www.eastwestoffroad.com',
-      process.env.STORE_URL,
+      // process.env.STORE_URL,
     ], // Replace with your frontend's origin
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
