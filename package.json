@@ -5,11 +5,11 @@
   "main": "index.js",
   "type": "module",
   "engines": {
-    "node": "18.x"
+    "node": ">=16"
   },
   "scripts": {
     "start": "node index.js",
-    "build": "echo 'Build completed'",
+    "build": "node index.js",
     "start-dev": "nodemon index.js",
     "update:quantities": "node scripts/update-quantities.js",
     "update-price-percentage": "node scripts/update-price-percentage.js",
