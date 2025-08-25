@@ -21,12 +21,12 @@ const PORT = secret.port || 8090;
 // Configure CORS middleware
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:4000',
-      'https://www.eastwestoffroad.com',
-      // process.env.STORE_URL,
-    ], // Replace with your frontend's origin
+    origin: 'https://www.eastwestoffroad.com/',
+    // origin: [
+    //   'http://localhost:3000',
+    //   'http://localhost:4000',
+    //   'https://www.eastwestoffroad.com',
+    // ], // Replace with your frontend's origin
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
