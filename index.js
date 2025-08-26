@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { auth } from './lib/auth.js';
+
 dotenv.config();
 
 // ES module __dirname workaround
@@ -18,51 +19,35 @@ import { secret } from './config/secret.js';
 const app = express();
 const PORT = secret.port || 8090;
 
-// Configure CORS middleware
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+//* cors middleware
+//
+const allowedOrigins = [
+  'http://localhost:3000', // Frontend local development
+  'http://localhost:4000', // Admin panel local development
+  'http://localhost:8090', // Backend local development
+  'https://ewo-admin.vercel.app', // Admin panel production
+  'https://www.eastwestoffroad.com', // Frontend production (if you have one)
+];
 
-      const allowedOrigins = [
-        'http://localhost:3000', // Frontend local development
-        'http://localhost:4000', // Admin panel local development
-        'http://localhost:8090', // Backend local development
-        'https://ewo-admin.vercel.app', // Admin panel production
-        'https://www.eastwestoffroad.com', // Frontend production (if you have one)
-        'https://ewo-backend.vercel.app', // Backend production
-      ];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true); // Allow the origin
+    } else {
+      callback(new Error('Not allowed by CORS')); // Disallow the origin
+    }
+  },
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  credentials: true, // Credentials are supported
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
 
-      // Check if origin is in allowed list
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        // Log blocked origins for debugging
-        console.log('CORS blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // Added PATCH for admin routes
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Origin',
-      'Accept',
-    ], // Specify allowed headers
-    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
-    preflightContinue: false, // Handle preflight properly
-    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
-  })
-);
+app.use(cors(corsOptions));
 
-// better auth config
 // Mount Better Auth routes BEFORE express.json() middleware
 app.all('/api/auth/*', toNodeHandler(auth));
 
-// Handle CORS preflight for all API routes
-app.options('*', cors());
 app.get('/api/auth/ok', (req, res) => {
   res.json({ status: 'Better Auth is running' });
 });
@@ -80,7 +65,6 @@ app.get('/api/me', async (req, res) => {
     return res.status(500).json({ error: 'Failed to get session' });
   }
 });
-// better auth config end
 
 // error handler
 import globalErrorHandler from './middleware/global-error-handler.js';
