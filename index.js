@@ -34,33 +34,42 @@ dotenv.config();
 const app = express();
 const PORT = secret.port || 8090;
 
+app.set('trust proxy', 1);
+
 //* cors middleware
-//
-const allowedOrigins = [
-  'http://localhost:3000', // Frontend local development
-  'http://localhost:4000', // Admin panel local development
-  'http://localhost:8090', // Backend local development
-  'https://ewo-admin.vercel.app', // Admin panel production
-  'https://www.eastwestoffroad.com/', // Frontend production (if you have one)
-];
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true); // Allow the origin
-    } else {
-      callback(new Error('Not allowed by CORS')); // Disallow the origin
-    }
-  },
-  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true, // Credentials are supported
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:4000',
+  'http://localhost:8090',
+  'https://www.eastwestoffroad.com',
+  'https://eastwestoffroad.com',
+  'https://ewo-admin.vercel.app',
+]);
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // server-to-server / curl
+      const o = origin.replace(/\/$/, '');
+      if (allowedOrigins.has(o)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Better-Auth-CSRF',
+      'X-Better-Auth-Action',
+      'X-Better-Auth-Client',
+    ],
+  })
+);
 
-// / Mount Better Auth routes BEFORE express.json() middleware
+app.options('*', cors());
+
 app.all('/api/auth/*', toNodeHandler(auth));
 
 app.get('/api/auth/ok', (req, res) => {
@@ -110,14 +119,22 @@ app.use('/api/shipping', shippingRoutes);
 app.use('/api/meta-conversions', metaConversionsRoutes);
 app.use('/api/contact', contactRoutes);
 
-// root route
-app.get('/', (req, res) => res.send('Apps worked successfully'));
-
-app.listen(PORT, () => console.log(`server running on port ${PORT}`));
-
 // global error handler
 app.use(globalErrorHandler);
 //* handle not found
+
+// Final error handler ensures CORS headers also exist on errors
+app.use((err, req, res, next) => {
+  const origin = (req.headers.origin || '').replace(/\/$/, '');
+  if (allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  console.error(err);
+  res.status(err.status || 500).json({ error: 'Internal Server Error' });
+});
+
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
@@ -131,5 +148,9 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+app.get('/', (req, res) => res.send('Apps worked successfully'));
+
+app.listen(PORT, () => console.log(`server running on port ${PORT}`));
 
 export default app;
