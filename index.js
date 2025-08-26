@@ -20,7 +20,7 @@ const app = express();
 const PORT = secret.port || 8090;
 
 //* cors middleware
-
+//
 const allowedOrigins = [
   'http://localhost:3000', // Frontend local development
   'http://localhost:4000', // Admin panel local development
