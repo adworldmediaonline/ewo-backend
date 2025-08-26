@@ -1,20 +1,35 @@
-import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { auth } from './lib/auth.js';
-
-dotenv.config();
-
-// ES module __dirname workaround
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 import connectDB from './config/db.js';
 import { secret } from './config/secret.js';
+
+import globalErrorHandler from './middleware/global-error-handler.js';
+
+import categoryRoutes from './routes/category.routes.js';
+import contactRoutes from './routes/contact.routes.js';
+import userRoutes from './routes/user.routes.js';
+
+import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
+import { auth } from './lib/auth.js';
+
+import adminRoutes from './routes/admin.routes.js';
+import brandRoutes from './routes/brand.routes.js';
+import cartRoutes from './routes/cart.routes.js';
+import cartTrackingRoutes from './routes/cartTracking.routes.js';
+import cloudinaryRoutes from './routes/cloudinary.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
+import metaConversionsRoutes from './routes/metaConversions.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import productRoutes from './routes/product.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import shippingRoutes from './routes/shipping.routes.js';
+import userOrderRoutes from './routes/user.order.routes.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = secret.port || 8090;
@@ -26,7 +41,7 @@ const allowedOrigins = [
   'http://localhost:4000', // Admin panel local development
   'http://localhost:8090', // Backend local development
   'https://ewo-admin.vercel.app', // Admin panel production
-  'https://www.eastwestoffroad.com', // Frontend production (if you have one)
+  'https://www.eastwestoffroad.com/', // Frontend production (if you have one)
 ];
 
 const corsOptions = {
@@ -45,7 +60,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Mount Better Auth routes BEFORE express.json() middleware
+// / Mount Better Auth routes BEFORE express.json() middleware
 app.all('/api/auth/*', toNodeHandler(auth));
 
 app.get('/api/auth/ok', (req, res) => {
@@ -66,38 +81,10 @@ app.get('/api/me', async (req, res) => {
   }
 });
 
-// error handler
-import globalErrorHandler from './middleware/global-error-handler.js';
-// routes
+// ES module __dirname workaround
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-import categoryRoutes from './routes/category.routes.js';
-import contactRoutes from './routes/contact.routes.js';
-import userRoutes from './routes/user.routes.js';
-
-import adminRoutes from './routes/admin.routes.js';
-import brandRoutes from './routes/brand.routes.js';
-import cartRoutes from './routes/cart.routes.js';
-import cartTrackingRoutes from './routes/cartTracking.routes.js';
-import cloudinaryRoutes from './routes/cloudinary.routes.js';
-import couponRoutes from './routes/coupon.routes.js';
-import metaConversionsRoutes from './routes/metaConversions.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import productRoutes from './routes/product.routes.js';
-import reviewRoutes from './routes/review.routes.js';
-import shippingRoutes from './routes/shipping.routes.js';
-import userOrderRoutes from './routes/user.order.routes.js';
-// import { handleStripeWebhook } from './controller/order.controller.js';
-
-// IMPORTANT: Stripe webhook route must be defined before other middleware
-// that parses the request body
-// app.post(
-//   '/api/order/webhook',
-//   express.raw({ type: 'application/json' }),
-//   handleStripeWebhook
-// );
-
-// middleware
-// IMPORTANT: express.json() must come AFTER Better Auth routes
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
