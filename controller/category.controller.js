@@ -1,12 +1,12 @@
 import {
-  createCategoryService,
   addAllCategoryService,
-  getShowCategoryServices,
+  createCategoryService,
+  deleteCategoryService,
   getAllCategoryServices,
   getCategoryTypeService,
-  deleteCategoryService,
-  updateCategoryService,
+  getShowCategoryServices,
   getSingleCategoryService,
+  updateCategoryService,
 } from '../services/category.service.js';
 
 // add category

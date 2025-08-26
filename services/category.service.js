@@ -19,7 +19,6 @@ export const addAllCategoryService = async data => {
 export const getShowCategoryServices = async () => {
   const category = await Category.find({ status: 'Show' })
     .populate('products')
-    // .sort({ updatedAt: -1 });
     .sort({ description: 1 });
   return category;
 };
