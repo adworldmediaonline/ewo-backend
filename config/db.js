@@ -1,13 +1,12 @@
-// db.js
-// MongoDB connection using Mongoose with best practices
-
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+dotenv.config();
 
-const MONGODB_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI;
 
-if (!MONGODB_URI) {
+if (!MONGO_URI) {
   throw new Error(
-    'Please define the MONGODB_URI environment variable inside .env.local'
+    'Please define the MONGO_URI environment variable inside .env.local'
   );
 }
 
@@ -23,7 +22,7 @@ export default async function connectDB() {
   }
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(MONGODB_URI, {
+      .connect(MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         // Add more options as needed
