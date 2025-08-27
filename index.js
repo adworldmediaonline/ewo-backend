@@ -43,7 +43,6 @@ const allowedOrigins = new Set([
   'http://localhost:4000',
   'http://localhost:8090',
   'https://www.eastwestoffroad.com',
-  // 'https://eastwestoffroad.com',
   'https://ewo-admin.vercel.app',
   'https://ewo-staging.vercel.app',
 ]);
