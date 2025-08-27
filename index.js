@@ -119,6 +119,10 @@ app.use('/api/shipping', shippingRoutes);
 app.use('/api/meta-conversions', metaConversionsRoutes);
 app.use('/api/contact', contactRoutes);
 
+app.get('/', (req, res) => res.send('Apps worked successfully'));
+
+app.listen(PORT, () => console.log(`server running on port ${PORT}`));
+
 // global error handler
 app.use(globalErrorHandler);
 //* handle not found
@@ -148,9 +152,5 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-app.get('/', (req, res) => res.send('Apps worked successfully'));
-
-app.listen(PORT, () => console.log(`server running on port ${PORT}`));
 
 export default app;
