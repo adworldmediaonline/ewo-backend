@@ -82,7 +82,6 @@ app.get('/api/me', async (req, res) => {
       headers: fromNodeHeaders(req.headers),
     });
 
-    console.log('session', session);
     return res.json(session);
   } catch (error) {
     console.error('Error getting session:', error);

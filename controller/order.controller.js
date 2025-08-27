@@ -841,23 +841,12 @@ export const processRefund = async (req, res, next) => {
       });
     }
 
-    console.log('💸 Processing refund:', {
-      orderId: order._id,
-      chargeId: order.paymentIntent.chargeId,
-      paymentIntentId: order.paymentIntent.id,
-      refundAmount: refundAmount,
-      reason: reason,
-    });
-
     // Process refund through Stripe
     let refund;
     try {
       if (order.paymentIntent.chargeId) {
         // Preferred method: Use charge ID
-        console.log(
-          '💳 Using charge ID for refund:',
-          order.paymentIntent.chargeId
-        );
+
         refund = await stripe.refunds.create({
           charge: order.paymentIntent.chargeId,
           amount: refundAmount,
@@ -869,10 +858,6 @@ export const processRefund = async (req, res, next) => {
         });
       } else if (order.paymentIntent.id) {
         // Alternative method: Use payment intent ID
-        console.log(
-          '💳 Using payment intent ID for refund:',
-          order.paymentIntent.id
-        );
 
         // First, retrieve the payment intent to get the charge ID
         const paymentIntent = await stripe.paymentIntents.retrieve(
@@ -882,22 +867,8 @@ export const processRefund = async (req, res, next) => {
           }
         );
 
-        console.log('🔍 Payment Intent retrieved:', {
-          id: paymentIntent.id,
-          status: paymentIntent.status,
-          amount: paymentIntent.amount,
-          chargesCount: paymentIntent.charges?.data?.length || 0,
-          charges:
-            paymentIntent.charges?.data?.map(charge => ({
-              id: charge.id,
-              status: charge.status,
-              amount: charge.amount,
-            })) || [],
-        });
-
         if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
           const chargeId = paymentIntent.charges.data[0].id;
-          console.log('💳 Retrieved charge ID from payment intent:', chargeId);
 
           refund = await stripe.refunds.create({
             charge: chargeId,
@@ -916,9 +887,6 @@ export const processRefund = async (req, res, next) => {
         } else {
           // For test mode or cases where charges aren't immediately available,
           // try using payment intent ID directly
-          console.log(
-            '⚠️ No charges found, trying payment intent refund directly'
-          );
 
           try {
             refund = await stripe.refunds.create({
@@ -930,7 +898,6 @@ export const processRefund = async (req, res, next) => {
                 orderNumber: order.orderId || order._id.toString(),
               },
             });
-            console.log('✅ Refund created using payment intent ID directly');
           } catch (directRefundError) {
             console.error(
               '❌ Direct payment intent refund failed:',
@@ -945,18 +912,11 @@ export const processRefund = async (req, res, next) => {
         throw new Error('No valid payment data found for refund');
       }
     } catch (stripeError) {
-      console.error('❌ Stripe refund error:', stripeError);
       return res.status(400).json({
         success: false,
         message: `Refund failed: ${stripeError.message}`,
       });
     }
-
-    console.log('✅ Stripe refund processed:', {
-      refundId: refund.id,
-      amount: refund.amount,
-      status: refund.status,
-    });
 
     // Update order with refund information
     const refundData = {
@@ -1093,10 +1053,6 @@ export const cancelOrder = async (req, res, next) => {
                 },
               });
             } catch (directRefundError) {
-              console.error(
-                '❌ Direct payment intent cancellation refund failed:',
-                directRefundError.message
-              );
               throw new Error(
                 `No charges found for this payment intent and direct cancellation refund failed: ${directRefundError.message}`
               );
@@ -1127,7 +1083,6 @@ export const cancelOrder = async (req, res, next) => {
         const emailSent = await sendOrderCancellation(updatedOrder);
         if (emailSent) {
         } else {
-          console.log('⚠️ Failed to send cancellation email');
         }
 
         res.status(200).json({

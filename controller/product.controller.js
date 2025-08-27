@@ -1,6 +1,6 @@
-import Product from '../model/Products.js';
-import ApiError from '../errors/api-error.js';
 import mongoose from 'mongoose';
+import ApiError from '../errors/api-error.js';
+import Product from '../model/Products.js';
 import {
   addAllProductService,
   createProductService,
@@ -62,10 +62,6 @@ export const getPaginatedProducts = async (req, res, next) => {
       sortBy: req.query.sortBy || 'skuArrangementOrderNo',
       sortOrder: req.query.sortOrder || 'asc',
     };
-
-    // Debug logging
-    console.log('Controller received filters:', filters);
-    console.log('Raw query params:', req.query);
 
     const result = await getPaginatedProductsService(filters);
 
@@ -270,7 +266,6 @@ export const getProductSuggestions = async (req, res) => {
       suggestions,
     });
   } catch (error) {
-    console.error('Suggestion error:', error);
     return res.status(500).json({
       success: false,
       message: 'Error fetching product suggestions',
@@ -338,7 +333,6 @@ export const searchProducts = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Search error:', error);
     return res.status(500).json({
       success: false,
       message: 'Error searching products',

@@ -33,7 +33,6 @@ export const addReview = async (req, res, next) => {
 
     // Create the new review
     const review = await Review.create(req.body);
-    // console.log('review-->',review)
 
     // Add the review to the product's reviews array
     const product = await Products.findById(productId);
@@ -47,7 +46,6 @@ export const addReview = async (req, res, next) => {
 
     return res.status(201).json({ message: 'Review added successfully.' });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
@@ -118,7 +116,6 @@ export const quickFeedback = async (req, res, next) => {
     const reviewPromises = order.cart.map(async item => {
       const product = await Products.findById(item._id);
       if (!product) {
-        console.log(`Product not found: ${item._id}`);
         return null;
       }
 
@@ -169,7 +166,6 @@ export const quickFeedback = async (req, res, next) => {
       </html>
     `);
   } catch (error) {
-    console.error('Error submitting quick feedback:', error);
     res.status(500).send(`
       <html>
         <head><title>Error</title></head>
@@ -347,7 +343,6 @@ export const detailedFeedback = async (req, res, next) => {
       </html>
     `);
   } catch (error) {
-    console.error('Error loading detailed feedback form:', error);
     res.status(500).send(`
       <html>
         <head><title>Error</title></head>
@@ -717,26 +712,11 @@ export const submitUnifiedFeedback = async (req, res, next) => {
   const { token, rating, comment } = req.body;
 
   try {
-    // Enhanced logging for security monitoring
-    console.log('🔒 Feedback submission attempt:', {
-      ip: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
-      timestamp: new Date().toISOString(),
-      hasToken: !!token,
-      hasRating: !!rating,
-      commentLength: comment?.length || 0,
-    });
-
     // Verify the review token
     let tokenData;
     try {
       tokenData = jwt.verify(token, secret.jwt_secret_for_verify);
     } catch (error) {
-      console.warn('⚠️ Invalid token attempt:', {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        error: error.message,
-      });
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired review token',
@@ -745,11 +725,6 @@ export const submitUnifiedFeedback = async (req, res, next) => {
 
     // Validate token purpose
     if (tokenData.purpose !== 'feedback_review') {
-      console.warn('⚠️ Invalid token purpose:', {
-        ip: req.ip,
-        purpose: tokenData.purpose,
-        expected: 'feedback_review',
-      });
       return res.status(400).json({
         success: false,
         message: 'Invalid token purpose',
@@ -759,10 +734,6 @@ export const submitUnifiedFeedback = async (req, res, next) => {
     // Find the order
     const order = await Order.findById(tokenData.orderId);
     if (!order) {
-      console.warn('⚠️ Order not found for token:', {
-        ip: req.ip,
-        orderId: tokenData.orderId,
-      });
       return res.status(404).json({
         success: false,
         message: 'Order not found',
@@ -771,12 +742,6 @@ export const submitUnifiedFeedback = async (req, res, next) => {
 
     // Enhanced email verification - ensure token email matches order email
     if (tokenData.email !== order.email) {
-      console.warn('⚠️ Email mismatch detected:', {
-        ip: req.ip,
-        tokenEmail: tokenData.email,
-        orderEmail: order.email,
-        orderId: order._id,
-      });
       return res.status(403).json({
         success: false,
         message: 'Token email does not match order email',
@@ -785,11 +750,6 @@ export const submitUnifiedFeedback = async (req, res, next) => {
 
     // Check if feedback has already been submitted
     if (order.feedbackSubmittedAt) {
-      console.warn('⚠️ Duplicate feedback attempt:', {
-        ip: req.ip,
-        orderId: order._id,
-        previousSubmission: order.feedbackSubmittedAt,
-      });
       return res.status(400).json({
         success: false,
         message: 'Feedback has already been submitted for this order',
@@ -818,7 +778,6 @@ export const submitUnifiedFeedback = async (req, res, next) => {
     const reviewPromises = order.cart.map(async item => {
       const product = await Products.findById(item._id);
       if (!product) {
-        console.log(`Product not found: ${item._id}`);
         return null;
       }
 
@@ -855,26 +814,12 @@ export const submitUnifiedFeedback = async (req, res, next) => {
     });
 
     // Log successful submission
-    console.log('✅ Feedback submitted successfully:', {
-      orderId: order._id,
-      reviewsCreated: validReviews.length,
-      customerEmail: tokenData.email,
-      rating: rating,
-      hasComment: !!cleanComment,
-      ip: req.ip,
-    });
 
     res.status(200).json({
       success: true,
       message: 'Review submitted successfully',
     });
   } catch (error) {
-    console.error('❌ Error submitting unified feedback:', {
-      error: error.message,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      timestamp: new Date().toISOString(),
-    });
     res.status(500).json({
       success: false,
       message: 'Failed to submit review',
@@ -927,7 +872,6 @@ export const submitDetailedFeedback = async (req, res, next) => {
     const reviewPromises = order.cart.map(async item => {
       const product = await Products.findById(item._id);
       if (!product) {
-        console.log(`Product not found: ${item._id}`);
         return null;
       }
 
@@ -961,7 +905,6 @@ export const submitDetailedFeedback = async (req, res, next) => {
       reviewsCreated: validReviews.length,
     });
   } catch (error) {
-    console.error('Error submitting detailed feedback:', error);
     next(error);
   }
 };
@@ -976,7 +919,6 @@ export const deleteReviews = async (req, res, next) => {
     }
     res.json({ message: 'All reviews deleted for the product' });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };

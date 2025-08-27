@@ -308,18 +308,6 @@ couponSchema.methods.calculateDiscount = function (
     return sum + price * quantity;
   }, 0);
 
-  console.log('💰 Discount calculation details:', {
-    applicableType: this.applicableType,
-    applicableItemsTotal,
-    cartTotal,
-    cartSubtotal,
-    shippingCost,
-    discountType: this.discountType,
-    discountPercentage: this.discountPercentage,
-    discountAmount: this.discountAmount,
-    itemsCount: applicableItems.length,
-  });
-
   let discount = 0;
   let appliedToFullTotal = false;
 
@@ -331,24 +319,10 @@ couponSchema.methods.calculateDiscount = function (
         // Apply percentage to full total (subtotal + shipping)
         discount = cartTotal * (this.discountPercentage / 100);
         appliedToFullTotal = true;
-        console.log('📊 Percentage applied to FULL TOTAL:', {
-          cartTotal,
-          discountPercentage: this.discountPercentage,
-          percentageDecimal: this.discountPercentage / 100,
-          calculation: `${cartTotal} * (${this.discountPercentage} / 100)`,
-          discount,
-        });
       } else {
         // Apply percentage only to applicable items
         discount = applicableItemsTotal * (this.discountPercentage / 100);
         appliedToFullTotal = false;
-        console.log('📊 Percentage applied to APPLICABLE ITEMS only:', {
-          applicableItemsTotal,
-          discountPercentage: this.discountPercentage,
-          percentageDecimal: this.discountPercentage / 100,
-          calculation: `${applicableItemsTotal} * (${this.discountPercentage} / 100)`,
-          discount,
-        });
       }
       break;
     case 'fixed_amount':
@@ -358,31 +332,23 @@ couponSchema.methods.calculateDiscount = function (
         const maxDiscount = cartTotal;
         discount = Math.min(this.discountAmount, maxDiscount);
         appliedToFullTotal = true;
-        console.log('💵 Fixed amount applied to FULL TOTAL:', {
-          cartTotal,
-          discount,
-        });
       } else {
         const maxDiscount = applicableItemsTotal;
         discount = Math.min(this.discountAmount, maxDiscount);
         appliedToFullTotal = false;
-        console.log('💵 Fixed amount applied to APPLICABLE ITEMS only:', {
-          applicableItemsTotal,
-          discount,
-        });
       }
       break;
     case 'buy_x_get_y':
       // BOGO always applies to specific items only
       discount = this.calculateBuyXGetYDiscount(applicableItems);
       appliedToFullTotal = false;
-      console.log('🎁 Buy X Get Y applied to applicable items:', { discount });
+
       break;
     case 'free_shipping':
       // Free shipping applies to shipping cost only
       discount = shippingCost;
       appliedToFullTotal = false;
-      console.log('🚚 Free shipping applied:', { shippingCost, discount });
+
       break;
   }
 
@@ -396,17 +362,6 @@ couponSchema.methods.calculateDiscount = function (
 };
 
 couponSchema.methods.getApplicableItems = function (cartItems) {
-  console.log('🔍 getApplicableItems called with:', {
-    applicableType: this.applicableType,
-    cartItemsCount: cartItems.length,
-    applicableProductsCount: this.applicableProducts?.length,
-    applicableProducts: this.applicableProducts?.map(p => ({
-      id: (p._id || p).toString(),
-      type: typeof p,
-      isPopulated: !!p.title,
-    })),
-  });
-
   if (this.applicableType === 'all') {
     const filtered = cartItems.filter(item => {
       const productId = item.productId || item._id;
@@ -415,44 +370,24 @@ couponSchema.methods.getApplicableItems = function (cartItems) {
         return excludedId === productId.toString();
       });
 
-      console.log('🔍 ALL type filter:', {
-        productId: productId?.toString(),
-        isExcluded,
-        result: !isExcluded,
-      });
-
       return !isExcluded;
     });
 
-    console.log('✅ ALL type result:', filtered.length);
     return filtered;
   }
 
   const filtered = cartItems.filter(item => {
     const productId = item.productId || item._id;
 
-    console.log('🔍 Processing cart item:', {
-      productId: productId?.toString(),
-      productIdType: typeof productId,
-      title: item.title,
-      category: item.category,
-      brand: item.brand,
-    });
-
     // Check exclusions first
     const isExcluded = this.excludedProducts.some(excludedItem => {
       const excludedId = (excludedItem._id || excludedItem).toString();
       const match = excludedId === productId.toString();
-      console.log('🚫 Exclusion check:', {
-        excludedId,
-        productId: productId.toString(),
-        match,
-      });
+
       return match;
     });
 
     if (isExcluded) {
-      console.log('❌ Item excluded');
       return false;
     }
 
@@ -467,15 +402,6 @@ couponSchema.methods.getApplicableItems = function (cartItems) {
           const productIdStr = productId.toString();
           const match = applicableId === productIdStr;
 
-          console.log('🎯 Product match check:', {
-            applicableId,
-            productId: productIdStr,
-            match,
-            applicableItemType: typeof applicableItem,
-            productIdType: typeof productId,
-            isPopulated: !!applicableItem.title,
-          });
-
           return match;
         });
         break;
@@ -483,40 +409,17 @@ couponSchema.methods.getApplicableItems = function (cartItems) {
         result =
           this.applicableCategories.includes(item.category) ||
           (this.productType && item.productType === this.productType);
-        console.log('📂 Category match:', {
-          itemCategory: item.category,
-          applicableCategories: this.applicableCategories,
-          productType: this.productType,
-          itemProductType: item.productType,
-          result,
-        });
+
         break;
       case 'brand':
         result = this.applicableBrands.includes(item.brand);
-        console.log('🏷️ Brand match:', {
-          itemBrand: item.brand,
-          applicableBrands: this.applicableBrands,
-          result,
-        });
+
         break;
       default:
         result = false;
-        console.log('❓ Unknown applicable type');
     }
 
-    console.log('🔍 Final result for item:', {
-      productId: productId.toString(),
-      applicableType: this.applicableType,
-      result,
-    });
-
     return result;
-  });
-
-  console.log('✅ getApplicableItems final result:', {
-    totalCartItems: cartItems.length,
-    applicableItems: filtered.length,
-    applicableItemIds: filtered.map(item => item.productId || item._id),
   });
 
   return filtered;

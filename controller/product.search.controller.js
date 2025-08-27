@@ -100,8 +100,6 @@ exports.getProductSuggestions = async (req, res) => {
       { $sort: { createdAt: -1 } },
     ]);
 
-    console.log('Suggestions found:', suggestions.length);
-
     return res.status(200).json({
       success: true,
       suggestions,
