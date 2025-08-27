@@ -1,38 +1,19 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 import Coupon from '../model/Coupon.js';
 import CouponUsage from '../model/CouponUsage.js';
 import Product from '../model/Products.js';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 
 // addCoupon
 const addCoupon = async (req, res, next) => {
   try {
-    console.log('🎫 Creating new coupon with data:', {
-      title: req.body.title,
-      couponCode: req.body.couponCode,
-      couponCodeUpperCase: req.body.couponCode?.toUpperCase(),
-      couponCodeLength: req.body.couponCode?.length,
-      couponCodeBytes: req.body.couponCode
-        ? Buffer.from(req.body.couponCode).toString('hex')
-        : null,
-      discountType: req.body.discountType,
-      applicableType: req.body.applicableType,
-    });
-
     // Validate coupon code uniqueness
     const existingCoupon = await Coupon.findOne({
       couponCode: req.body.couponCode?.toUpperCase(),
     });
 
     if (existingCoupon) {
-      console.log('🚫 Duplicate coupon code attempt:', {
-        attemptedCode: req.body.couponCode?.toUpperCase(),
-        existingCouponId: existingCoupon._id,
-        existingCouponTitle: existingCoupon.title,
-        existingCouponCreated: existingCoupon.createdAt,
-      });
-
       return res.status(400).json({
         success: false,
         message: `Coupon code "${req.body.couponCode?.toUpperCase()}" already exists. Please use a different code.`,
@@ -56,7 +37,6 @@ const addCoupon = async (req, res, next) => {
       couponData.applicableCategories = [req.body.productType];
     }
 
-    console.log('✅ No duplicate found, creating coupon...');
     const newCoupon = new Coupon(couponData);
 
     if (!newCoupon.startTime) {
@@ -65,27 +45,12 @@ const addCoupon = async (req, res, next) => {
 
     await newCoupon.save();
 
-    console.log('🎉 Coupon created successfully:', {
-      id: newCoupon._id,
-      couponCode: newCoupon.couponCode,
-      title: newCoupon.title,
-    });
-
     res.status(201).json({
       success: true,
       message: 'Coupon Added Successfully!',
       data: newCoupon,
     });
   } catch (error) {
-    console.error('❌ Coupon creation error:', {
-      errorCode: error.code,
-      errorMessage: error.message,
-      attemptedCouponCode: req.body.couponCode,
-      errorName: error.name,
-      errorKeyPattern: error.keyPattern,
-      errorKeyValue: error.keyValue,
-    });
-
     if (error.code === 11000) {
       // MongoDB duplicate key error
       const duplicateField = Object.keys(error.keyPattern || {})[0];
@@ -187,15 +152,6 @@ const validateCoupon = async (req, res, next) => {
       });
     }
 
-    console.log('🎟️ Validating coupon:', {
-      couponCode,
-      cartItemsCount: cartItems.length,
-      cartTotal,
-      cartSubtotal,
-      shippingCost,
-      userId,
-    });
-
     // Find coupon
     const coupon = await Coupon.findOne({
       couponCode: couponCode.toUpperCase(),
@@ -208,28 +164,7 @@ const validateCoupon = async (req, res, next) => {
       });
     }
 
-    console.log('🎫 Found coupon:', {
-      title: coupon.title,
-      applicableType: coupon.applicableType,
-      applicableProducts: coupon.applicableProducts?.map(p =>
-        p._id?.toString()
-      ),
-      discountType: coupon.discountType,
-      minimumAmount: coupon.minimumAmount,
-    });
-
     // Debug cart items
-    console.log(
-      '🛒 Cart items for validation:',
-      cartItems.map(item => ({
-        productId: item.productId || item._id,
-        title: item.title,
-        category: item.category,
-        brand: item.brand,
-        quantity: item.quantity,
-        price: item.price,
-      }))
-    );
 
     // Check if coupon is valid
     if (!coupon.isValid()) {
@@ -267,8 +202,6 @@ const validateCoupon = async (req, res, next) => {
       shippingCost,
     });
 
-    console.log('💰 Discount calculation result:', discountResult);
-
     if (discountResult.discount === 0) {
       // Provide more detailed error message for debugging
       let detailedMessage = discountResult.message;
@@ -286,17 +219,6 @@ const validateCoupon = async (req, res, next) => {
         } else if (coupon.applicableType === 'brand') {
           detailedMessage += ` (brands: ${coupon.applicableBrands.join(', ')})`;
         }
-
-        console.log('❌ No applicable items found. Debugging info:', {
-          couponApplicableType: coupon.applicableType,
-          applicableProducts: coupon.applicableProducts?.map(p =>
-            p._id?.toString()
-          ),
-          applicableCategories: coupon.applicableCategories,
-          applicableBrands: coupon.applicableBrands,
-          cartItemIds: cartItems.map(item => item.productId || item._id),
-          applicableItemsFound: applicableItems.length,
-        });
       }
 
       return res.status(400).json({
@@ -310,12 +232,6 @@ const validateCoupon = async (req, res, next) => {
     const applicableProductNames = applicableItems
       .map(item => item.title)
       .filter(Boolean);
-
-    console.log('✅ Coupon validation successful:', {
-      discount: discountResult.discount,
-      applicableItems: discountResult.applicableItems,
-      applicableProductNames,
-    });
 
     res.json({
       success: true,
@@ -338,7 +254,6 @@ const validateCoupon = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error('❌ Coupon validation error:', error);
     next(error);
   }
 };
@@ -645,16 +560,6 @@ const validateMultipleCoupons = async (req, res, next) => {
       });
     }
 
-    console.log('🎟️ Validating multiple coupons:', {
-      couponCodes,
-      cartItemsCount: cartItems.length,
-      cartTotal,
-      cartSubtotal,
-      shippingCost,
-      userId,
-      excludeAppliedCoupons,
-    });
-
     // Find all requested coupons
     const coupons = await Promise.all(
       couponCodes.map(async code => {
@@ -663,15 +568,6 @@ const validateMultipleCoupons = async (req, res, next) => {
         }).populate('applicableProducts excludedProducts');
         return { code: code.toUpperCase(), coupon };
       })
-    );
-
-    console.log(
-      '🎫 Found coupons:',
-      coupons.map(c => ({
-        code: c.code,
-        found: !!c.coupon,
-        title: c.coupon?.title,
-      }))
     );
 
     const validationResults = [];
@@ -794,10 +690,6 @@ const validateMultipleCoupons = async (req, res, next) => {
           discount: discountResult.discount,
           couponData,
         });
-
-        console.log(
-          `✅ Coupon ${code} applied: $${discountResult.discount} discount on ${availableItems.length} items`
-        );
       } else {
         validationResults.push({
           couponCode: code,
@@ -807,13 +699,6 @@ const validateMultipleCoupons = async (req, res, next) => {
         });
       }
     }
-
-    console.log('💰 Multiple coupon validation complete:', {
-      totalCouponsRequested: couponCodes.length,
-      validCouponsApplied: appliedCoupons.length,
-      totalDiscount: Math.round(totalDiscount * 100) / 100,
-      usedProducts: Array.from(usedProductIds),
-    });
 
     res.json({
       success: true,
@@ -830,7 +715,6 @@ const validateMultipleCoupons = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error('❌ Multiple coupon validation error:', error);
     next(error);
   }
 };
@@ -848,20 +732,20 @@ const getAllActiveCoupons = async (req, res, next) => {
 };
 
 export {
-  addCoupon,
   addAllCoupon,
-  getAllCoupons,
-  getCouponById,
-  updateCoupon,
-  deleteCoupon,
-  validateCoupon,
+  addCoupon,
   applyCoupon,
-  getCouponAnalytics,
   bulkUpdateCoupons,
+  deleteCoupon,
   duplicateCoupon,
-  getValidCoupons,
+  getAllActiveCoupons,
+  getAllCoupons,
+  getCouponAnalytics,
+  getCouponById,
   getCouponsByProduct,
   getOverallAnalytics,
+  getValidCoupons,
+  updateCoupon,
+  validateCoupon,
   validateMultipleCoupons,
-  getAllActiveCoupons,
 };
