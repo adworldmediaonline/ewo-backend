@@ -37,6 +37,7 @@ app.set('trust proxy', 1);
 //* CORS middleware - Following Better Auth official docs
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:4000',
   'http://localhost:8090',
   'https://ewo-admin.vercel.app',
   process.env.FRONTEND_URL,
