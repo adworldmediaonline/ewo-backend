@@ -38,8 +38,11 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8090',
-  'https://www.eastwestoffroad.com',
-];
+  'https://ewo.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+console.log('🌐 CORS Allowed Origins:', allowedOrigins);
 
 app.use(
   cors({
@@ -47,6 +50,7 @@ app.use(
       if (!origin) return cb(null, true); // server-to-server / curl
       const o = origin.replace(/\/$/, '');
       if (allowedOrigins.includes(o)) return cb(null, true);
+      console.log(`🚫 CORS blocked for origin: ${origin}`);
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
@@ -71,7 +75,12 @@ app.all('/api/auth/*', toNodeHandler(auth));
 
 // Test endpoint to verify Better Auth is working
 app.get('/api/auth/ok', (req, res) => {
-  res.json({ status: 'Better Auth is running' });
+  res.json({
+    status: 'Better Auth is running',
+    environment: process.env.NODE_ENV,
+    baseURL: process.env.API_BASE_URL || 'http://localhost:8090',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // JWT endpoint for getting tokens
