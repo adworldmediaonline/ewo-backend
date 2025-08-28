@@ -7,8 +7,6 @@ import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import { secret } from './config/secret.js';
 
-import globalErrorHandler from './middleware/global-error-handler.js';
-
 import categoryRoutes from './routes/category.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -36,24 +34,19 @@ const PORT = secret.port || 8090;
 
 app.set('trust proxy', 1);
 
-//* cors middleware
-
-const allowedOrigins = new Set([
+//* CORS middleware - Following Better Auth official docs
+const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:4000',
   'http://localhost:8090',
   'https://www.eastwestoffroad.com',
-  // 'https://eastwestoffroad.com',
-  'https://ewo-admin.vercel.app',
-  'https://ewo-staging.vercel.app',
-]);
+];
 
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // server-to-server / curl
       const o = origin.replace(/\/$/, '');
-      if (allowedOrigins.has(o)) return cb(null, true);
+      if (allowedOrigins.includes(o)) return cb(null, true);
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
@@ -65,23 +58,66 @@ app.use(
       'X-Better-Auth-CSRF',
       'X-Better-Auth-Action',
       'X-Better-Auth-Client',
+      'X-Better-Auth-JWT',
     ],
+    exposedHeaders: ['set-auth-token', 'set-auth-jwt', 'X-Better-Auth-CSRF'],
   })
 );
 
 app.options('*', cors());
 
+// Better Auth endpoints - Following official docs
 app.all('/api/auth/*', toNodeHandler(auth));
 
+// Test endpoint to verify Better Auth is working
 app.get('/api/auth/ok', (req, res) => {
   res.json({ status: 'Better Auth is running' });
 });
 
+// JWT endpoint for getting tokens
+app.get('/api/auth/token', async (req, res) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+
+    if (!session) {
+      return res.status(401).json({ error: 'No valid session' });
+    }
+
+    // Get JWT token from session
+    const jwtToken = await auth.api.getJWT({
+      headers: fromNodeHeaders(req.headers),
+    });
+
+    return res.json({ token: jwtToken });
+  } catch (error) {
+    console.error('Error getting JWT token:', error);
+    return res.status(500).json({ error: 'Failed to get JWT token' });
+  }
+});
+
+// JWKS endpoint for JWT verification
+app.get('/api/auth/jwks', async (req, res) => {
+  try {
+    const jwks = await auth.api.getJWKS();
+    return res.json(jwks);
+  } catch (error) {
+    console.error('Error getting JWKS:', error);
+    return res.status(500).json({ error: 'Failed to get JWKS' });
+  }
+});
+
+// Session endpoint for getting current session
 app.get('/api/me', async (req, res) => {
   try {
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
+
+    if (!session) {
+      return res.status(401).json({ error: 'No valid session' });
+    }
 
     return res.json(session);
   } catch (error) {
@@ -122,35 +158,5 @@ app.use('/api/contact', contactRoutes);
 app.get('/', (req, res) => res.send('Apps worked successfully'));
 
 app.listen(PORT, () => console.log(`server running on port ${PORT}`));
-
-// global error handler
-app.use(globalErrorHandler);
-//* handle not found
-
-// Final error handler ensures CORS headers also exist on errors
-app.use((err, req, res, next) => {
-  const origin = (req.headers.origin || '').replace(/\/$/, '');
-  if (allowedOrigins.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  console.error(err);
-  res.status(err.status || 500).json({ error: 'Internal Server Error' });
-});
-
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: 'Not Found',
-    errorMessages: [
-      {
-        path: req.originalUrl,
-        message: 'API Not Found',
-      },
-    ],
-  });
-  next();
-});
 
 export default app;
