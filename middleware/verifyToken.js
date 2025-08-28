@@ -1,35 +1,40 @@
-import jwt from 'jsonwebtoken';
-import { promisify } from 'util';
-import { secret } from '../config/secret.js';
-/**
- * 1. check if token exists
- * 2. if not token send res
- * 3. decode the token
- * 4. if valid next
- */
+import { auth, extractTokenFromHeaders, verifyToken } from '../lib/auth.js';
 
-const verifyToken = async (req, res, next) => {
+const verifyTokenMiddleware = async (req, res, next) => {
   try {
-    const token = req.headers?.authorization?.split(' ')?.[1];
+    // First try to get session from Better Auth (cookies)
+    let session = null;
 
-    if (!token) {
+    try {
+      session = await auth.api.getSession({
+        headers: req.headers,
+      });
+    } catch (error) {
+      // If cookie-based auth fails, try JWT token
+      const token = extractTokenFromHeaders(req.headers);
+      if (token) {
+        session = await verifyToken(token);
+      }
+    }
+
+    if (!session) {
       return res.status(401).json({
-        status: 'fail',
-        error: 'You are not logged in',
+        success: false,
+        message: 'Access denied. No valid token provided.',
       });
     }
 
-    const decoded = await promisify(jwt.verify)(token, secret.token_secret);
-
-    req.user = decoded;
-
+    // Add user info to request
+    req.user = session.user;
+    req.session = session;
     next();
   } catch (error) {
-    res.status(403).json({
-      status: 'fail',
-      error: 'Invalid token',
+    console.error('Token verification error:', error);
+    return res.status(401).json({
+      success: false,
+      message: 'Access denied. Invalid token.',
     });
   }
 };
 
-export default verifyToken;
+export default verifyTokenMiddleware;
