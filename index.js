@@ -38,7 +38,7 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8090',
-  'https://ewo.vercel.app',
+  'https://ewo-admin.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
