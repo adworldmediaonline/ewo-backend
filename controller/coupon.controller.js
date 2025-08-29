@@ -452,9 +452,12 @@ const duplicateCoupon = async (req, res, next) => {
 // getValidCoupons - Get all valid coupons for a user
 const getValidCoupons = async (req, res, next) => {
   try {
-    const { userId } = req.query;
+    // const { userId } = req.query;
 
-    const coupons = await Coupon.findValidCoupons(userId)
+    const coupons = await Coupon.find({
+      status: 'active',
+    })
+      .populate('applicableProducts')
       .select(
         'title description couponCode discountType discountPercentage discountAmount minimumAmount endTime logo'
       )
