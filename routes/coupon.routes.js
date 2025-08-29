@@ -1,32 +1,31 @@
 import express from 'express';
 import {
-  addCoupon,
   addAllCoupon,
-  getAllCoupons,
-  getCouponById,
-  updateCoupon,
-  deleteCoupon,
-  validateCoupon,
-  validateMultipleCoupons,
+  addCoupon,
   applyCoupon,
-  getCouponAnalytics,
   bulkUpdateCoupons,
+  deleteCoupon,
   duplicateCoupon,
-  getValidCoupons,
+  getAllCoupons,
+  getCouponAnalytics,
+  getCouponById,
   getCouponsByProduct,
   getOverallAnalytics,
-  getAllActiveCoupons,
+  getValidCoupons,
+  updateCoupon,
+  validateCoupon,
+  validateMultipleCoupons,
 } from '../controller/coupon.controller.js';
+// import roleAuth from '../middleware/roleAuth.js';
+// import verifyToken from '../middleware/verifyToken.js';
 import Coupon from '../model/Coupon.js';
-import verifyToken from '../middleware/verifyToken.js';
-import roleAuth from '../middleware/roleAuth.js';
 const router = express.Router();
 
 // Check if coupon code is available
 router.get(
   '/check-availability/:couponCode',
-  verifyToken,
-  roleAuth('Admin'),
+  // verifyToken,
+  // roleAuth('Admin'),
   async (req, res) => {
     try {
       const couponCode = req.params.couponCode.toUpperCase();
@@ -60,22 +59,22 @@ router.get(
 );
 
 //add a coupon - Only Admin role can create coupons
-router.post('/add', verifyToken, roleAuth('Admin'), addCoupon);
+router.post('/add', /* verifyToken, roleAuth('Admin'), */ addCoupon);
 
 //add multiple coupon - Only Admin role can create multiple coupons
-router.post('/all', verifyToken, roleAuth('Admin'), addAllCoupon);
+router.post('/all', /* verifyToken, roleAuth('Admin'), */ addAllCoupon);
 
 //get all coupon - Only Admin role can view all coupons
-router.get('/', verifyToken, roleAuth('Admin'), getAllCoupons);
+router.get('/', /* verifyToken, roleAuth('Admin'), */ getAllCoupons);
 
 //get a coupon - Only Admin role can view specific coupon
-router.get('/:id', verifyToken, roleAuth('Admin'), getCouponById);
+router.get('/:id', /* verifyToken, roleAuth('Admin'), */ getCouponById);
 
 //update a coupon - Only Admin role can update coupons
-router.patch('/:id', verifyToken, roleAuth('Admin'), updateCoupon);
+router.patch('/:id', /* verifyToken, roleAuth('Admin'), */ updateCoupon);
 
 //delete a coupon - Only Admin role can delete coupons
-router.delete('/:id', verifyToken, roleAuth('Admin'), deleteCoupon);
+router.delete('/:id', /* verifyToken, roleAuth('Admin'), */ deleteCoupon);
 
 // Enhanced Coupon Management Routes - Admin Only
 
@@ -161,30 +160,36 @@ router.post('/products/applicable', getCouponsByProduct);
 //get coupon analytics - Only Admin role can view analytics
 router.get(
   '/:id/analytics',
-  verifyToken,
-  roleAuth('Admin'),
+  // verifyToken,
+  // roleAuth('Admin'),
   getCouponAnalytics
 );
 
 //get overall coupon analytics - Only Admin role can view overall analytics
 router.get(
   '/analytics/overview',
-  verifyToken,
-  roleAuth('Admin'),
+  // verifyToken,
+  // roleAuth('Admin'),
   getOverallAnalytics
 );
 
 //bulk update coupons - Only Admin role can perform bulk operations
-router.patch('/bulk/update', verifyToken, roleAuth('Admin'), bulkUpdateCoupons);
+router.patch(
+  '/bulk/update',
+  /* verifyToken, roleAuth('Admin'), */ bulkUpdateCoupons
+);
 
 //duplicate coupon - Only Admin role can duplicate coupons
-router.post('/:id/duplicate', verifyToken, roleAuth('Admin'), duplicateCoupon);
+router.post(
+  '/:id/duplicate',
+  /* verifyToken, roleAuth('Admin'), */ duplicateCoupon
+);
 
 // Debug endpoint to list all coupon codes
 router.get(
   '/debug/list-codes',
-  verifyToken,
-  roleAuth('Admin'),
+  // verifyToken,
+  // roleAuth('Admin'),
   async (req, res) => {
     try {
       const coupons = await Coupon.find(
