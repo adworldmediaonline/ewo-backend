@@ -24,7 +24,7 @@ const userSchema = mongoose.Schema(
 
     shippingAddress: String,
 
-    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Reviews' }],
+    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review' }],
 
     role: {
       type: String,
@@ -40,10 +40,11 @@ const userSchema = mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+  },
+  {
+    timestamps: true,
+    collection: 'users',
   }
-  // {
-  //   timestamps: true,
-  // }
 );
 
 const User = mongoose.model('User', userSchema);
