@@ -1,7 +1,7 @@
+import mongoose from 'mongoose';
+import ApiError from '../errors/api-error.js';
 import Category from '../model/Category.js';
 import Product from '../model/Products.js';
-import ApiError from '../errors/api-error.js';
-import mongoose from 'mongoose';
 
 // create product service
 export const createProductService = async data => {
@@ -103,74 +103,24 @@ export const getPaginatedProductsService = async (filters = {}) => {
   // Subcategory filter
   if (subcategory) {
     // Convert slug back to readable format for better matching
-    // Handle both old format (dana-60) and new format (dana-60)
     const subcategoryPattern = subcategory
       .replace(/-/g, ' ')
       .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
       .replace(/\b\w/g, l => l.toUpperCase());
+
     console.log('Subcategory filter:', {
       original: subcategory,
       pattern: subcategoryPattern,
     });
 
-    try {
-      // Step 1: Find the Category document that matches our parent + children criteria
-      let categoryQuery = {};
+    // Direct filtering: Find products that have the subcategory in their children field
+    // This matches the database structure where products have a children field
+    query.children = new RegExp(subcategoryPattern, 'i');
 
-      if (category) {
-        // If we have a main category, find categories where parent matches it
-        // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
-        // Also handle cases where "and" is naturally part of the category name
-        const categoryPattern = category
-          .replace(/-/g, ' ')
-          .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
-          .replace(/\b\w/g, l => l.toUpperCase());
-        categoryQuery.parent = new RegExp(categoryPattern, 'i');
-      }
-
-      // Add children filter
-      categoryQuery.children = new RegExp(subcategoryPattern, 'i');
-
-      console.log(
-        'Category query for subcategory:',
-        JSON.stringify(categoryQuery, null, 2)
-      );
-
-      // Find the matching category
-      const matchingCategory = await Category.findOne(categoryQuery);
-
-      if (matchingCategory) {
-        console.log('Found matching category:', {
-          id: matchingCategory._id,
-          name: matchingCategory.name,
-          parent: matchingCategory.parent,
-          children: matchingCategory.children,
-        });
-
-        // Step 2: Filter products by this category ID
-        // Clear any existing category filters and use the found category ID
-        delete query['category.name'];
-        query['category.id'] = matchingCategory._id;
-
-        console.log('Updated query after subcategory filter:', {
-          removedCategoryName: true,
-          addedCategoryId: matchingCategory._id,
-          newQuery: JSON.stringify(query, null, 2),
-        });
-      } else {
-        console.log('No matching category found for subcategory filter');
-        console.log(
-          'Category query used:',
-          JSON.stringify(categoryQuery, null, 2)
-        );
-        // If no category found, return no results
-        query._id = null; // This will ensure no products are returned
-      }
-    } catch (error) {
-      console.error('Error in subcategory filtering:', error);
-      // If there's an error, return no results
-      query._id = null;
-    }
+    console.log('Updated query after subcategory filter:', {
+      addedChildrenFilter: subcategoryPattern,
+      newQuery: JSON.stringify(query, null, 2),
+    });
   }
 
   // Price range filter
@@ -187,62 +137,15 @@ export const getPaginatedProductsService = async (filters = {}) => {
   // Log the final query for debugging
   console.log('Final query:', JSON.stringify(query, null, 2));
   console.log('Sort query:', JSON.stringify(sortQuery, null, 2));
-  console.log('Query explanation:', {
+  console.log('Filter summary:', {
     hasCategory: !!category,
     hasSubcategory: !!subcategory,
-    categoryPattern: category
-      ? category
-          .replace(/-/g, ' ')
-          .replace(/\band\b/g, '(&|and)')
-          .replace(/\b\w/g, l => l.toUpperCase())
-      : null,
-    subcategoryPattern: subcategory
-      ? subcategory
-          .replace(/-/g, ' ')
-          .replace(/\band\b/g, '(&|and)')
-          .replace(/\b\w/g, l => l.toUpperCase())
-      : null,
-    queryType: subcategory
-      ? 'Subcategory filtering with Category lookup'
-      : 'Direct category filtering',
-    patternConversion: {
-      originalCategory: category,
-      originalSubcategory: subcategory,
-      convertedCategory: category
-        ? category
-            .replace(/-/g, ' ')
-            .replace(/\band\b/g, '(&|and)')
-            .replace(/\b\w/g, l => l.toUpperCase())
-        : null,
-      convertedSubcategory: subcategory
-        ? subcategory
-            .replace(/-/g, ' ')
-            .replace(/\band\b/g, '(&|and)')
-            .replace(/\b\w/g, l => l.toUpperCase())
-        : null,
-      flexiblePattern: category
-        ? category
-            .replace(/-/g, ' ')
-            .replace(/\band\b/g, '(&|and)')
-            .replace(/\b\w/g, l => l.toUpperCase())
-        : null,
-    },
+    categoryValue: category,
+    subcategoryValue: subcategory,
+    searchValue: search,
+    page: page,
+    limit: limit,
   });
-
-  // Check if query is invalid (e.g., _id: null from subcategory filtering)
-  if (query._id === null) {
-    console.log('Query is invalid, returning empty results');
-    return {
-      products: [],
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: 0,
-        totalProducts: 0,
-        hasNextPage: false,
-        hasPrevPage: false,
-      },
-    };
-  }
 
   // Calculate skip value
   const skip = (parseInt(page) - 1) * parseInt(limit);
