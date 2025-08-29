@@ -1,15 +1,31 @@
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import { secret } from '../config/secret.js';
 import Order from '../model/Order.js';
 import Products from '../model/Products.js';
 import Review from '../model/Review.js';
 import User from '../model/User.js';
-import jwt from 'jsonwebtoken';
-import { secret } from '../config/secret.js';
 
 // add a review
 export const addReview = async (req, res, next) => {
   const { userId, productId, rating, comment } = req.body;
+
   try {
+    // Validate required fields
+    if (!userId || !productId || !rating || !comment) {
+      return res.status(400).json({
+        message:
+          'Missing required fields: userId, productId, rating, and comment are required',
+      });
+    }
+
+    // Validate rating range
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        message: 'Rating must be between 1 and 5',
+      });
+    }
+
     // Check if the user has already left a review for this product
     const existingReview = await Review.findOne({
       user: userId,
@@ -21,6 +37,7 @@ export const addReview = async (req, res, next) => {
         .status(400)
         .json({ message: 'You have already left a review for this product.' });
     }
+
     const checkPurchase = await Order.findOne({
       user: new mongoose.Types.ObjectId(userId),
       'cart._id': { $in: [productId] },
@@ -36,16 +53,34 @@ export const addReview = async (req, res, next) => {
 
     // Add the review to the product's reviews array
     const product = await Products.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Initialize reviews array if it doesn't exist
+    if (!product.reviews) {
+      product.reviews = [];
+    }
     product.reviews.push(review._id);
     await product.save();
 
     // Add the review to the user's reviews array
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Initialize reviews array if it doesn't exist
+    if (!user.reviews) {
+      user.reviews = [];
+    }
     user.reviews.push(review._id);
     await user.save();
 
     return res.status(201).json({ message: 'Review added successfully.' });
   } catch (error) {
+    console.error('Error in addReview:', error);
+    console.error('Request body:', req.body);
     next(error);
   }
 };
@@ -130,6 +165,10 @@ export const quickFeedback = async (req, res, next) => {
         userId: null,
       });
 
+      // Initialize reviews array if it doesn't exist
+      if (!product.reviews) {
+        product.reviews = [];
+      }
       product.reviews.push(review._id);
       await product.save();
 
@@ -796,6 +835,10 @@ export const submitUnifiedFeedback = async (req, res, next) => {
         submissionTimestamp: new Date(),
       });
 
+      // Initialize reviews array if it doesn't exist
+      if (!product.reviews) {
+        product.reviews = [];
+      }
       product.reviews.push(review._id);
       await product.save();
 
@@ -886,6 +929,10 @@ export const submitDetailedFeedback = async (req, res, next) => {
         userId: null,
       });
 
+      // Initialize reviews array if it doesn't exist
+      if (!product.reviews) {
+        product.reviews = [];
+      }
       product.reviews.push(review._id);
       await product.save();
 

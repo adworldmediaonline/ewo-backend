@@ -2,15 +2,15 @@ import express from 'express';
 import {
   addReview,
   deleteReviews,
-  quickFeedback,
   detailedFeedback,
-  submitDetailedFeedback,
   getUnifiedFeedback,
+  quickFeedback,
+  submitDetailedFeedback,
   submitUnifiedFeedback,
 } from '../controller/review.controller.js';
 import {
-  reviewSubmissionLimiter,
   feedbackFormLimiter,
+  reviewSubmissionLimiter,
 } from '../middleware/rateLimiter.js';
 const router = express.Router();
 
