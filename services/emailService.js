@@ -1,12 +1,12 @@
+import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { secret } from '../config/secret.js';
-import jwt from 'jsonwebtoken';
 import {
+  deliveryConfirmationTemplate,
+  feedbackEmailTemplate,
+  orderCancellationTemplate,
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
-  deliveryConfirmationTemplate,
-  orderCancellationTemplate,
-  feedbackEmailTemplate,
 } from '../utils/emailTemplates.js';
 
 // Create nodemailer transporter
@@ -1060,16 +1060,16 @@ const sendContactConfirmation = async contact => {
 };
 
 export {
+  diagnoseFeedbackEmail,
+  scheduleFeedbackEmail,
+  sendContactConfirmation,
+  sendContactNotification,
+  sendDeliveryConfirmation,
+  sendDeliveryNotificationWithTracking,
+  sendFeedbackEmailAfterDelay,
+  sendOrderCancellation,
   sendOrderConfirmation,
   sendShippingConfirmation,
   sendShippingNotificationWithTracking,
-  sendDeliveryConfirmation,
-  sendDeliveryNotificationWithTracking,
-  sendOrderCancellation,
-  scheduleFeedbackEmail,
-  sendFeedbackEmailAfterDelay,
-  diagnoseFeedbackEmail,
   verifyEmailConfig,
-  sendContactNotification,
-  sendContactConfirmation,
 };
