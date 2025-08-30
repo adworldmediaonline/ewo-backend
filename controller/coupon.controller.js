@@ -468,7 +468,7 @@ const getValidCoupons = async (req, res, next) => {
     })
       .populate(
         'applicableProducts',
-        'title sku price img imageURLs parent status quantity'
+        'title sku price img imageURLs parent status quantity slug'
       )
       .select(
         'title description couponCode discountType discountPercentage discountAmount buyQuantity getQuantity minimumAmount maximumAmount endTime logo applicableType applicableProducts applicableCategories applicableBrands status priority stackable isPublic userRestrictions startTime'
