@@ -88,7 +88,7 @@ const getAllCoupons = async (req, res, next) => {
     const coupons = await Coupon.find({})
       .populate(
         'applicableProducts',
-        'title sku price img imageURLs parent status quantity'
+        'title sku price img imageURLs parent status quantity shipping'
       )
       .sort({ _id: -1 });
 
@@ -468,7 +468,7 @@ const getValidCoupons = async (req, res, next) => {
     })
       .populate(
         'applicableProducts',
-        'title sku price img imageURLs parent status quantity slug'
+        'title sku price img imageURLs parent status quantity slug shipping'
       )
       .select(
         'title description couponCode discountType discountPercentage discountAmount buyQuantity getQuantity minimumAmount maximumAmount endTime logo applicableType applicableProducts applicableCategories applicableBrands status priority stackable isPublic userRestrictions startTime'
@@ -739,7 +739,10 @@ const getAllActiveCoupons = async (req, res, next) => {
   try {
     const coupons = await Coupon.find({
       status: 'active',
-    }).populate('applicableProducts');
+    }).populate(
+      'applicableProducts',
+      'title sku price img imageURLs parent status quantity slug shipping'
+    );
     res.json({ success: true, data: coupons });
   } catch (error) {
     next(error);
