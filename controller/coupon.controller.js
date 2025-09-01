@@ -104,7 +104,18 @@ const getAllCoupons = async (req, res, next) => {
 const getCouponById = async (req, res, next) => {
   try {
     const coupon = await Coupon.findById(req.params.id);
-    res.send(coupon);
+
+    if (!coupon) {
+      return res.status(404).json({
+        success: false,
+        message: 'Coupon not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: coupon,
+    });
   } catch (error) {
     next(error);
   }
@@ -113,19 +124,108 @@ const getCouponById = async (req, res, next) => {
 const updateCoupon = async (req, res, next) => {
   try {
     const coupon = await Coupon.findById(req.params.id);
-    if (coupon) {
-      coupon.title = req.body.title;
-      coupon.couponCode = req.body.couponCode;
-      coupon.endTime = dayjs().utc().format(req.body.endTime);
-      coupon.discountPercentage = req.body.discountPercentage;
-      coupon.minimumAmount = req.body.minimumAmount;
-      coupon.productType = req.body.productType;
-      coupon.logo = req.body.logo;
-      await coupon.save();
-      res.send({ message: 'Coupon Updated Successfully!' });
+    if (!coupon) {
+      return res.status(404).json({
+        success: false,
+        message: 'Coupon not found',
+      });
     }
+
+    // Check if coupon code is being changed and if it's unique
+    if (req.body.couponCode && req.body.couponCode !== coupon.couponCode) {
+      const existingCoupon = await Coupon.findOne({
+        couponCode: req.body.couponCode.toUpperCase(),
+        _id: { $ne: req.params.id }, // Exclude current coupon
+      });
+
+      if (existingCoupon) {
+        return res.status(400).json({
+          success: false,
+          message: `Coupon code "${req.body.couponCode.toUpperCase()}" already exists. Please use a different code.`,
+        });
+      }
+    }
+
+    // Update all fields with enhanced structure
+    const updateData = {
+      title: req.body.title,
+      description: req.body.description,
+      couponCode: req.body.couponCode,
+      logo: req.body.logo,
+
+      // Time settings
+      startTime: req.body.startTime
+        ? new Date(req.body.startTime)
+        : coupon.startTime,
+      endTime: req.body.endTime ? new Date(req.body.endTime) : coupon.endTime,
+
+      // Discount Configuration
+      discountType: req.body.discountType,
+      discountPercentage: req.body.discountPercentage,
+      discountAmount: req.body.discountAmount,
+      buyQuantity: req.body.buyQuantity,
+      getQuantity: req.body.getQuantity,
+
+      // Usage Restrictions
+      minimumAmount: req.body.minimumAmount,
+      maximumAmount: req.body.maximumAmount,
+      usageLimit: req.body.usageLimit,
+      usageLimitPerUser: req.body.usageLimitPerUser,
+
+      // Product/Category Restrictions
+      applicableType: req.body.applicableType,
+      productType: req.body.productType,
+      applicableProducts: req.body.applicableProducts,
+      applicableCategories: req.body.applicableCategories,
+      applicableBrands: req.body.applicableBrands,
+      excludedProducts: req.body.excludedProducts,
+
+      // User Restrictions
+      userRestrictions: req.body.userRestrictions,
+
+      // Advanced Settings
+      stackable: req.body.stackable,
+      priority: req.body.priority,
+
+      // Status
+      status: req.body.status,
+      isPublic: req.body.isPublic,
+    };
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    const updatedCoupon = await Coupon.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Coupon Updated Successfully!',
+      data: updatedCoupon,
+    });
   } catch (error) {
-    // console.log('coupon error',error)
+    if (error.code === 11000) {
+      // MongoDB duplicate key error
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+      const duplicateValue = error.keyValue
+        ? error.keyValue[duplicateField]
+        : 'unknown';
+
+      return res.status(400).json({
+        success: false,
+        message: `Coupon code "${duplicateValue}" already exists in database. Please use a different code.`,
+        errorType: 'duplicate_key',
+        duplicateField,
+        duplicateValue,
+      });
+    }
     next(error);
   }
 };
