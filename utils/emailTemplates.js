@@ -137,7 +137,7 @@ const orderConfirmationTemplate = (order, config) => {
             Coupon Applied: <strong>${coupon.couponCode}</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
               coupon.title
-            } (${discountText})</div>
+            } </div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
             -${formatPrice(coupon.discount || coupon.discountAmount)}
@@ -1329,9 +1329,9 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
 };
 
 export {
+  deliveryConfirmationTemplate,
+  feedbackEmailTemplate,
+  orderCancellationTemplate,
   orderConfirmationTemplate,
   shippingConfirmationTemplate,
-  deliveryConfirmationTemplate,
-  orderCancellationTemplate,
-  feedbackEmailTemplate,
 };
