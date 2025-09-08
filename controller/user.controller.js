@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../model/User.js';
 import { sendEmail } from '../config/email.js';
-import { generateToken, tokenForVerify } from '../utils/token.js';
 import { secret } from '../config/secret.js';
+import User from '../model/User.js';
+import { generateToken, tokenForVerify } from '../utils/token.js';
 
 // register user
 // sign up
@@ -515,11 +515,14 @@ export const signUpWithProvider = async (req, res, next) => {
 // Get all users (for admin panel)
 export const getAllUsers = async (req, res, next) => {
   try {
-    // Exclude password and sensitive fields
+    // Exclude password and sensitive fields, and filter out admin and super-admin users
     const users = await User.find(
-      {},
+      {
+        role: { $nin: ['admin', 'super-admin'] },
+      },
       '-password -confirmationToken -confirmationTokenExpires'
     ).sort({ createdAt: -1 });
+
     res.status(200).json({
       status: 'success',
       data: users,
