@@ -2,12 +2,6 @@ import { mongooseInstance } from '../lib/dbConnect.js';
 
 const sessionSchema = new mongooseInstance.Schema(
   {
-    // id: {
-    //   type: String,
-    //   required: true,
-    //   unique: true,
-    //   index: true,
-    // },
     userId: {
       type: String,
       required: true,
@@ -32,18 +26,11 @@ const sessionSchema = new mongooseInstance.Schema(
       type: String,
       required: false,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
+  },
+  {
+    timestamps: true,
+    collection: 'session',
   }
-  // {
-  //   timestamps: true,
-  // }
 );
 
 const Session = mongoose.model('Session', sessionSchema);

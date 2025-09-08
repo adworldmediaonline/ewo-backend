@@ -1,16 +1,16 @@
 import express from 'express';
 import {
-  signup,
-  login,
-  forgetPassword,
-  confirmForgetPassword,
   changePassword,
   confirmEmail,
-  resendVerification,
-  updateUser,
-  signUpWithProvider,
+  confirmForgetPassword,
+  forgetPassword,
   getAllUsers,
   getUserById,
+  login,
+  resendVerification,
+  signUpWithProvider,
+  signup,
+  updateUser,
 } from '../controller/user.controller.js';
 const router = express.Router();
 

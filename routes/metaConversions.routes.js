@@ -1,17 +1,17 @@
 import express from 'express';
 import {
-  trackMetaAddToCart,
-  trackMetaPurchase,
-  trackMetaViewContent,
-  trackMetaPageView,
-  trackMetaInitiateCheckout,
-  trackMetaLead,
-  trackMetaCustomEvent,
-  trackMetaBatchEvents,
   getMetaConfigStatus,
   testMetaEvent,
+  trackMetaAddToCart,
+  trackMetaBatchEvents,
+  trackMetaCustomEvent,
+  trackMetaInitiateCheckout,
+  trackMetaLead,
+  trackMetaPageView,
+  trackMetaPurchase,
+  trackMetaViewContent,
 } from '../controller/metaConversions.controller.js';
-import verifyToken from '../middleware/verifyToken.js';
+
 import roleAuth from '../middleware/roleAuth.js';
 const router = express.Router();
 
@@ -30,12 +30,7 @@ router.get('/status', getMetaConfigStatus);
 router.post('/test', testMetaEvent);
 
 // Protected configuration routes (admin only)
-router.get(
-  '/config/status',
-  verifyToken,
-  roleAuth(['admin']),
-  getMetaConfigStatus
-);
-router.post('/config/test', verifyToken, roleAuth(['admin']), testMetaEvent);
+router.get('/config/status', roleAuth(['admin']), getMetaConfigStatus);
+router.post('/config/test', roleAuth(['admin']), testMetaEvent);
 
 export default router;

@@ -52,6 +52,7 @@ const accountSchema = new mongooseInstance.Schema(
   },
   {
     timestamps: true,
+    collection: 'account',
   }
 );
 

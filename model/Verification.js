@@ -20,6 +20,7 @@ const verificationSchema = new mongooseInstance.Schema(
   },
   {
     timestamps: true,
+    collection: 'verification',
   }
 );
 
@@ -30,4 +31,4 @@ export const Verification = mongooseInstance.model(
 
 const Verification = mongoose.model('Verification', verificationSchema);
 
-module.exports = Verification;
+export default Verification;
