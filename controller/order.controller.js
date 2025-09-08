@@ -120,6 +120,7 @@ export const paymentIntent = async (req, res, next) => {
 export const addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
+    console.log('orderData', orderData);
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
@@ -339,6 +340,7 @@ export const getOrders = async (req, res, next) => {
 export const getSingleOrder = async (req, res, next) => {
   try {
     const orderItem = await Order.findById(req.params.id).populate('user');
+
     res.status(200).json(orderItem);
   } catch (error) {
     next(error);

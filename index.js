@@ -39,6 +39,7 @@ app.use(
       'http://localhost:3000',
       'https://www.eastwestoffroad.com',
       'http://localhost:4000',
+      'https://admin.eastwestoffroad.com',
     ],
     credentials: true,
   })
@@ -57,7 +58,6 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['POST', 'GET', 'OPTIONS'],
     exposedHeaders: ['Content-Length'],
-    maxAge: 600,
     credentials: true,
   })
 );

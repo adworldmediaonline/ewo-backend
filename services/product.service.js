@@ -158,7 +158,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping'
+        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku'
       ),
     Product.countDocuments(query),
   ]);

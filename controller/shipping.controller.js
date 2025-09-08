@@ -1,5 +1,5 @@
-import ShippingService from '../services/shippingService.js';
 import Order from '../model/Order.js';
+import ShippingService from '../services/shippingService.js';
 
 export const shipOrder = async (req, res, next) => {
   try {
