@@ -54,6 +54,7 @@ app.use(
       'http://localhost:3000',
       'https://www.eastwestoffroad.com',
       'http://localhost:4000',
+      'https://admin.eastwestoffroad.com',
     ],
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['POST', 'GET', 'OPTIONS'],
