@@ -40,6 +40,7 @@ app.use(
       'https://www.eastwestoffroad.com',
       'http://localhost:4000',
       'https://admin.eastwestoffroad.com',
+      'https://ewo-admin.vercel.app',
     ],
     credentials: true,
   })
@@ -55,6 +56,7 @@ app.use(
       'https://www.eastwestoffroad.com',
       'http://localhost:4000',
       'https://admin.eastwestoffroad.com',
+      'https://ewo-admin.vercel.app',
     ],
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['POST', 'GET', 'OPTIONS'],
