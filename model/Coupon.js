@@ -164,7 +164,7 @@ const couponSchema = new mongoose.Schema(
     // Application Scope - whether to apply to subtotal only or full total including shipping
     applyToFullTotal: {
       type: Boolean,
-      default: true, // For now, apply to full total. Change to false for subtotal only
+      default: true, // Apply to full total by default. Set to false for subtotal only
     },
 
     // Status and Metadata

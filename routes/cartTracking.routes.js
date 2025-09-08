@@ -1,23 +1,20 @@
 import express from 'express';
 import {
-  trackAddToCart,
-  trackCartAction,
+  bulkTrackCartEvents,
   getCartAnalytics,
   getCartConversionFunnel,
+  getCartTrackingEvents,
+  getCartTrackingStats,
+  getConversionFunnelForAdmin,
   getPopularProducts,
+  getPopularProductsForAdmin,
   getUserCartJourney,
   markAsConverted,
-  getCartTrackingStats,
-  bulkTrackCartEvents,
-  getCartTrackingStatsForAdmin,
-  getCartTrackingEvents,
-  getConversionFunnelForAdmin,
-  getPopularProductsForAdmin,
+  trackAddToCart,
+  trackCartAction,
 } from '../controller/cartTracking.controller.js';
 
 // Import middleware for authentication and authorization
-import verifyToken from '../middleware/verifyToken.js';
-import roleAuth from '../middleware/roleAuth.js';
 
 const router = express.Router();
 
@@ -41,7 +38,6 @@ router.get('/popular-products', getPopularProducts);
 router.get('/stats', getCartTrackingStats);
 
 // New admin routes for admin panel (no authentication required for now)
-router.get('/analytics/stats', getCartTrackingStatsForAdmin);
 router.get('/events', getCartTrackingEvents);
 router.get('/analytics/conversion-funnel', getConversionFunnelForAdmin);
 router.get('/analytics/popular-products', getPopularProductsForAdmin);

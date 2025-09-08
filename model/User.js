@@ -25,25 +25,10 @@ const userSchema = mongoose.Schema(
     shippingAddress: String,
 
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review' }],
-
-    role: {
-      type: String,
-      // enum: ['user', 'admin', 'super_admin'],
-      default: 'user',
-    },
-
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
     timestamps: true,
-    collection: 'users',
+    collection: 'user',
   }
 );
 
