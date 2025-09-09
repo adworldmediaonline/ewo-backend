@@ -1,28 +1,46 @@
 import bcrypt from 'bcryptjs';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-dayjs.extend(utc);
 import jwt from 'jsonwebtoken';
 import { tokenForVerify } from '../config/auth.js';
-import Admin from '../model/Admin.js';
-import { generateToken } from '../utils/token.js';
 import { sendEmail } from '../config/email.js';
 import { secret } from '../config/secret.js';
+import Admin from '../model/Admin.js';
+import { generateToken } from '../utils/token.js';
+dayjs.extend(utc);
 
 // register
 const registerAdmin = async (req, res, next) => {
   try {
-    const isAdded = await Admin.findOne({ email: req.body.email });
+    console.log(req.body);
+
+    // Validate required fields
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).send({
+        message: 'All fields are required: name, email, password, role',
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).send({
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    const isAdded = await Admin.findOne({ email: email });
     if (isAdded) {
       return res.status(403).send({
         message: 'This Email already Added!',
       });
     } else {
       const newStaff = new Admin({
-        name: req.body.name,
-        email: req.body.email,
-        role: req.body.role,
-        password: bcrypt.hashSync(req.body.password),
+        name: name,
+        email: email,
+        role: role,
+        password: bcrypt.hashSync(password, 10), // Add salt rounds
       });
       const staff = await newStaff.save();
       const token = generateToken(staff);
@@ -119,6 +137,23 @@ const forgetPassword = async (req, res, next) => {
 const confirmAdminForgetPass = async (req, res, next) => {
   try {
     const { token, password } = req.body;
+
+    // Validate required fields
+    if (!token || !password) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Token and password are required',
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
     const admin = await Admin.findOne({ confirmationToken: token });
 
     if (!admin) {
@@ -128,7 +163,7 @@ const confirmAdminForgetPass = async (req, res, next) => {
       });
     }
 
-    const expired = new Date() > new Date(user.confirmationTokenExpires);
+    const expired = new Date() > new Date(admin.confirmationTokenExpires); // Fixed: was using 'user' instead of 'admin'
 
     if (expired) {
       return res.status(401).json({
@@ -136,7 +171,7 @@ const confirmAdminForgetPass = async (req, res, next) => {
         message: 'Token expired',
       });
     } else {
-      const newPassword = bcrypt.hashSync(password);
+      const newPassword = bcrypt.hashSync(password, 10); // Add salt rounds
       await Admin.updateOne(
         { confirmationToken: token },
         { $set: { password: newPassword } }
@@ -160,15 +195,31 @@ const confirmAdminForgetPass = async (req, res, next) => {
 const changePassword = async (req, res, next) => {
   try {
     const { email, oldPass, newPass } = req.body || {};
+
+    // Validate required fields
+    if (!email || !oldPass || !newPass) {
+      return res.status(400).json({
+        message: 'All fields are required: email, oldPass, newPass',
+      });
+    }
+
+    // Validate new password length
+    if (newPass.length < 6) {
+      return res.status(400).json({
+        message: 'New password must be at least 6 characters long',
+      });
+    }
+
     const admin = await Admin.findOne({ email: email });
     // Check if the admin exists
     if (!admin) {
       return res.status(404).json({ message: 'Admin not found' });
     }
+
     if (!bcrypt.compareSync(oldPass, admin.password)) {
       return res.status(401).json({ message: 'Incorrect current password' });
     } else {
-      const hashedPassword = bcrypt.hashSync(newPass);
+      const hashedPassword = bcrypt.hashSync(newPass, 10); // Add salt rounds
       await Admin.updateOne({ email: email }, { password: hashedPassword });
       res.status(200).json({ message: 'Password changed successfully' });
     }
@@ -178,42 +229,85 @@ const changePassword = async (req, res, next) => {
 };
 // reset Password
 const resetPassword = async (req, res) => {
-  const token = req.body.token;
-  const { email } = jwt.decode(token);
-  const staff = await Admin.findOne({ email: email });
+  try {
+    const { token, newPassword } = req.body;
 
-  if (token) {
-    jwt.verify(token, secret.jwt_secret_for_verify, (err, decoded) => {
-      if (err) {
-        return res.status(500).send({
-          message: 'Token expired, please try again!',
-        });
-      } else {
-        staff.password = bcrypt.hashSync(req.body.newPassword);
-        staff.save();
-        res.send({
-          message: 'Your password change successful, you can login now!',
-        });
-      }
+    // Validate required fields
+    if (!token || !newPassword) {
+      return res.status(400).send({
+        message: 'Token and newPassword are required',
+      });
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).send({
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    const { email } = jwt.decode(token);
+    const staff = await Admin.findOne({ email: email });
+
+    if (!staff) {
+      return res.status(404).send({
+        message: 'Admin not found',
+      });
+    }
+
+    if (token) {
+      jwt.verify(token, secret.jwt_secret_for_verify, async (err, decoded) => {
+        if (err) {
+          return res.status(500).send({
+            message: 'Token expired, please try again!',
+          });
+        } else {
+          staff.password = bcrypt.hashSync(newPassword, 10); // Add salt rounds
+          await staff.save();
+          res.send({
+            message: 'Your password change successful, you can login now!',
+          });
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).send({
+      message: error.message || 'Internal server error',
     });
   }
 };
 // add staff
 const addStaff = async (req, res, next) => {
   try {
-    const isAdded = await Admin.findOne({ email: req.body.email });
+    // Validate required fields
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).send({
+        message: 'All fields are required: name, email, password, role',
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).send({
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    const isAdded = await Admin.findOne({ email: email });
     if (isAdded) {
       return res.status(500).send({
         message: 'This Email already Added!',
       });
     } else {
       const newStaff = new Admin({
-        name: req.body.name,
-        email: req.body.email,
-        password: bcrypt.hashSync(req.body.password),
+        name: name,
+        email: email,
+        password: bcrypt.hashSync(password, 10), // Add salt rounds
         phone: req.body.phone,
         joiningDate: req.body.joiningDate,
-        role: req.body.role,
+        role: role,
         image: req.body.image,
       });
       await newStaff.save();
@@ -253,6 +347,15 @@ const updateStaff = async (req, res) => {
   try {
     const admin = await Admin.findOne({ _id: req.params.id });
     if (admin) {
+      // Validate password if provided
+      if (req.body.password !== undefined) {
+        if (!req.body.password || req.body.password.length < 6) {
+          return res.status(400).send({
+            message: 'Password must be at least 6 characters long',
+          });
+        }
+      }
+
       admin.name = req.body.name;
       admin.email = req.body.email;
       admin.phone = req.body.phone;
@@ -261,7 +364,7 @@ const updateStaff = async (req, res) => {
       admin.image = req.body.image;
       admin.password =
         req.body.password !== undefined
-          ? bcrypt.hashSync(req.body.password)
+          ? bcrypt.hashSync(req.body.password, 10) // Add salt rounds
           : admin.password;
       const updatedAdmin = await admin.save();
       const token = generateToken(updatedAdmin);
@@ -320,16 +423,16 @@ const updatedStatus = async (req, res) => {
 };
 
 export {
-  registerAdmin,
-  loginAdmin,
-  forgetPassword,
-  resetPassword,
   addStaff,
-  getAllStaff,
-  getStaffById,
-  updateStaff,
-  deleteStaff,
-  updatedStatus,
   changePassword,
   confirmAdminForgetPass,
+  deleteStaff,
+  forgetPassword,
+  getAllStaff,
+  getStaffById,
+  loginAdmin,
+  registerAdmin,
+  resetPassword,
+  updateStaff,
+  updatedStatus,
 };
