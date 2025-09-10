@@ -6,10 +6,13 @@ import Product from '../model/Products.js';
 // create product service
 export const createProductService = async data => {
   // Calculate updated pricing fields
-  if (data.price) {
-    data.updatedPrice = Math.round(data.price * 1.2 * 100) / 100;
-    data.finalPriceDiscount = Math.round(data.updatedPrice * 0.85 * 100) / 100;
-  }
+  // if (data.price) {
+  //   data.updatedPrice = Math.round(data.price * 1.2 * 100) / 100;
+  //   data.finalPriceDiscount = Math.round(data.updatedPrice * 0.85 * 100) / 100;
+  // }
+
+  data.updatedPrice = data.price;
+  data.finalPriceDiscount = data.price;
 
   const product = await Product.create(data);
   const { _id: productId, category } = product;

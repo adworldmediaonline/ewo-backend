@@ -45,7 +45,7 @@ app.use(
       'https://ewo-admin.vercel.app',
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     maxAge: 86400,
   })
 );
@@ -69,6 +69,8 @@ app.use(
     maxAge: 86400,
   })
 );
+
+// Enable CORS for /api/product/* with custom options
 
 app.all('/api/auth/*', toNodeHandler(auth));
 
