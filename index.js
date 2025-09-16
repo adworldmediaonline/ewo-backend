@@ -23,6 +23,7 @@ import couponRoutes from './routes/coupon.routes.js';
 import metaConversionsRoutes from './routes/metaConversions.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import productRoutes from './routes/product.routes.js';
+import protectedRoutes from './routes/protected.route.js';
 import reviewRoutes from './routes/review.routes.js';
 import shippingRoutes from './routes/shipping.routes.js';
 import userOrderRoutes from './routes/user.order.routes.js';
@@ -44,6 +45,8 @@ app.use(
       'https://ewo-admin.vercel.app',
     ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    maxAge: 86400,
   })
 );
 
@@ -63,8 +66,11 @@ app.use(
     methods: ['POST', 'GET', 'OPTIONS'],
     exposedHeaders: ['Content-Length'],
     credentials: true,
+    maxAge: 86400,
   })
 );
+
+// Enable CORS for /api/product/* with custom options
 
 app.all('/api/auth/*', toNodeHandler(auth));
 
@@ -124,6 +130,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // connect database
 connectDB();
 
+// Protected routes
+app.use('/api/protected', protectedRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/category', categoryRoutes);
