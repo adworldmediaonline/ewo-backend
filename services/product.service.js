@@ -137,19 +137,6 @@ export const getPaginatedProductsService = async (filters = {}) => {
   const sortQuery = {};
   sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-  // Log the final query for debugging
-  console.log('Final query:', JSON.stringify(query, null, 2));
-  console.log('Sort query:', JSON.stringify(sortQuery, null, 2));
-  console.log('Filter summary:', {
-    hasCategory: !!category,
-    hasSubcategory: !!subcategory,
-    categoryValue: category,
-    subcategoryValue: subcategory,
-    searchValue: search,
-    page: page,
-    limit: limit,
-  });
-
   // Calculate skip value
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
