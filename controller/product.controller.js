@@ -64,7 +64,6 @@ export const getPaginatedProducts = async (req, res, next) => {
     };
 
     const result = await getPaginatedProductsService(filters);
-    console.log('result', result);
 
     res.status(200).json({
       success: true,

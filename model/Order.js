@@ -405,10 +405,7 @@ const orderSchema = new mongoose.Schema(
 orderSchema.pre('save', function (next) {
   // Ensure totalAmount doesn't go negative for free orders
   if (this.totalAmount < 0) {
-    console.log(
-      '⚠️ Negative total detected, setting to 0 for free order:',
-      this.totalAmount
-    );
+
     this.totalAmount = 0;
 
     // Update payment method if it's a free order
@@ -496,7 +493,6 @@ orderSchema.pre('save', async function (next) {
       }
 
       order.orderId = orderId;
-      console.log('Generated order ID:', orderId);
     }
 
     // Generate invoice number if not already set (keeping for backward compatibility)

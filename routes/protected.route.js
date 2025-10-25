@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Test route 1: Protected route that requires authentication
 router.get('/admin', requireAuth, (req, res) => {
-  console.log('✅ Protected route accessed by:', req.user.email);
+
 
   res.json({
     success: true,
@@ -30,10 +30,7 @@ router.get('/admin', requireAuth, (req, res) => {
 // Test route 2: Public route that shows different content based on auth status
 router.get('/public', optionalAuth, (req, res) => {
   if (req.user) {
-    console.log(
-      '✅ Public route accessed by authenticated user:',
-      req.user.email
-    );
+
     res.json({
       success: true,
       message: 'Hello authenticated user!',
@@ -48,7 +45,7 @@ router.get('/public', optionalAuth, (req, res) => {
       },
     });
   } else {
-    console.log('ℹ️ Public route accessed by anonymous user');
+
     res.json({
       success: true,
       message: 'Hello anonymous user!',
@@ -63,12 +60,7 @@ router.get('/public', optionalAuth, (req, res) => {
 
 // Test route 3: Admin-only route (requires specific role)
 router.get('/admin', requireAuth, (req, res) => {
-  console.log(
-    '🔐 Admin route accessed by:',
-    req.user.email,
-    'Role:',
-    req.user.role
-  );
+
 
   if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
     return res.status(403).json({
@@ -103,7 +95,6 @@ router.get('/admin', requireAuth, (req, res) => {
 
 // Test route 4: User profile route
 router.get('/profile', requireAuth, (req, res) => {
-  console.log('👤 Profile route accessed by:', req.user.email);
 
   res.json({
     success: true,

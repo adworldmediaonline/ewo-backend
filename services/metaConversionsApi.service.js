@@ -21,18 +21,11 @@ class MetaConversionsApiService {
       try {
         // Initialize Facebook Business SDK v23.0 (no getInstance method)
         this.api = bizSdk.FacebookAdsApi.init(this.accessToken);
-        console.log('✅ Meta Conversions API initialized successfully');
+
       } catch (error) {
-        console.error(
-          '❌ Meta Conversions API initialization failed:',
-          error.message
-        );
         this.isConfigured = false;
       }
     } else {
-      console.warn(
-        '⚠️ Meta Conversions API not configured - missing environment variables'
-      );
     }
   }
 
@@ -69,11 +62,6 @@ class MetaConversionsApiService {
         stringData === 'null' ||
         stringData === 'undefined'
       ) {
-        console.warn(
-          'hashData: Unable to convert to valid string:',
-          typeof data,
-          data
-        );
         return null;
       }
 
@@ -85,13 +73,6 @@ class MetaConversionsApiService {
 
       return crypto.createHash('sha256').update(cleanedData).digest('hex');
     } catch (error) {
-      console.error(
-        'hashData error:',
-        error.message,
-        'for data:',
-        typeof data,
-        data
-      );
       return null;
     }
   }
@@ -212,7 +193,6 @@ class MetaConversionsApiService {
             try {
               user.setEmail(hashedEmail);
             } catch (e2) {
-              console.warn('Could not set email:', e2.message);
             }
           }
         }
@@ -229,7 +209,6 @@ class MetaConversionsApiService {
             try {
               user.setPhone(hashedPhone);
             } catch (e2) {
-              console.warn('Could not set phone:', e2.message);
             }
           }
         }
@@ -245,7 +224,6 @@ class MetaConversionsApiService {
             try {
               user.setFirstName(hashedFirstName);
             } catch (e2) {
-              console.warn('Could not set firstName:', e2.message);
             }
           }
         }
@@ -260,7 +238,6 @@ class MetaConversionsApiService {
             try {
               user.setLastName(hashedLastName);
             } catch (e2) {
-              console.warn('Could not set lastName:', e2.message);
             }
           }
         }
@@ -276,7 +253,6 @@ class MetaConversionsApiService {
             try {
               user.setCity(hashedCity);
             } catch (e2) {
-              console.warn('Could not set city:', e2.message);
             }
           }
         }
@@ -291,7 +267,6 @@ class MetaConversionsApiService {
             try {
               user.setState(hashedState);
             } catch (e2) {
-              console.warn('Could not set state:', e2.message);
             }
           }
         }
@@ -306,7 +281,6 @@ class MetaConversionsApiService {
             try {
               user.setZipCode(hashedZip);
             } catch (e2) {
-              console.warn('Could not set zipCode:', e2.message);
             }
           }
         }
@@ -325,7 +299,6 @@ class MetaConversionsApiService {
               try {
                 user.setCountry(hashedCountry);
               } catch (e3) {
-                console.warn('Could not set country:', e3.message);
               }
             }
           }
@@ -342,7 +315,6 @@ class MetaConversionsApiService {
             try {
               user.setExternalId(hashedExternalId);
             } catch (e2) {
-              console.warn('Could not set externalId:', e2.message);
             }
           }
         }
@@ -353,7 +325,6 @@ class MetaConversionsApiService {
         try {
           user.setFbp(userData.fbp);
         } catch (e) {
-          console.warn('Could not set fbp:', e.message);
         }
       }
 
@@ -361,7 +332,6 @@ class MetaConversionsApiService {
         try {
           user.setFbc(userData.fbc);
         } catch (e) {
-          console.warn('Could not set fbc:', e.message);
         }
       }
 
@@ -370,7 +340,6 @@ class MetaConversionsApiService {
         try {
           user.setClientIpAddress(clientInfo.ip || userData.clientIpAddress);
         } catch (e) {
-          console.warn('Could not set clientIpAddress:', e.message);
         }
       }
 
@@ -380,13 +349,11 @@ class MetaConversionsApiService {
             clientInfo.userAgent || userData.clientUserAgent
           );
         } catch (e) {
-          console.warn('Could not set clientUserAgent:', e.message);
         }
       }
 
       return user;
     } catch (error) {
-      console.error('❌ Error creating UserData:', error.message);
       throw error;
     }
   }
@@ -413,7 +380,6 @@ class MetaConversionsApiService {
 
       return custom;
     } catch (error) {
-      console.error('❌ Error creating CustomData:', error.message);
       throw error;
     }
   }
@@ -428,50 +394,25 @@ class MetaConversionsApiService {
    * @returns {Promise<Object>} - API response
    */
   async sendEvent(eventName, userData = {}, customData = {}, clientInfo = {}) {
-    console.log(`🚀 [META CORE] sendEvent called for: ${eventName}`);
-    console.log(`👤 [META CORE] Input userData:`, {
-      ...userData,
-      email: userData.email ? '[REDACTED]' : null,
-    });
-    console.log(`📊 [META CORE] Input customData:`, customData);
-    console.log(`🌐 [META CORE] Input clientInfo:`, {
-      ...clientInfo,
-      ip: '[REDACTED]',
-    });
-
     if (!this.isConfigured) {
-      console.log(
-        '⚠️ [META CORE] Meta Conversions API not configured, skipping event'
-      );
       return { success: false, error: 'Not configured' };
     }
 
     try {
-      console.log(`🔧 [META CORE] Enhancing user data...`);
       // Enhance userData with fallback strategies for guest users
       const enhancedUserData = this.enhanceUserData(userData, clientInfo);
-      console.log(`✨ [META CORE] Enhanced userData:`, {
-        ...enhancedUserData,
-        email: enhancedUserData.email ? '[REDACTED]' : null,
-      });
 
       // Validate customer data quality
       const validation = this.validateCustomerData(enhancedUserData);
 
       if (!validation.isValid) {
-        console.log(
-          `Meta Conversions API: Event ${eventName} may have poor matching due to insufficient customer data`,
-          validation
-        );
+        return { success: false, error: 'Invalid user data' };
       }
 
-      // Get current timestamp (as per official example)
       let current_timestamp = Math.floor(new Date() / 1000);
 
-      // Create UserData object (following official example structure)
       const user = new UserData();
 
-      // Set emails and phones as arrays (official v23.0 structure)
       if (enhancedUserData.email) {
         const hashedEmail = this.hashData(enhancedUserData.email);
         if (hashedEmail) {
@@ -605,54 +546,19 @@ class MetaConversionsApiService {
         try {
           if (typeof serverEvent.setTestEventCode === 'function') {
             serverEvent.setTestEventCode(testEventCode);
-            console.log(
-              `🧪 [META CORE] Added test event code: ${testEventCode}`
-            );
-          } else {
-            console.log(
-              `⚠️ [META CORE] setTestEventCode method not available in this SDK version`
-            );
           }
         } catch (error) {
-          console.log(
-            `⚠️ [META CORE] Could not set test event code: ${error.message}`
-          );
         }
       }
 
-      console.log(
-        `📡 [META CORE] Creating EventRequest with pixelId: ${this.pixelId}`
-      );
-      console.log(
-        `🔑 [META CORE] Using access token: ${
-          this.accessToken ? '[REDACTED]' : 'MISSING'
-        }`
-      );
-
-      // Create and execute EventRequest (following official example structure)
       const eventsData = [serverEvent];
-      console.log(`🎯 [META CORE] Created ${eventsData.length} server events`);
 
       const eventRequest = new EventRequest(
         this.accessToken,
         this.pixelId
       ).setEvents(eventsData);
-      console.log(`📤 [META CORE] EventRequest created, executing...`);
 
       const response = await eventRequest.execute();
-      console.log(`📨 [META CORE] EventRequest executed successfully`);
-      console.log(`📋 [META CORE] Response:`, response);
-
-      console.log(
-        `✅ Meta ${eventName} sent for ${
-          enhancedUserData.externalId || 'guest'
-        }:`,
-        {
-          success: true,
-          validation: validation.isValid ? 'GOOD' : 'POOR',
-          identifierCount: validation.identifierCount,
-        }
-      );
 
       return {
         success: true,
@@ -661,12 +567,6 @@ class MetaConversionsApiService {
         identifierCount: validation.identifierCount,
       };
     } catch (error) {
-      console.error(`❌ Meta Conversions API Error:`, {
-        eventName,
-        error: error.message,
-        userData: Object.keys(userData || {}),
-      });
-
       return { success: false, error: error.message };
     }
   }
@@ -693,9 +593,6 @@ class MetaConversionsApiService {
         enhanced.externalId = `temp_${tempId}`;
       }
 
-      console.log(
-        'Meta Conversions API: No email or phone found, using fallback identifiers'
-      );
     }
 
     // Add default country if missing
@@ -914,16 +811,6 @@ class MetaConversionsApiService {
   }
 
   async sendAddToCart(userData, productData, clientInfo = {}) {
-    console.log(`🛒 [META SERVICE] sendAddToCart called`);
-    console.log(`👤 [META SERVICE] User data:`, {
-      ...userData,
-      email: userData.email ? '[REDACTED]' : null,
-    });
-    console.log(`📦 [META SERVICE] Product data:`, productData);
-    console.log(`🌐 [META SERVICE] Client info:`, {
-      ...clientInfo,
-      ip: '[REDACTED]',
-    });
 
     const customData = {
       currency: productData.currency || 'USD',
@@ -932,16 +819,12 @@ class MetaConversionsApiService {
       contentIds: [productData.productId || productData.id],
     };
 
-    console.log(`📊 [META SERVICE] Custom data prepared:`, customData);
-    console.log(`📡 [META SERVICE] Calling sendEvent with AddToCart...`);
-
     const result = await this.sendEvent(
       'AddToCart',
       userData,
       customData,
       clientInfo
     );
-    console.log(`📋 [META SERVICE] sendEvent result:`, result);
 
     return result;
   }
@@ -982,9 +865,6 @@ class MetaConversionsApiService {
   // Batch event sending
   async sendEvents(events) {
     if (!this.isConfigured) {
-      console.log(
-        '⚠️ Meta Conversions API not configured, skipping batch events'
-      );
       return { success: false, error: 'Not configured' };
     }
 
@@ -1023,10 +903,8 @@ class MetaConversionsApiService {
 
       const response = await eventRequest.execute();
 
-      console.log(`✅ Meta batch events sent: ${events.length} events`);
       return { success: true, response: response };
     } catch (error) {
-      console.error('❌ Meta Conversions API Batch Error:', error.message);
       return { success: false, error: error.message };
     }
   }

@@ -35,21 +35,10 @@ const transporter = nodemailer.createTransport({
 // Verify transporter configuration
 const verifyEmailConfig = async () => {
   try {
-    console.log('🔍 Verifying email configuration...');
+
     await transporter.verify();
-    console.log('✅ Email configuration verified successfully');
     return true;
   } catch (error) {
-    console.error('❌ Email configuration verification failed:', {
-      error: error.message,
-      code: error.code,
-      service: secret.email_service,
-      host: secret.email_host,
-      port: secret.email_port,
-      user: secret.email_user
-        ? secret.email_user.substring(0, 5) + '***'
-        : 'undefined',
-    });
     return false;
   }
 };
@@ -71,17 +60,7 @@ const emailConfig = {
  */
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    console.log(`📧 Attempting to send email to: ${to}`);
-    console.log(`📧 Subject: ${subject}`);
-    console.log(`📧 Email service config:`, {
-      service: secret.email_service,
-      host: secret.email_host,
-      port: secret.email_port,
-      user: secret.email_user
-        ? secret.email_user.substring(0, 5) + '***'
-        : 'undefined',
-      secure: true,
-    });
+
 
     const result = await transporter.sendMail({
       from: `"${emailConfig.storeName}" <${secret.email_user}>`,
@@ -97,21 +76,9 @@ const sendEmail = async ({ to, subject, html }) => {
       },
     });
 
-    console.log(`✅ Email sent successfully to ${to}`, {
-      messageId: result.messageId,
-      response: result.response,
-    });
     return true;
   } catch (error) {
-    console.error('❌ Failed to send email:', {
-      error: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      to,
-      subject,
-    });
+
 
     // Log specific error types for debugging
     if (error.code === 'EAUTH') {
@@ -138,15 +105,7 @@ const sendOrderConfirmation = async order => {
   }
 
   try {
-    // Log order data being sent to email template
-    console.log('📧 Order data for email template:', {
-      _id: order._id,
-      subTotal: order.subTotal,
-      shippingCost: order.shippingCost,
-      discount: order.discount,
-      firstTimeDiscount: order.firstTimeDiscount,
-      totalAmount: order.totalAmount,
-    });
+
 
     // Generate email HTML from template
     const html = orderConfirmationTemplate(order, emailConfig);
@@ -158,7 +117,6 @@ const sendOrderConfirmation = async order => {
       html,
     });
   } catch (error) {
-    console.error('Error sending order confirmation email:', error);
     return false;
   }
 };
@@ -179,14 +137,7 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
-    console.log('📧 Shipping email order data:', {
-      _id: cleanOrderData._id,
-      subTotal: cleanOrderData.subTotal,
-      shippingCost: cleanOrderData.shippingCost,
-      discount: cleanOrderData.discount,
-      firstTimeDiscount: cleanOrderData.firstTimeDiscount,
-      totalAmount: cleanOrderData.totalAmount,
-    });
+
 
     // Combine order and shipping info, with shippingInfo taking precedence
     const orderWithShipping = {
@@ -197,7 +148,6 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
       },
     };
 
-    console.log('Order with shipping for email:', orderWithShipping);
 
     // Generate email HTML from template
     const html = shippingConfirmationTemplate(orderWithShipping, emailConfig);
@@ -213,7 +163,6 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
       html,
     });
   } catch (error) {
-    console.error('Error sending shipping confirmation email:', error);
     return false;
   }
 };
@@ -279,7 +228,6 @@ const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
       throw new Error('Failed to send shipping notification email');
     }
 
-    console.log(`Shipping notification sent successfully for order ${orderId}`);
 
     return {
       success: true,
@@ -288,7 +236,6 @@ const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
       carrier: shippingDetails.carrier,
     };
   } catch (error) {
-    console.error('Error sending shipping notification with tracking:', error);
     return {
       success: false,
       message: error.message || 'Failed to send shipping notification',
@@ -312,14 +259,7 @@ const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
-    console.log('📧 Delivery email order data:', {
-      _id: cleanOrderData._id,
-      subTotal: cleanOrderData.subTotal,
-      shippingCost: cleanOrderData.shippingCost,
-      discount: cleanOrderData.discount,
-      firstTimeDiscount: cleanOrderData.firstTimeDiscount,
-      totalAmount: cleanOrderData.totalAmount,
-    });
+
 
     // Combine order and delivery info
     const orderWithDelivery = {
@@ -331,7 +271,6 @@ const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
       },
     };
 
-    console.log('Order with delivery info for email:', orderWithDelivery);
 
     // Generate email HTML from template
     const html = deliveryConfirmationTemplate(orderWithDelivery, emailConfig);
@@ -347,7 +286,6 @@ const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
       html,
     });
   } catch (error) {
-    console.error('Error sending delivery confirmation email:', error);
     return false;
   }
 };
@@ -419,20 +357,13 @@ const sendDeliveryNotificationWithTracking = async (
       throw new Error('Failed to send delivery notification email');
     }
 
-    console.log(`Delivery notification sent successfully for order ${orderId}`);
 
     // Automatically schedule feedback email after 15 seconds
-    console.log(
-      `📅 Auto-scheduling feedback email for order ${orderId} in 15 seconds`
-    );
+
     setTimeout(async () => {
       try {
         await sendFeedbackEmailAfterDelay(orderId);
       } catch (error) {
-        console.error(
-          `Failed to send feedback email for order ${orderId}:`,
-          error
-        );
       }
     }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
@@ -443,7 +374,6 @@ const sendDeliveryNotificationWithTracking = async (
       trackingNumber: deliveryDetails.trackingNumber,
     };
   } catch (error) {
-    console.error('Error sending delivery notification with tracking:', error);
     return {
       success: false,
       message: error.message || 'Failed to send delivery notification',
@@ -466,13 +396,6 @@ const sendOrderCancellation = async order => {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
-    console.log('📧 Cancellation email order data:', {
-      _id: cleanOrderData._id,
-      orderId: cleanOrderData.orderId,
-      totalAmount: cleanOrderData.totalAmount,
-      paymentMethod: cleanOrderData.paymentMethod,
-    });
-
     // Add cancellation timestamp
     const orderWithCancellation = {
       ...cleanOrderData,
@@ -493,7 +416,6 @@ const sendOrderCancellation = async order => {
       html,
     });
   } catch (error) {
-    console.error('Error sending order cancellation email:', error);
     return false;
   }
 };
@@ -524,7 +446,6 @@ const generateFeedbackToken = (orderId, email) => {
  */
 const sendFeedbackEmailAfterDelay = async orderId => {
   try {
-    console.log(`🔄 Processing feedback email for order: ${orderId}`);
 
     // Import Order model here to avoid circular dependency
     const Order = (await import('../model/Order.js')).default;
@@ -533,41 +454,25 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     const order = await Order.findById(orderId).populate('user');
 
     if (!order) {
-      console.error(`❌ Order not found for feedback email: ${orderId}`);
       return false;
     }
 
-    console.log(`📋 Order found:`, {
-      orderId: order._id,
-      email: order.email,
-      status: order.status,
-      feedbackEmailSent: order.feedbackEmailSent,
-      deliveredAt: order.deliveredAt,
-    });
-
     if (!order.email) {
-      console.error(`❌ Order has no email address: ${orderId}`);
       return false;
     }
 
     if (order.status !== 'delivered') {
-      console.error(
-        `❌ Order is not delivered, cannot send feedback email: ${orderId} (status: ${order.status})`
-      );
       return false;
     }
 
     if (order.feedbackEmailSent) {
-      console.log(`⚠️ Feedback email already sent for order: ${orderId}`);
       return false;
     }
 
-    console.log(`🔐 Generating feedback token for order: ${orderId}`);
 
     // Generate secure token for review submission
     const reviewToken = generateFeedbackToken(orderId, order.email);
 
-    console.log(`📝 Generating email template for order: ${orderId}`);
 
     // Generate email HTML from template
     const html = feedbackEmailTemplate(order, emailConfig, reviewToken);
@@ -575,8 +480,6 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     // Create subject line
     const orderNumber = order.orderId || order._id;
     const subject = `⭐ How was your order? Share your experience - ${emailConfig.storeName}`;
-
-    console.log(`📧 Sending feedback email for order: ${orderId}`);
 
     // Send the email
     const emailSent = await sendEmail({
@@ -586,7 +489,6 @@ const sendFeedbackEmailAfterDelay = async orderId => {
     });
 
     if (emailSent) {
-      console.log(`💾 Updating order record for: ${orderId}`);
 
       // Mark feedback email as sent
       await Order.findByIdAndUpdate(orderId, {
@@ -595,18 +497,11 @@ const sendFeedbackEmailAfterDelay = async orderId => {
         feedbackEmailProcessed: true,
       });
 
-      console.log(`✅ Feedback email sent successfully for order ${orderId}`);
       return true;
     } else {
-      console.error(`❌ Failed to send feedback email for order ${orderId}`);
       return false;
     }
   } catch (error) {
-    console.error('❌ Error sending feedback email after delay:', {
-      orderId,
-      error: error.message,
-      stack: error.stack,
-    });
     return false;
   }
 };
@@ -625,13 +520,6 @@ const sendFeedbackEmail = async order => {
   try {
     // Extract clean order data from Mongoose document
     const cleanOrderData = order.toObject ? order.toObject() : order;
-
-    console.log('📧 Feedback email order data:', {
-      _id: cleanOrderData._id,
-      email: cleanOrderData.email,
-      name: cleanOrderData.name,
-      status: cleanOrderData.status,
-    });
 
     // Generate secure token for review submission
     const reviewToken = generateFeedbackToken(
@@ -657,7 +545,6 @@ const sendFeedbackEmail = async order => {
       html,
     });
   } catch (error) {
-    console.error('Error sending feedback email:', error);
     return false;
   }
 };
@@ -699,29 +586,18 @@ const scheduleFeedbackEmail = async orderId => {
       feedbackEmailScheduledAt: scheduledAt,
     });
 
-    console.log(
-      `📅 Feedback email scheduled for order ${orderId}, will send in 15 seconds`
-    );
-
     // Schedule email to be sent after 15 seconds
     setTimeout(async () => {
       try {
-        console.log(`⏰ Sending scheduled feedback email for order ${orderId}`);
 
         // Get fresh order data
         const freshOrder = await Order.findById(orderId).populate('user');
 
         if (!freshOrder) {
-          console.error(
-            `Order ${orderId} not found when trying to send feedback email`
-          );
           return;
         }
 
         if (freshOrder.feedbackEmailSent) {
-          console.log(
-            `Feedback email already sent for order ${orderId}, skipping`
-          );
           return;
         }
 
@@ -734,19 +610,9 @@ const scheduleFeedbackEmail = async orderId => {
             feedbackEmailSent: true,
             feedbackEmailSentAt: new Date(),
           });
-          console.log(
-            `✅ Feedback email sent successfully for order ${orderId}`
-          );
         } else {
-          console.error(
-            `❌ Failed to send feedback email for order ${orderId}`
-          );
         }
       } catch (error) {
-        console.error(
-          `Error sending scheduled feedback email for order ${orderId}:`,
-          error
-        );
       }
     }, 3 * 60 * 1000); // 3 minutes in milliseconds
 
@@ -757,7 +623,6 @@ const scheduleFeedbackEmail = async orderId => {
       scheduledAt: scheduledAt,
     };
   } catch (error) {
-    console.error('Error scheduling feedback email:', error);
     return {
       success: false,
       message: error.message || 'Failed to schedule feedback email',
@@ -772,7 +637,6 @@ const scheduleFeedbackEmail = async orderId => {
  */
 const diagnoseFeedbackEmail = async orderId => {
   try {
-    console.log(`🔍 Starting diagnostic for order: ${orderId}`);
 
     const Order = (await import('../model/Order.js')).default;
     const order = await Order.findById(orderId).populate('user');
@@ -866,10 +730,8 @@ const diagnoseFeedbackEmail = async orderId => {
       );
     }
 
-    console.log('🔍 Diagnostic complete:', diagnostic);
     return diagnostic;
   } catch (error) {
-    console.error('❌ Diagnostic failed:', error);
     return {
       orderId,
       error: error.message,
@@ -898,49 +760,40 @@ const sendContactNotification = async contact => {
 
             <div style="background-color: #f1f3f4; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
               <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Contact Details</h3>
-              <p style="margin: 5px 0; color: #555;"><strong>Name:</strong> ${
-                contact.name
-              }</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> <a href="mailto:${
-                contact.email
-              }">${contact.email}</a></p>
-              ${
-                contact.phone
-                  ? `<p style="margin: 5px 0; color: #555;"><strong>Phone:</strong> <a href="tel:${contact.phone}">${contact.phone}</a></p>`
-                  : ''
-              }
-              <p style="margin: 5px 0; color: #555;"><strong>Priority:</strong> <span style="color: ${
-                contact.priority === 'high'
-                  ? '#e74c3c'
-                  : contact.priority === 'medium'
-                  ? '#f39c12'
-                  : '#27ae60'
-              }; font-weight: bold; text-transform: uppercase;">${
-        contact.priority
-      }</span></p>
-              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${
-                contact.formattedDate
-              }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Name:</strong> ${contact.name
+        }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> <a href="mailto:${contact.email
+        }">${contact.email}</a></p>
+              ${contact.phone
+          ? `<p style="margin: 5px 0; color: #555;"><strong>Phone:</strong> <a href="tel:${contact.phone}">${contact.phone}</a></p>`
+          : ''
+        }
+              <p style="margin: 5px 0; color: #555;"><strong>Priority:</strong> <span style="color: ${contact.priority === 'high'
+          ? '#e74c3c'
+          : contact.priority === 'medium'
+            ? '#f39c12'
+            : '#27ae60'
+        }; font-weight: bold; text-transform: uppercase;">${contact.priority
+        }</span></p>
+              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${contact.formattedDate
+        }</p>
             </div>
 
             <div style="background-color: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
               <h3 style="color: #2c3e50; margin: 0 0 10px 0;">Subject</h3>
-              <p style="color: #555; margin: 0; font-weight: 500;">${
-                contact.subject
-              }</p>
+              <p style="color: #555; margin: 0; font-weight: 500;">${contact.subject
+        }</p>
             </div>
 
             <div style="background-color: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
               <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Message</h3>
-              <div style="color: #555; line-height: 1.6; white-space: pre-wrap;">${
-                contact.message
-              }</div>
+              <div style="color: #555; line-height: 1.6; white-space: pre-wrap;">${contact.message
+        }</div>
             </div>
 
             <div style="text-align: center;">
-              <a href="${
-                process.env.ADMIN_URL || 'http://localhost:3001'
-              }/contacts/${contact._id}"
+              <a href="${process.env.ADMIN_URL || 'http://localhost:3001'
+        }/contacts/${contact._id}"
                  style="display: inline-block; background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 View in Admin Panel
               </a>
@@ -955,9 +808,8 @@ const sendContactNotification = async contact => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Contact notification email sent successfully');
+
   } catch (error) {
-    console.error('❌ Failed to send contact notification email:', error);
     throw error;
   }
 };
@@ -991,33 +843,26 @@ const sendContactConfirmation = async contact => {
 
             <div style="background-color: #f1f3f4; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Your Message Summary</h3>
-              <p style="margin: 5px 0; color: #555;"><strong>Name:</strong> ${
-                contact.name
-              }</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> ${
-                contact.email
-              }</p>
-              ${
-                contact.phone
-                  ? `<p style="margin: 5px 0; color: #555;"><strong>Phone:</strong> ${contact.phone}</p>`
-                  : ''
-              }
-              <p style="margin: 5px 0; color: #555;"><strong>Subject:</strong> ${
-                contact.subject
-              }</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${
-                contact.formattedDate
-              }</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Reference ID:</strong> ${
-                contact._id
-              }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Name:</strong> ${contact.name
+        }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> ${contact.email
+        }</p>
+              ${contact.phone
+          ? `<p style="margin: 5px 0; color: #555;"><strong>Phone:</strong> ${contact.phone}</p>`
+          : ''
+        }
+              <p style="margin: 5px 0; color: #555;"><strong>Subject:</strong> ${contact.subject
+        }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Submitted:</strong> ${contact.formattedDate
+        }</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Reference ID:</strong> ${contact._id
+        }</p>
             </div>
 
             <div style="background-color: #ffffff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Your Message</h3>
-              <div style="color: #555; line-height: 1.6; white-space: pre-wrap; background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 3px solid #3498db;">${
-                contact.message
-              }</div>
+              <div style="color: #555; line-height: 1.6; white-space: pre-wrap; background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 3px solid #3498db;">${contact.message
+        }</div>
             </div>
 
             <div style="background-color: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0;">

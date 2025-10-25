@@ -21,19 +21,17 @@ function addRandomMinutes(date, minMinutes = 0, maxMinutes = 30) {
 async function generateReviews() {
   try {
     await connectDB();
-    console.log('Starting review generation for product E90178...');
+
 
     // Find the product by SKU
     const product = await Products.findOne({ sku: 'E90178' }).select(
       '_id title price status reviews'
     );
-    console.log(product);
     if (!product) {
       console.error('Product with SKU E90178 not found!');
       process.exit(1);
     }
 
-    console.log(`Found product: ${product.title} (ID: ${product._id})`);
 
     // Reviews data from the image with realistic timestamps
     const reviewsData = [
@@ -157,14 +155,7 @@ async function generateReviews() {
       createdReviews.push(savedReview);
       reviewIds.push(savedReview._id);
 
-      console.log(
-        `Created review for ${
-          reviewData.guestName
-        } (${createdAt.toLocaleDateString()}): ${reviewData.comment.substring(
-          0,
-          50
-        )}...`
-      );
+
     }
 
     // Update product with review IDs
@@ -177,10 +168,8 @@ async function generateReviews() {
       }
     );
 
-    console.log('Reviews generated successfully');
     process.exit(0);
   } catch (error) {
-    console.error('Review generation failed:', error);
     process.exit(1);
   }
 }

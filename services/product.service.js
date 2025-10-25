@@ -93,11 +93,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
       .replace(/\b\w/g, l => l.toUpperCase());
 
-    console.log('Category filter:', {
-      original: category,
-      pattern: categoryPattern,
-      flexiblePattern: flexiblePattern,
-    });
+
 
     // Use a more flexible regex that can match both & and 'and'
     query['category.name'] = new RegExp(flexiblePattern, 'i');
@@ -111,19 +107,10 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
       .replace(/\b\w/g, l => l.toUpperCase());
 
-    console.log('Subcategory filter:', {
-      original: subcategory,
-      pattern: subcategoryPattern,
-    });
-
     // Direct filtering: Find products that have the subcategory in their children field
     // This matches the database structure where products have a children field
     query.children = new RegExp(subcategoryPattern, 'i');
 
-    console.log('Updated query after subcategory filter:', {
-      addedChildrenFilter: subcategoryPattern,
-      newQuery: JSON.stringify(query, null, 2),
-    });
   }
 
   // Price range filter
@@ -262,8 +249,8 @@ export const updateProductService = async (id, currProduct) => {
     product.slug = currProduct.slug;
     product.imageURLs = Array.isArray(currProduct.imageURLs)
       ? currProduct.imageURLs.map(url =>
-          typeof url === 'string' ? url : url.img || ''
-        )
+        typeof url === 'string' ? url : url.img || ''
+      )
       : [];
     product.tags = currProduct.tags;
     product.parent = currProduct.parent;
@@ -290,9 +277,6 @@ export const updateProductService = async (id, currProduct) => {
         Math.round(product.updatedPrice * 0.85 * 100) / 100;
     }
 
-    console.log('product.options', product.options);
-    console.log(typeof product.options);
-    console.log('product.sku', product.sku);
     // Save the updated product
     await product.save();
 

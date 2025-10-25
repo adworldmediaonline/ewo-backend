@@ -82,8 +82,8 @@ export const paymentIntent = async (req, res, next) => {
         const id = item._id
           ? item._id.toString()
           : item.productId
-          ? item.productId.toString()
-          : null;
+            ? item.productId.toString()
+            : null;
 
         return {
           _id: id,
@@ -96,7 +96,7 @@ export const paymentIntent = async (req, res, next) => {
       // Stringify and limit to Stripe metadata size constraints
       try {
         metadata.order_cart = JSON.stringify(simplifiedCart).substring(0, 500);
-      } catch (error) {}
+      } catch (error) { }
     }
 
     // Create a PaymentIntent with the order amount and currency
@@ -120,7 +120,7 @@ export const paymentIntent = async (req, res, next) => {
 export const addOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
-    console.log('orderData', orderData);
+
 
     // If this is a guest checkout (no user ID), ensure the field is set properly
     if (!orderData.user) {
@@ -1172,18 +1172,18 @@ export const getPaymentDetails = async (req, res, next) => {
       paymentMethod: order.paymentMethod,
       paymentIntent: order.paymentIntent
         ? {
-            id: order.paymentIntent.id,
-            status: order.paymentIntent.status,
-            amount: order.paymentIntent.amount,
-            currency: order.paymentIntent.currency,
-            chargeId: order.paymentIntent.chargeId,
-            receiptUrl: order.paymentIntent.receiptUrl,
-            receiptNumber: order.paymentIntent.receiptNumber,
-            paymentMethodDetails: order.paymentIntent.paymentMethodDetails,
-            createdAt: order.paymentIntent.createdAt,
-            paidAt: order.paymentIntent.paidAt,
-            refunds: order.paymentIntent.refunds || [],
-          }
+          id: order.paymentIntent.id,
+          status: order.paymentIntent.status,
+          amount: order.paymentIntent.amount,
+          currency: order.paymentIntent.currency,
+          chargeId: order.paymentIntent.chargeId,
+          receiptUrl: order.paymentIntent.receiptUrl,
+          receiptNumber: order.paymentIntent.receiptNumber,
+          paymentMethodDetails: order.paymentIntent.paymentMethodDetails,
+          createdAt: order.paymentIntent.createdAt,
+          paidAt: order.paymentIntent.paidAt,
+          refunds: order.paymentIntent.refunds || [],
+        }
         : null,
       refundable:
         order.paymentMethod === 'Card' &&

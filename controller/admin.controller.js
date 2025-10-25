@@ -12,7 +12,6 @@ dayjs.extend(utc);
 // register
 const registerAdmin = async (req, res, next) => {
   try {
-    console.log(req.body);
 
     // Validate required fields
     const { name, email, password, role } = req.body;

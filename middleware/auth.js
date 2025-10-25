@@ -72,7 +72,7 @@ export const optionalAuth = async (req, res, next) => {
     if (session) {
       req.user = session.user;
       req.session = session.session;
-      console.log('✅ Optional auth - User found:', session.user.email);
+
     } else {
       console.log('ℹ️ Optional auth - No user session');
     }
