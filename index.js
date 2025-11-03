@@ -15,6 +15,7 @@ import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 
 import { auth } from './lib/auth.js';
 import adminRoutes from './routes/admin.routes.js';
+import bannerRoutes from './routes/banner.routes.js';
 import brandRoutes from './routes/brand.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import cartTrackingRoutes from './routes/cartTracking.routes.js';
@@ -137,6 +138,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/category', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/banner', bannerRoutes);
 app.use('/api/brand', brandRoutes);
 app.use('/api/product', productRoutes);
 app.use('/api/products', productsRoutes);
