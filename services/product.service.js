@@ -263,6 +263,7 @@ export const updateProductService = async (id, currProduct) => {
     product.additionalInformation = currProduct.additionalInformation;
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
+    product.videoId = currProduct.videoId;
     product.options = currProduct.options;
     product.shipping.price = currProduct.shipping.price;
     product.shipping.description = currProduct.shipping.description;
