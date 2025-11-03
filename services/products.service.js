@@ -50,7 +50,8 @@ export const getFilteredProductsService = async (filters = {}) => {
 
   // Availability filters
   if (inStock === 'true' || inStock === true) {
-    query.status = 'in-stock';
+    // Use regex to handle variations like 'in-stock', 'in-stock/', etc.
+    query.status = { $regex: /^in-stock/i };
     query.quantity = { $gt: 0 };
   }
 
@@ -148,7 +149,8 @@ export const getProductCountService = async (filters = {}) => {
   }
 
   if (inStock === 'true' || inStock === true) {
-    query.status = 'in-stock';
+    // Use regex to handle variations like 'in-stock', 'in-stock/', etc.
+    query.status = { $regex: /^in-stock/i };
     query.quantity = { $gt: 0 };
   }
 
