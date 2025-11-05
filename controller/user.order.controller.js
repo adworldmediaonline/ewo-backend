@@ -339,3 +339,103 @@ export const getDashboardRecentOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// get order breakdown statistics
+export const getOrderBreakdown = async (req, res, next) => {
+  try {
+    // Get counts and amounts for each status
+    const statusBreakdown = await Order.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$totalAmount' },
+        },
+      },
+    ]);
+
+    // Create a map for easy access
+    const breakdownMap = {
+      delivered: { count: 0, totalAmount: 0 },
+      pending: { count: 0, totalAmount: 0 },
+      processing: { count: 0, totalAmount: 0 },
+      shipped: { count: 0, totalAmount: 0 },
+      cancel: { count: 0, totalAmount: 0 },
+    };
+
+    // Fill in the actual data
+    statusBreakdown.forEach(item => {
+      if (breakdownMap[item._id] !== undefined) {
+        breakdownMap[item._id] = {
+          count: item.count,
+          totalAmount: item.totalAmount,
+        };
+      }
+    });
+
+    // Get total orders
+    const totalOrders = Object.values(breakdownMap).reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
+    const totalRevenue = Object.values(breakdownMap).reduce(
+      (sum, item) => sum + item.totalAmount,
+      0
+    );
+
+    // Calculate percentages
+    const breakdown = {
+      delivered: {
+        count: breakdownMap.delivered.count,
+        totalAmount: breakdownMap.delivered.totalAmount,
+        percentage:
+          totalOrders > 0
+            ? ((breakdownMap.delivered.count / totalOrders) * 100).toFixed(1)
+            : 0,
+      },
+      pending: {
+        count: breakdownMap.pending.count,
+        totalAmount: breakdownMap.pending.totalAmount,
+        percentage:
+          totalOrders > 0
+            ? ((breakdownMap.pending.count / totalOrders) * 100).toFixed(1)
+            : 0,
+      },
+      processing: {
+        count: breakdownMap.processing.count,
+        totalAmount: breakdownMap.processing.totalAmount,
+        percentage:
+          totalOrders > 0
+            ? ((breakdownMap.processing.count / totalOrders) * 100).toFixed(1)
+            : 0,
+      },
+      shipped: {
+        count: breakdownMap.shipped.count,
+        totalAmount: breakdownMap.shipped.totalAmount,
+        percentage:
+          totalOrders > 0
+            ? ((breakdownMap.shipped.count / totalOrders) * 100).toFixed(1)
+            : 0,
+      },
+      cancelled: {
+        count: breakdownMap.cancel.count,
+        totalAmount: breakdownMap.cancel.totalAmount,
+        percentage:
+          totalOrders > 0
+            ? ((breakdownMap.cancel.count / totalOrders) * 100).toFixed(1)
+            : 0,
+      },
+      total: {
+        orders: totalOrders,
+        revenue: totalRevenue,
+      },
+    };
+
+    res.status(200).json({
+      success: true,
+      data: breakdown,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

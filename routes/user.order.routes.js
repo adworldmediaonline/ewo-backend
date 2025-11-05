@@ -4,6 +4,7 @@ import {
   getDashboardRecentOrder,
   getOrderById,
   getOrderByUser,
+  getOrderBreakdown,
   getSalesReport,
   mostSellingCategory,
 } from '../controller/user.order.controller.js';
@@ -14,6 +15,9 @@ router.get('/dashboard-amount', getDashboardAmount);
 
 // get sales-report
 router.get('/sales-report', getSalesReport);
+
+// get order breakdown
+router.get('/order-breakdown', getOrderBreakdown);
 
 // get sales-report
 router.get('/most-selling-category', mostSellingCategory);
