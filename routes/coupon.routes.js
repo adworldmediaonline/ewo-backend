@@ -6,6 +6,7 @@ import {
   bulkUpdateCoupons,
   deleteCoupon,
   duplicateCoupon,
+  getAllActiveCoupons,
   getAllCoupons,
   getCouponAnalytics,
   getCouponById,
@@ -66,6 +67,9 @@ router.post('/all', /* verifyToken, roleAuth('Admin'), */ addAllCoupon);
 
 //get all coupon - Only Admin role can view all coupons
 router.get('/', /* verifyToken, roleAuth('Admin'), */ getAllCoupons);
+
+//get all active coupons (public endpoint - used for auto-apply) - MUST be before /:id
+router.get('/active', getAllActiveCoupons);
 
 //get a coupon - Only Admin role can view specific coupon
 router.get('/:id', /* verifyToken, roleAuth('Admin'), */ getCouponById);
