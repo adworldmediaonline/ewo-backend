@@ -102,9 +102,8 @@ const orderConfirmationTemplate = (order, config) => {
     firstTimeDiscountHtml = `
       <tr>
         <td style="padding: 12px; text-align: right;">
-          🎉 First-time order discount (-${
-            firstTimeDiscount?.percentage || 10
-          }%)
+          🎉 First-time order discount (-${firstTimeDiscount?.percentage || 10
+      }%)
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(firstTimeDiscountAmount)}
@@ -135,9 +134,8 @@ const orderConfirmationTemplate = (order, config) => {
         <tr>
           <td style="padding: 12px; text-align: right;">
             Coupon Applied: <strong>${coupon.couponCode}</strong>
-            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-              coupon.title
-            } </div>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${coupon.title
+        } </div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
             -${formatPrice(coupon.discount || coupon.discountAmount)}
@@ -152,8 +150,8 @@ const orderConfirmationTemplate = (order, config) => {
             <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
-                .map(c => `${c.couponCode} (${c.title})`)
-                .join(', ')}
+          .map(c => `${c.couponCode} (${c.title})`)
+          .join(', ')}
             </div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
@@ -176,14 +174,13 @@ const orderConfirmationTemplate = (order, config) => {
       <tr>
         <td style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-            appliedCoupon.title
-          } (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title
+      } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(
-            appliedCoupon.discount || appliedCoupon.discountAmount
-          )}
+        appliedCoupon.discount || appliedCoupon.discountAmount
+      )}
         </td>
       </tr>
     `;
@@ -211,22 +208,20 @@ const orderConfirmationTemplate = (order, config) => {
   const itemsHtml =
     cart && cart.length > 0
       ? cart
-          .map(
-            item => `
+        .map(
+          item => `
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${
-          item.title || 'Product'
-        }</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
-          item.orderQuantity || 1
-        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.title || 'Product'
+            }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.orderQuantity || 1
+            }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-          item.price
-        )}</td>
+              item.price
+            )}</td>
       </tr>
     `
-          )
-          .join('')
+        )
+        .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
   // Add coupon success message for multiple or single coupons
@@ -248,8 +243,8 @@ const orderConfirmationTemplate = (order, config) => {
         <p style="color: #075985; margin: 0; line-height: 1.6;">
           <strong>${coupon.couponCode}</strong> - ${coupon.title}<br>
           <span style="font-size: 14px;">You saved ${formatPrice(
-            coupon.discount || coupon.discountAmount
-          )} on this order!</span>
+        coupon.discount || coupon.discountAmount
+      )} on this order!</span>
         </p>
       </div>
       `;
@@ -260,14 +255,13 @@ const orderConfirmationTemplate = (order, config) => {
       couponSuccessMessage = `
       <!-- Multiple Coupons Success Message -->
       <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
-        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">${
-          appliedCoupons.length
+        <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">${appliedCoupons.length
         } Coupons Applied Successfully!</h4>
         <div style="color: #075985; margin: 0; line-height: 1.6;">
           ${couponList}<br>
           <span style="font-size: 14px; font-weight: bold; margin-top: 10px; display: block;">Total savings: ${formatPrice(
-            totalSavings
-          )}!</span>
+          totalSavings
+        )}!</span>
         </div>
       </div>
       `;
@@ -282,12 +276,11 @@ const orderConfirmationTemplate = (order, config) => {
     <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #0ea5e9;">
               <h4 style="color: #0c4a6e; margin-top: 0; margin-bottom: 10px;">Coupon Applied Successfully!</h4>
       <p style="color: #075985; margin: 0; line-height: 1.6;">
-        <strong>${appliedCoupon.couponCode}</strong> - ${
-      appliedCoupon.title
-    }<br>
+        <strong>${appliedCoupon.couponCode}</strong> - ${appliedCoupon.title
+      }<br>
         <span style="font-size: 14px;">You saved ${formatPrice(
-          appliedCoupon.discount || appliedCoupon.discountAmount
-        )} on this order!</span>
+        appliedCoupon.discount || appliedCoupon.discountAmount
+      )} on this order!</span>
       </p>
     </div>
     `;
@@ -336,22 +329,22 @@ const orderConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
           <td style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;">${formatPrice(
-            subTotal
-          )}</td>
+    subTotal
+  )}</td>
         </tr>
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;"><strong>Shipping:</strong></td>
           <td style="padding: 12px; text-align: right;">${formatPrice(
-            shippingCost
-          )}</td>
+    shippingCost
+  )}</td>
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
-            totalAmount
-          )}</td>
+    totalAmount
+  )}</td>
         </tr>
       </tfoot>
     </table>
@@ -464,30 +457,27 @@ const shippingConfirmationTemplate = (order, config) => {
   const itemsHtml =
     cart && Array.isArray(cart) && cart.length > 0
       ? cart
-          .map((item, index) => {
-            console.log(`Cart item ${index}:`, item);
-            return `
+        .map((item, index) => {
+          console.log(`Cart item ${index}:`, item);
+          return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
-          <div style="font-weight: bold; color: #2d3748;">${
-            item?.title || 'Product'
-          }</div>
-          ${
-            item?.variant
+          <div style="font-weight: bold; color: #2d3748;">${item?.title || 'Product'
+            }</div>
+          ${item?.variant
               ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
               : ''
-          }
+            }
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
-          item?.orderQuantity || item?.quantity || 1
-        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item?.orderQuantity || item?.quantity || 1
+            }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-          item?.price || 0
-        )}</td>
+              item?.price || 0
+            )}</td>
       </tr>
     `;
-          })
-          .join('')
+        })
+        .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
   // Handle first-time discount display for shipping email
@@ -496,9 +486,8 @@ const shippingConfirmationTemplate = (order, config) => {
     firstTimeDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
-          🎉 First-time order discount (-${
-            firstTimeDiscount?.percentage || 10
-          }%)
+          🎉 First-time order discount (-${firstTimeDiscount?.percentage || 10
+      }%)
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(firstTimeDiscount.amount)}
@@ -529,9 +518,8 @@ const shippingConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
             Coupon Applied: <strong>${coupon.couponCode}</strong>
-            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-              coupon.title
-            } (${discountText})</div>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${coupon.title
+        } (${discountText})</div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
             -${formatPrice(coupon.discountAmount)}
@@ -546,8 +534,8 @@ const shippingConfirmationTemplate = (order, config) => {
             <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
-                .map(c => `${c.couponCode} (${c.title})`)
-                .join(', ')}
+          .map(c => `${c.couponCode} (${c.title})`)
+          .join(', ')}
             </div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
@@ -567,9 +555,8 @@ const shippingConfirmationTemplate = (order, config) => {
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-            appliedCoupon.title
-          } (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title
+      } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -602,8 +589,7 @@ const shippingConfirmationTemplate = (order, config) => {
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your package is on its way to you</p>
     </div>
 
-    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${
-      name || 'Valued Customer'
+    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name || 'Valued Customer'
     }</strong>,</p>
     <p style="font-size: 16px; line-height: 1.6;">Exciting news! Your order has been shipped and is now on its way to you. Here are all the details:</p>
 
@@ -613,9 +599,8 @@ const shippingConfirmationTemplate = (order, config) => {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">#${
-            orderId || _id || 'N/A'
-          }</td>
+          <td style="padding: 8px 0; text-align: right;">#${orderId || _id || 'N/A'
+    }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Shipped Date:</strong></td>
@@ -623,9 +608,8 @@ const shippingConfirmationTemplate = (order, config) => {
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Carrier:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${
-            carrier || 'Standard Shipping'
-          }</td>
+          <td style="padding: 8px 0; text-align: right;">${carrier || 'Standard Shipping'
+    }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
@@ -668,22 +652,22 @@ const shippingConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
           <td style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;">${formatPrice(
-            subTotal
-          )}</td>
+      subTotal
+    )}</td>
         </tr>
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;"><strong>Shipping:</strong></td>
           <td style="padding: 12px; text-align: right;">${formatPrice(
-            shippingCost
-          )}</td>
+      shippingCost
+    )}</td>
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
-            totalAmount
-          )}</td>
+      totalAmount
+    )}</td>
         </tr>
       </tfoot>
     </table>
@@ -702,11 +686,10 @@ const shippingConfirmationTemplate = (order, config) => {
         <li style="margin-bottom: 8px;">Your package will be delivered to the address provided above</li>
         <li style="margin-bottom: 8px;">Please ensure someone is available to receive the package</li>
         <li style="margin-bottom: 8px;">If you're not available, the carrier will leave a delivery notice</li>
-        ${
-          trackingUrl
-            ? '<li style="margin-bottom: 8px;">Track your package in real-time using the tracking button above</li>'
-            : ''
-        }
+        ${trackingUrl
+      ? '<li style="margin-bottom: 8px;">Track your package in real-time using the tracking button above</li>'
+      : ''
+    }
       </ul>
     </div>
 
@@ -793,9 +776,8 @@ const deliveryConfirmationTemplate = (order, config) => {
     firstTimeDiscountHtml = `
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
-          🎉 First-time order discount (-${
-            firstTimeDiscount?.percentage || 10
-          }%)
+          🎉 First-time order discount (-${firstTimeDiscount?.percentage || 10
+      }%)
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(firstTimeDiscount.amount)}
@@ -826,9 +808,8 @@ const deliveryConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;">
             Coupon Applied: <strong>${coupon.couponCode}</strong>
-            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-              coupon.title
-            } (${discountText})</div>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">${coupon.title
+        } (${discountText})</div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
             -${formatPrice(coupon.discountAmount)}
@@ -843,8 +824,8 @@ const deliveryConfirmationTemplate = (order, config) => {
             <strong>${appliedCoupons.length} Coupons Applied</strong>
             <div style="font-size: 12px; color: #718096; margin-top: 2px;">
               ${appliedCoupons
-                .map(c => `${c.couponCode} (${c.title})`)
-                .join(', ')}
+          .map(c => `${c.couponCode} (${c.title})`)
+          .join(', ')}
             </div>
           </td>
           <td style="padding: 12px; text-align: right; color: #48bb78;">
@@ -864,9 +845,8 @@ const deliveryConfirmationTemplate = (order, config) => {
       <tr>
         <td colspan="2" style="padding: 12px; text-align: right;">
           🎫 Coupon Applied: <strong>${appliedCoupon.couponCode}</strong>
-          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${
-            appliedCoupon.title
-          } (${discountText})</div>
+          <div style="font-size: 12px; color: #718096; margin-top: 2px;">${appliedCoupon.title
+      } (${discountText})</div>
         </td>
         <td style="padding: 12px; text-align: right; color: #48bb78;">
           -${formatPrice(appliedCoupon.discountAmount)}
@@ -891,29 +871,26 @@ const deliveryConfirmationTemplate = (order, config) => {
   const itemsHtml =
     cart && Array.isArray(cart) && cart.length > 0
       ? cart
-          .map((item, index) => {
-            return `
+        .map((item, index) => {
+          return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
-          <div style="font-weight: bold; color: #2d3748;">${
-            item?.title || 'Product'
-          }</div>
-          ${
-            item?.variant
+          <div style="font-weight: bold; color: #2d3748;">${item?.title || 'Product'
+            }</div>
+          ${item?.variant
               ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
               : ''
-          }
+            }
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${
-          item?.orderQuantity || item?.quantity || 1
-        }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item?.orderQuantity || item?.quantity || 1
+            }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-          item?.price || 0
-        )}</td>
+              item?.price || 0
+            )}</td>
       </tr>
     `;
-          })
-          .join('')
+        })
+        .join('')
       : `<tr><td style="padding: 12px; border-bottom: 1px solid #eee;" colspan="3">Order items not available</td></tr>`;
 
   const content = `
@@ -922,8 +899,7 @@ const deliveryConfirmationTemplate = (order, config) => {
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your package has arrived safely</p>
     </div>
 
-    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${
-      name || 'Valued Customer'
+    <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${name || 'Valued Customer'
     }</strong>,</p>
     <p style="font-size: 16px; line-height: 1.6;">Great news! Your order has been successfully delivered. We hope you love your purchase!</p>
 
@@ -933,9 +909,8 @@ const deliveryConfirmationTemplate = (order, config) => {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">#${
-            orderId || _id || 'N/A'
-          }</td>
+          <td style="padding: 8px 0; text-align: right;">#${orderId || _id || 'N/A'
+    }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Delivered Date:</strong></td>
@@ -943,13 +918,11 @@ const deliveryConfirmationTemplate = (order, config) => {
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Delivered By:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${
-            carrier || 'Standard Shipping'
-          }</td>
+          <td style="padding: 8px 0; text-align: right;">${carrier || 'Standard Shipping'
+    }</td>
         </tr>
-        ${
-          trackingNumber
-            ? `
+        ${trackingNumber
+      ? `
         <tr>
           <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
           <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
@@ -957,8 +930,8 @@ const deliveryConfirmationTemplate = (order, config) => {
           </td>
         </tr>
         `
-            : ''
-        }
+      : ''
+    }
       </table>
     </div>
 
@@ -990,22 +963,22 @@ const deliveryConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
           <td style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;">${formatPrice(
-            subTotal
-          )}</td>
+      subTotal
+    )}</td>
         </tr>
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;"><strong>Shipping:</strong></td>
           <td style="padding: 12px; text-align: right;">${formatPrice(
-            shippingCost
-          )}</td>
+      shippingCost
+    )}</td>
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr style="background-color: #f0fff4;">
           <td colspan="2" style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #2d3748;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #48bb78;">${formatPrice(
-            totalAmount
-          )}</td>
+      totalAmount
+    )}</td>
         </tr>
       </tfoot>
     </table>
@@ -1089,18 +1062,16 @@ const orderCancellationTemplate = (order, config) => {
   const orderSummaryHtml =
     cart && Array.isArray(cart) && cart.length > 0
       ? cart
-          .map(
-            (item, index) => `
-        <div style="padding: 8px 0; border-bottom: 1px solid #eee; ${
-          index === cart.length - 1 ? 'border-bottom: none;' : ''
-        }">
-          <strong>${item?.title || 'Product'}</strong> x ${
-              item?.orderQuantity || item?.quantity || 1
+        .map(
+          (item, index) => `
+        <div style="padding: 8px 0; border-bottom: 1px solid #eee; ${index === cart.length - 1 ? 'border-bottom: none;' : ''
+            }">
+          <strong>${item?.title || 'Product'}</strong> x ${item?.orderQuantity || item?.quantity || 1
             }
         </div>
       `
-          )
-          .join('')
+        )
+        .join('')
       : '<div style="padding: 8px 0;">Order items not available</div>';
 
   const content = `
@@ -1109,8 +1080,7 @@ const orderCancellationTemplate = (order, config) => {
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your order has been successfully cancelled</p>
     </div>
 
-    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${
-      name || 'Valued Customer'
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name || 'Valued Customer'
     }</strong>,</p>
 
     <p style="font-size: 16px; line-height: 1.6;">We wanted to let you know that your order placed with <strong>${storeName}</strong> has been successfully cancelled.</p>
@@ -1121,15 +1091,14 @@ const orderCancellationTemplate = (order, config) => {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; width: 50%;"><strong>Order Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">#${
-            orderId || _id || 'N/A'
-          }</td>
+          <td style="padding: 8px 0; text-align: right;">#${orderId || _id || 'N/A'
+    }</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Order Total:</strong></td>
           <td style="padding: 8px 0; text-align: right; font-weight: bold;">${formatPrice(
-            totalAmount
-          )}</td>
+      totalAmount
+    )}</td>
         </tr>
       </table>
 
@@ -1149,20 +1118,19 @@ const orderCancellationTemplate = (order, config) => {
       </p>
     </div>
 
-    ${
-      paymentMethod === 'Card'
-        ? `
+    ${paymentMethod === 'Card'
+      ? `
     <!-- Refund Information -->
     <div style="background-color: #f0fff4; padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #48bb78;">
       <h3 style="color: #2d3748; margin-top: 0; margin-bottom: 15px; font-size: 18px;">💰 Refund Information</h3>
       <p style="margin: 0; color: #4a5568; line-height: 1.6;">
         Since you paid by card, a full refund of <strong>${formatPrice(
-          totalAmount
-        )}</strong> has been processed and will appear on your original payment method within 5-10 business days.
+        totalAmount
+      )}</strong> has been processed and will appear on your original payment method within 5-10 business days.
       </p>
     </div>
     `
-        : ''
+      : ''
     }
 
     <!-- Call to Action -->
@@ -1244,14 +1212,11 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
       <img src="${item.img || '/placeholder.png'}" alt="${item.title}"
            style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
       <div>
-        <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;">${
-          item.title
+        <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;">${item.title
         }</h4>
-        <p style="margin: 0; color: #666; font-size: 14px;">Quantity: ${
-          item.quantity
+        <p style="margin: 0; color: #666; font-size: 14px;">Quantity: ${item.quantity
         }</p>
-        <p style="margin: 0; color: #007bff; font-size: 14px; font-weight: bold;">$${
-          item.price
+        <p style="margin: 0; color: #007bff; font-size: 14px; font-weight: bold;">$${item.price
         }</p>
       </div>
     </div>
@@ -1304,7 +1269,7 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
             <div class="instruction">Click the button below to rate and review your order</div>
 
             <div style="margin-top: 20px; text-align: center;">
-              <a href="${secret.api_base_url}/api/review/unified-feedback?token=${reviewToken}"
+              <a href="${clientUrl}/review?token=${reviewToken}"
                  style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 4px 8px rgba(0,123,255,0.3);">
                 ⭐ Rate & Review Your Order
               </a>
