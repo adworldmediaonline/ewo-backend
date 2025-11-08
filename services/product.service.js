@@ -145,9 +145,9 @@ export const getPaginatedProductsService = async (filters = {}) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   // Execute query with pagination
+  // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
   const [products, total] = await Promise.all([
     Product.find(query)
-      .populate('reviews')
       .sort(sortQuery)
       .skip(skip)
       .limit(parseInt(limit))
@@ -176,17 +176,18 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
 // get all product data
 export const getAllProductsService = async () => {
+  // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
   const products = await Product.find({})
-    .populate('reviews')
     .sort({ skuArrangementOrderNo: 1 });
   return products;
 };
 
 // get offer product service
 export const getOfferTimerProductService = async () => {
+  // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
   const products = await Product.find({
     'offerDate.endDate': { $gt: new Date() },
-  }).populate('reviews');
+  });
   return products;
 };
 
