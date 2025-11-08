@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 import ApiError from '../errors/api-error.js';
 import Category from '../model/Category.js';
 import Product from '../model/Products.js';
+import {
+  generateCacheKey,
+  getFromCache,
+  setInCache,
+} from '../lib/redis-cache.js';
 
 // create product service
 export const createProductService = async data => {
@@ -62,6 +67,18 @@ export const getPaginatedProductsService = async (filters = {}) => {
     sortBy = 'skuArrangementOrderNo',
     sortOrder = 'asc',
   } = filters;
+
+  // Generate cache key based on filters
+  const cacheKey = generateCacheKey('products:paginated', filters);
+
+  // Try to get from cache first
+  const cachedData = await getFromCache(cacheKey);
+  if (cachedData) {
+    console.log('Cache HIT - Returning cached products');
+    return cachedData;
+  }
+
+  console.log('Cache MISS - Fetching from database');
 
   // Build query
   const query = {};
@@ -140,7 +157,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
     Product.countDocuments(query),
   ]);
 
-  return {
+  const result = {
     products,
     pagination: {
       currentPage: parseInt(page),
@@ -150,6 +167,11 @@ export const getPaginatedProductsService = async (filters = {}) => {
       hasPrevPage: parseInt(page) > 1,
     },
   };
+
+  // Store in cache with 5 minute TTL (300 seconds)
+  await setInCache(cacheKey, result, 300);
+
+  return result;
 };
 
 // get all product data
@@ -328,7 +350,7 @@ export const getStockOutProducts = async () => {
   return result;
 };
 
-// get Reviews Products
+// delete product service
 export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
   return result;

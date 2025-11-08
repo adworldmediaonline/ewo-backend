@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
+import initRedisClient, { closeRedisConnection } from './config/redis.js';
 import { secret } from './config/secret.js';
 
 import categoryRoutes from './routes/category.routes.js';
@@ -131,6 +132,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // connect database
 connectDB();
+
+// initialize Redis
+initRedisClient()
+  .then(() => {
+    console.log('Redis initialization attempted');
+  })
+  .catch((err) => {
+    console.log('Redis unavailable, continuing without cache:', err.message);
+  });
 
 // Protected routes
 app.use('/api/protected', protectedRoutes);
