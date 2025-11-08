@@ -204,19 +204,21 @@ const orderConfirmationTemplate = (order, config) => {
     clientUrl = secret.client_url,
   } = config;
 
-  // Generate items HTML
+  // Generate items HTML with selected options
   const itemsHtml =
     cart && cart.length > 0
       ? cart
         .map(
           item => `
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.title || 'Product'
-            }</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">
+          <strong>${item.title || 'Product'}</strong>
+          ${item.selectedOption ? `<br/><span style="font-size: 13px; color: #718096;">Option: ${item.selectedOption.title} (+$${Number(item.selectedOption.price || 0).toFixed(2)})</span>` : ''}
+        </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.orderQuantity || 1
             }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-              item.price
+              item.finalPriceDiscount || 0
             )}</td>
       </tr>
     `
@@ -453,7 +455,7 @@ const shippingConfirmationTemplate = (order, config) => {
     });
   };
 
-  // Generate items HTML with safety checks
+  // Generate items HTML with safety checks and selected options
   const itemsHtml =
     cart && Array.isArray(cart) && cart.length > 0
       ? cart
@@ -464,15 +466,15 @@ const shippingConfirmationTemplate = (order, config) => {
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
           <div style="font-weight: bold; color: #2d3748;">${item?.title || 'Product'
             }</div>
-          ${item?.variant
-              ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
+          ${item?.selectedOption
+              ? `<div style="font-size: 13px; color: #718096; margin-top: 4px;">Option: ${item.selectedOption.title} (+$${Number(item.selectedOption.price || 0).toFixed(2)})</div>`
               : ''
             }
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item?.orderQuantity || item?.quantity || 1
             }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-              item?.price || 0
+              item?.finalPriceDiscount || 0
             )}</td>
       </tr>
     `;
@@ -867,7 +869,7 @@ const deliveryConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Generate items HTML with safety checks
+  // Generate items HTML with safety checks and selected options
   const itemsHtml =
     cart && Array.isArray(cart) && cart.length > 0
       ? cart
@@ -877,15 +879,15 @@ const deliveryConfirmationTemplate = (order, config) => {
         <td style="padding: 12px; border-bottom: 1px solid #eee;">
           <div style="font-weight: bold; color: #2d3748;">${item?.title || 'Product'
             }</div>
-          ${item?.variant
-              ? `<div style="font-size: 12px; color: #718096; margin-top: 4px;">${item.variant}</div>`
+          ${item?.selectedOption
+              ? `<div style="font-size: 13px; color: #718096; margin-top: 4px;">Option: ${item.selectedOption.title} (+$${Number(item.selectedOption.price || 0).toFixed(2)})</div>`
               : ''
             }
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item?.orderQuantity || item?.quantity || 1
             }</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatPrice(
-              item?.price || 0
+              item?.finalPriceDiscount || 0
             )}</td>
       </tr>
     `;
@@ -1204,7 +1206,7 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
     });
   };
 
-  // Generate product list
+  // Generate product list with selected options
   const productList = cart
     .map(
       item => `
@@ -1214,9 +1216,13 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
       <div>
         <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;">${item.title
         }</h4>
-        <p style="margin: 0; color: #666; font-size: 14px;">Quantity: ${item.quantity
+        ${item.selectedOption
+          ? `<p style="margin: 0; color: #718096; font-size: 13px;">Option: ${item.selectedOption.title} (+$${Number(item.selectedOption.price || 0).toFixed(2)})</p>`
+          : ''
+        }
+        <p style="margin: 0; color: #666; font-size: 14px;">Quantity: ${item.orderQuantity || item.quantity || 1
         }</p>
-        <p style="margin: 0; color: #007bff; font-size: 14px; font-weight: bold;">$${item.price
+        <p style="margin: 0; color: #007bff; font-size: 14px; font-weight: bold;">$${Number(item.finalPriceDiscount || 0).toFixed(2)
         }</p>
       </div>
     </div>
