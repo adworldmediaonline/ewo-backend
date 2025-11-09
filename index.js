@@ -46,7 +46,6 @@ app.use(
       'http://localhost:4000',
       'https://admin.eastwestoffroad.com',
       'https://ewo-admin.vercel.app',
-      'https://ewo-admin.globalinnovations.co.in'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
