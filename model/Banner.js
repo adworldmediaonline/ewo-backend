@@ -43,6 +43,10 @@ const bannerSchema = mongoose.Schema(
         trim: true,
       },
     },
+    includeCaption: {
+      type: Boolean,
+      default: true,
+    },
     status: {
       type: String,
       enum: ['active', 'inactive'],
