@@ -76,11 +76,14 @@ const couponSchema = new mongoose.Schema(
     // Usage Restrictions
     minimumAmount: {
       type: Number,
-      required: true,
+      required: false,
+      default: 0,
       min: 0,
     },
     maximumAmount: {
       type: Number,
+      required: false,
+      default: 0,
       min: 0,
     },
     usageLimit: {
@@ -276,21 +279,25 @@ couponSchema.methods.calculateDiscount = function (
   // For now, use full total. In the future, this can be configured per coupon
   const baseAmountForLimits = this.applyToFullTotal ? cartTotal : cartSubtotal;
 
-  // Check minimum amount
-  if (baseAmountForLimits < this.minimumAmount) {
-    return {
-      discount: 0,
-      message: `Minimum order amount of $${this.minimumAmount} required`,
-    };
-  }
+  // MINIMUM/MAXIMUM AMOUNT RESTRICTIONS DISABLED
+  // These restrictions have been removed to allow coupons to work on any order amount
+  // If you need to re-enable them, uncomment the code below:
 
-  // Check maximum amount
-  if (this.maximumAmount && baseAmountForLimits > this.maximumAmount) {
-    return {
-      discount: 0,
-      message: `Maximum order amount of $${this.maximumAmount} exceeded`,
-    };
-  }
+  // // Check minimum amount (only if greater than 0)
+  // if (this.minimumAmount > 0 && baseAmountForLimits < this.minimumAmount) {
+  //   return {
+  //     discount: 0,
+  //     message: `Minimum order amount of $${this.minimumAmount} required`,
+  //   };
+  // }
+
+  // // Check maximum amount (only if greater than 0)
+  // if (this.maximumAmount > 0 && baseAmountForLimits > this.maximumAmount) {
+  //   return {
+  //     discount: 0,
+  //     message: `Maximum order amount of $${this.maximumAmount} exceeded`,
+  //   };
+  // }
 
   // Filter applicable items
   const applicableItems = this.getApplicableItems(cartItems);
@@ -304,7 +311,8 @@ couponSchema.methods.calculateDiscount = function (
   const applicableItemsTotal = applicableItems.reduce((sum, item) => {
     // Always use orderQuantity for discount calculation
     const quantity = item.orderQuantity || 0;
-    const price = item.price || 0;
+    // Use finalPriceDiscount (new field) or fall back to price (deprecated)
+    const price = item.finalPriceDiscount || item.price || 0;
     return sum + price * quantity;
   }, 0);
 
@@ -433,14 +441,20 @@ couponSchema.methods.calculateBuyXGetYDiscount = function (items) {
     Math.floor(totalQuantity / this.buyQuantity) * this.getQuantity;
 
   // Find cheapest items to make free
-  const sortedItems = items.sort((a, b) => a.price - b.price);
+  // Use finalPriceDiscount (new field) or fall back to price (deprecated)
+  const sortedItems = items.sort((a, b) => {
+    const priceA = a.finalPriceDiscount || a.price || 0;
+    const priceB = b.finalPriceDiscount || b.price || 0;
+    return priceA - priceB;
+  });
   let discount = 0;
   let remainingFreeItems = freeItems;
 
   for (const item of sortedItems) {
     if (remainingFreeItems <= 0) break;
     const freeFromThisItem = Math.min(item.quantity, remainingFreeItems);
-    discount += freeFromThisItem * item.price;
+    const itemPrice = item.finalPriceDiscount || item.price || 0;
+    discount += freeFromThisItem * itemPrice;
     remainingFreeItems -= freeFromThisItem;
   }
 
