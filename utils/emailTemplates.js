@@ -353,12 +353,12 @@ const orderConfirmationTemplate = (order, config) => {
 
     <!-- What's Next Section -->
     <div style="background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%); padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #38b2ac;">
-      <p style="color: #4a5568; line-height: 1.6; margin: 0;">We'll notify you again as soon as your order is shipped. Meanwhile, you can track or view your order anytime by clicking the link below:</p>
+      <p style="color: #4a5568; line-height: 1.6; margin: 0;">We'll notify you again as soon as your order is shipped. Meanwhile, you can track your order anytime by clicking the link below:</p>
     </div>
 
     <!-- Action Buttons -->
     <div style="margin: 40px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px;">
-      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">👉 View Your Order</a>
+      <a href="${clientUrl}/track-order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">📦 Track Your Order</a>
     </div>
 
     <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">If you have any questions, feel free to reach out to our support team.</p>
@@ -579,12 +579,6 @@ const shippingConfirmationTemplate = (order, config) => {
     `;
   }
 
-  // Create tracking button HTML
-  const trackingButtonHtml =
-    trackingUrl && trackingNumber
-      ? `<a href="${trackingUrl}" style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin-right: 15px;">Track Package</a>`
-      : '';
-
   const content = `
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 30px;">
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">📦 Your Order Has Shipped!</h1>
@@ -676,9 +670,8 @@ const shippingConfirmationTemplate = (order, config) => {
 
     <!-- Action Buttons -->
     <div style="margin: 40px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px;">
-      <p style="margin-bottom: 20px; font-size: 16px; color: #4a5568;">Keep track of your package and manage your order:</p>
-      ${trackingButtonHtml}
-      <a href="${clientUrl}/order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">View Order Details</a>
+      <p style="margin-bottom: 20px; font-size: 16px; color: #4a5568;">Track your order and view tracking information:</p>
+      <a href="${clientUrl}/track-order/${_id}" style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">📦 Track Your Order</a>
     </div>
 
     <!-- Delivery Information -->
@@ -688,8 +681,8 @@ const shippingConfirmationTemplate = (order, config) => {
         <li style="margin-bottom: 8px;">Your package will be delivered to the address provided above</li>
         <li style="margin-bottom: 8px;">Please ensure someone is available to receive the package</li>
         <li style="margin-bottom: 8px;">If you're not available, the carrier will leave a delivery notice</li>
-        ${trackingUrl
-      ? '<li style="margin-bottom: 8px;">Track your package in real-time using the tracking button above</li>'
+        ${trackingUrl || trackingNumber
+      ? '<li style="margin-bottom: 8px;">Track your package in real-time by clicking the Track Order link above</li>'
       : ''
     }
       </ul>
