@@ -148,6 +148,7 @@ export const getOrderByUser = async (req, res, next) => {
 // getOrderById
 export const getOrderById = async (req, res, next) => {
   try {
+    console.log(req.params.id);
     const order = await Order.findById(req.params.id);
     res.status(200).json({
       success: true,
