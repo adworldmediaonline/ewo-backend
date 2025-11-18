@@ -16,6 +16,7 @@
     "update:sku-arrangement": "node scripts/update-sku-arrangement.js",
     "update:calculated-prices": "node scripts/update-calculated-prices.js",
     "generate:reviews": "node scripts/generate-reviews.js",
+    "seed:reviews-e90157": "node scripts/seed-reviews-e90157.js",
     "increase-prices-15": "node scripts/increase-prices-15-percent.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
