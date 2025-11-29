@@ -6,87 +6,68 @@ import Products from '../model/Products.js';
 
 dotenv.config();
 
-// ========================================
-// CHANGE SKU HERE
-// ========================================
-const PRODUCT_SKU = 'E90063'; // Change this to seed reviews for different products
 
-// ========================================
-// CHANGE REVIEWS DATA HERE
-// ========================================
+const PRODUCT_SKU = 'E90102';
 const REVIEWS_DATA = [
   {
     rating: 5,
-    comment: 'Complete kit with standard and offset TREs. Great flexibility.',
-    guestName: 'Derek Johnson',
-  },
-  {
-    rating: 5,
-    comment: 'Perfect for Dana 60. Both standard and offset ends included.',
-    guestName: 'Sarah M.',
+    comment:
+      "Passenger arm for my K30 Dana 44 high steer. USA made, 1.25 thick with domestic billet blocks. Reamed for drag link and 1-ton TRE. All hardware included.",
+    guestName: 'Daniel Brooks',
   },
   {
     rating: 4.5,
-    comment: 'Quality kit. Love having both options in one package.',
-    guestName: 'Marcus Wilson',
+    comment: 'Solid passenger arm. Hardware included is quality.',
+    guestName: 'Mike Patterson',
+  },
+  {
+    rating: 5,
+    comment: 'Perfect for Dana 44 crossover. USA-made quality.',
+    guestName: 'Kevin Rodriguez',
   },
   {
     rating: 5,
     comment:
-      "This complete steering kit for Dana 60 is excellent. You get ES 2234 R & L standard tie rods AND ES 23434 R & L offset tie rods, plus all tube adapters and jam nuts (2 LH, 2 RH of each). Having both standard and offset options in one kit gives great flexibility for different steering setups.",
-    guestName: 'Jennifer Martinez',
-  },
-  {
-    rating: 5,
-    comment: 'Complete kit for Dana 44. All adapters included.',
-    guestName: 'Robert T.',
+      "Installing on my square body Dana 44. Arm is 1.25 thick, pre-reamed for drag link and tie rod end. All studs, washers, and nuts included. USA made.",
+    guestName: 'Rachel Thompson',
   },
   {
     rating: 4.5,
-    comment:
-      "Quality steering kit for Dana 44/Dana 60 1-ton axles. Includes ES 2234 standard and ES 23434 offset tie rod ends (both left and right), 2 LH tube adapters, 2 RH tube adapters, 2 LH jam nuts, and 2 RH jam nuts. Metal-on-metal construction with spring technology for durability. Great for on-road and off-road.",
-    guestName: 'Amanda Foster',
+    comment: 'Quality passenger arm for high steer. Pre-reamed saves time.',
+    guestName: 'Steve Morrison',
+  },
+  {
+    rating: 5,
+    comment: 'Heavy duty arm. 1.25 thick is serious quality.',
+    guestName: 'Sarah Bennett',
   },
   {
     rating: 5,
     comment:
-      "Installing this complete kit on my K3500 with Dana 60. What makes this stand out is you get BOTH standard ES 2234 R & L tie rods AND offset ES 23434 R & L tie rods in one package. Plus all the required adapters and jam nuts (2 left, 2 right of each). Designed for Dana 44/Dana 60 1-ton axles. Straightforward assembly with all hardware included.",
-    guestName: 'Christopher Davis',
-  },
-  {
-    rating: 5,
-    comment:
-      "Building a complete steering system on my GMC with Dana 44 and this kit is perfect. You get 1 ES 2234 R standard right, 1 ES 2234 L standard left, 1 ES 23434 R offset right, 1 ES 23434 L offset left, 2 LH tube adapters, 2 RH tube adapters, 2 LH jam nuts, and 2 RH jam nuts. Having both standard and offset tie rod ends gives flexibility for different steering configurations. Metal-on-metal construction with spring technology provides increased durability. After installation and about 180 miles including trail use, steering accuracy is excellent. Great value for a complete kit.",
-    guestName: 'Nicole Parker',
+      "Dana 44 passenger arm for my CJ. USA made with domestic billet blocks. Reamed for 7/8-18 drag link and 1-ton tie rod end. Complete hardware kit included.",
+    guestName: 'Jason Miller',
   },
   {
     rating: 4.5,
     comment:
-      "Quality complete steering kit for Dana 60 on my Chevy K2500. This kit includes everything - standard ES 2234 tie rods (R & L) and offset ES 23434 tie rods (R & L), plus all required adapters and jam nuts. The kit is designed specifically for Dana 44/Dana 60 1-ton axles and comes with all hardware for straightforward assembly. Metal-on-metal construction with spring technology is built for durability and can handle on-road and off-road driving. Having both standard and offset options in one kit is great for flexibility. After about 200 miles including some off-road use, steering agility is excellent. Good value for a comprehensive kit.",
-    guestName: 'Steven Phillips',
+      "Running this arm for about 350 miles on my K20 Dana 44. Heavy duty construction, pre-reamed, all hardware fit perfect. USA made quality shows.",
+    guestName: 'Jennifer Foster',
+  },
+  {
+    rating: 5,
+    comment: 'Best passenger arm. All mounting hardware included.',
+    guestName: 'Brian Carter',
   },
   {
     rating: 5,
     comment:
-      "Installing this complete steering kit on my K3500 Dana 60 front end. This is a comprehensive kit that includes 1 ES 2234 R standard right tie rod, 1 ES 2234 L standard left tie rod, 1 ES 23434 R offset right tie rod end, 1 ES 23434 L offset left tie rod end, 2 7/8-18 LH tube adapters, 2 7/8-18 RH tube adapters, 2 7/8-18 LH jam nuts, and 2 7/8-18 RH jam nuts. What sets this kit apart is having BOTH standard and offset tie rod ends in one package, giving you flexibility for different steering setups. The kit is designed specifically for Dana 44/Dana 60 1-ton axles. Metal-on-metal construction with spring technology provides increased durability for on-road and off-road capability. All required adapters and jam nuts are included for straightforward assembly. After installation, alignment, and about 220 miles of mixed driving including aggressive off-road trails, steering accuracy and agility are outstanding. All components are holding up great with no play or binding. Having both standard and offset options plus all hardware in one complete kit saved ordering multiple items. This is a complete solution for Dana 44/Dana 60 steering upgrades. Excellent value.",
-    guestName: 'Patricia Wilson',
-  },
-  {
-    rating: 5,
-    comment: 'Top kit. Both standard and offset in one package.',
-    guestName: 'Brian K.',
+      "Passenger side arm for my GMC Dana 44. 1.25 inch thick made with domestic billet blocks. Pre-reamed for drag link and tie rod ends. Complete with studs, washers, and lock nuts.",
+    guestName: 'Amanda Wright',
   },
   {
     rating: 4.5,
-    comment:
-      "I do steering upgrades on Dana 44 and Dana 60 axles and this complete kit is excellent. The kit includes 1 ES 2234 R standard right, 1 ES 2234 L standard left, 1 ES 23434 R offset right, 1 ES 23434 L offset left, 2 LH tube adapters, 2 RH tube adapters, 2 LH jam nuts, and 2 RH jam nuts. Having both standard ES 2234 and offset ES 23434 tie rod ends in one kit gives great flexibility for different steering configurations. The kit is designed specifically for Dana 44/Dana 60 1-ton axles and comes with all required adapters and jam nuts for straightforward assembly. Metal-on-metal construction with spring technology is built for increased durability and can handle on-road and off-road driving. I've used these on several customer builds and they work great. After weeks of testing on different trucks including heavy off-road use, they've all performed well with excellent steering accuracy and agility. Having both standard and offset options plus all hardware in one complete kit is convenient and good value.",
-    guestName: 'Michael Anderson',
-  },
-  {
-    rating: 5,
-    comment:
-      "Upgrading the steering system on my GMC with Dana 60 and this complete kit is exactly what I needed. This is a comprehensive top-of-the-line steering kit designed specifically for Dana 44/Dana 60 1-ton axles. The kit includes 1 ES 2234 R standard right tie rod, 1 ES 2234 L standard left tie rod, 1 ES 23434 R offset right tie rod end, 1 ES 23434 L offset left tie rod end, 2 7/8-18 LH tube adapters, 2 7/8-18 RH tube adapters, 2 7/8-18 LH jam nuts, and 2 7/8-18 RH jam nuts. What makes this kit exceptional is having BOTH standard ES 2234 and offset ES 23434 tie rod ends included in one complete package, which gives tremendous flexibility for different steering configurations and setups. The kit comes with all required adapters and jam nuts for straightforward assembly. Metal-on-metal construction with spring technology provides increased durability for both on-road and off-road capability. After installation, alignment, and about 240 miles of testing including heavy off-road trails, full articulation, and mixed driving conditions, steering accuracy and agility are outstanding. All components are working perfectly with no play, no binding, excellent precision. Having both standard and offset tie rod ends plus all the necessary hardware (tube adapters, jam nuts) in one complete kit made the installation straightforward and saved ordering multiple items separately. This is a complete solution for replacing your steering system on Dana 44/Dana 60 1-ton axles with the capability of handling on-road and off-road driving. Outstanding value for a top-of-the-line complete kit.",
-    guestName: 'Sarah Thompson',
+    comment: 'Quality arm with complete hardware. USA made.',
+    guestName: 'Marcus Williams',
   },
 ];
 
@@ -94,12 +75,8 @@ const REVIEWS_DATA = [
 // Helper Functions
 // ========================================
 
-// Generate random date within a range
-// Generate a random date within the current month and the previous 5 months (i.e., from the 1st of 6 months ago through now)
-// New getRandomDate generates a realistic "X days ago" (1-179 days, i.e. up to 6 months), evenly distributed.
 const getRandomDate = () => {
   const now = new Date();
-  // Up to 179 days ago (almost 6 months, covers '1 week ago', '7 days ago', etc)
   const maxDaysAgo = 179;
   const daysAgo = Math.floor(Math.random() * (maxDaysAgo + 1)); // 0 to 179
   const randomDate = new Date(now);
@@ -127,7 +104,7 @@ const addRandomMinutes = (date, minMinutes = 0, maxMinutes = 30) => {
 const seedReviews = async () => {
   try {
     await connectDB();
-    console.log('✅ Connected to database');
+
 
     // Find the product by SKU
     const product = await Products.findOne({ sku: PRODUCT_SKU }).select(
