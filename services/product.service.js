@@ -298,11 +298,11 @@ export const updateProductService = async (id, currProduct) => {
     product.seo.metaKeywords = currProduct.seo.metaKeywords;
 
     // Calculate updated pricing fields when price is updated
-    if (currProduct.price) {
-      product.updatedPrice = Math.round(currProduct.price * 1.2 * 100) / 100;
-      product.finalPriceDiscount =
-        Math.round(product.updatedPrice * 0.85 * 100) / 100;
-    }
+    // if (currProduct.price) {
+    //   product.updatedPrice = Math.round(currProduct.price * 1.2 * 100) / 100;
+    //   product.finalPriceDiscount =
+    //     Math.round(product.updatedPrice * 0.85 * 100) / 100;
+    // }
 
     // Save the updated product
     await product.save();
