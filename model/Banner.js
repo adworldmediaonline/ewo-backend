@@ -56,6 +56,11 @@ const bannerSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    selectedCoupon: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,
