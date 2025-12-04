@@ -1,17 +1,22 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-const connectDB = require('../config/db');
-const Products = require('../model/Products');
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import connectDB from '../config/db.js';
+import Products from '../model/Products.js';
+
+dotenv.config();
 
 const updateCalculatedPrices = async () => {
   try {
-
+    console.log('🔌 Connecting to database...');
     await connectDB();
+    console.log('✅ Connected to database successfully!\n');
 
     // Get all products with their current price values
-    const products = await Products.find({}, { price: 1, title: 1 });
+    const products = await Products.find({}, { price: 1, title: 1, sku: 1 });
+    console.log(`📦 Found ${products.length} products to update\n`);
 
     if (products.length === 0) {
+      console.log('⚠️  No products found. Exiting...');
       return;
     }
 
@@ -38,11 +43,16 @@ const updateCalculatedPrices = async () => {
       };
     });
 
+    console.log('🔄 Executing bulk update operation...');
     const result = await Products.bulkWrite(bulkOperations);
-
+    console.log(`✅ Bulk update completed!`);
+    console.log(`   Matched: ${result.matchedCount}`);
+    console.log(`   Modified: ${result.modifiedCount}\n`);
 
     // Verify the update by checking a few random products
     const sampleSize = Math.min(5, products.length);
+    console.log(`🔍 Verifying updates on ${sampleSize} sample products...\n`);
+
     const sampleProducts = await Products.aggregate([
       { $sample: { size: sampleSize } },
       {
@@ -51,6 +61,7 @@ const updateCalculatedPrices = async () => {
           price: 1,
           updatedPrice: 1,
           finalPriceDiscount: 1,
+          sku: 1,
         },
       },
     ]);
@@ -67,12 +78,23 @@ const updateCalculatedPrices = async () => {
           ? '✅'
           : '❌';
 
+      console.log(
+        `${updatedMatch}${finalMatch} ${product.title} (SKU: ${product.sku})\n` +
+        `   Original: $${originalPrice.toFixed(2)}\n` +
+        `   Updated Price: $${product.updatedPrice?.toFixed(2) || 'N/A'} (expected: $${expectedUpdated.toFixed(2)})\n` +
+        `   Final Discount: $${product.finalPriceDiscount?.toFixed(2) || 'N/A'} (expected: $${expectedFinal.toFixed(2)})\n`
+      );
     });
 
+    console.log('\n🎉 Price calculation update completed successfully!');
+
   } catch (error) {
+    console.error('❌ Error updating calculated prices:', error);
+    console.error('Stack trace:', error.stack);
     process.exit(1);
   } finally {
     await mongoose.connection.close();
+    console.log('🔌 Database connection closed');
     process.exit(0);
   }
 };
