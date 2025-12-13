@@ -87,17 +87,18 @@ const productsSchema = mongoose.Schema(
     shipping: {
       price: {
         type: Number,
-        required: [true, 'Shipping price is required'],
+        required: false,
         validate: {
           validator: function (value) {
-            return value > 0;
+            // Only validate if value is provided
+            return value === undefined || value === null || value >= 0;
           },
-          message: 'Shipping price must be greater than 0',
+          message: 'Shipping price cannot be negative',
         },
       },
       description: {
         type: String,
-        required: [true, 'Shipping description is required'],
+        required: false,
         default: '',
       },
     },

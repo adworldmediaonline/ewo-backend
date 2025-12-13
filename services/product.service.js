@@ -97,37 +97,168 @@ export const getPaginatedProductsService = async (filters = {}) => {
   // Category filter
   if (category) {
     // Convert slug back to readable format for better matching
-    // Handle both old format (crossover-high-steer-kits) and new format (crossover-and-high-steer-kits)
-    // Also handle cases where "and" is naturally part of the category name
-    let categoryPattern = category
-      .replace(/-/g, ' ')
-      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
-      .replace(/\b\w/g, l => l.toUpperCase());
+    // Handle special characters like "/" that might have been removed during slugification
+    // e.g., "rod-ends-heim-joints" should match "Rod Ends/ Heim Joints" in database
 
-    // Create a more flexible pattern that can match both versions
-    const flexiblePattern = category
-      .replace(/-/g, ' ')
-      .replace(/\band\b/g, '(&|and)') // Allow both & and 'and' in the pattern
-      .replace(/\b\w/g, l => l.toUpperCase());
+    // Split by hyphens
+    const words = category.split('-');
 
+    // Build pattern parts - handle "and" specially before escaping
+    const processedWords = words.map(word => {
+      // Handle "and" -> allow both & and 'and'
+      if (word.toLowerCase() === 'and') {
+        return '(&|and)';
+      }
+      // Escape special regex characters
+      return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    });
 
+    // Join with flexible separator pattern (space, slash, or hyphen)
+    // This allows "rod-ends-heim-joints" to match "Rod Ends/ Heim Joints"
+    const flexiblePattern = processedWords.join('[\\s/\\-]+');
 
-    // Use a more flexible regex that can match both & and 'and'
-    query['category.name'] = new RegExp(flexiblePattern, 'i');
+    // Create regex pattern (case insensitive)
+    const categoryRegex = new RegExp(flexiblePattern, 'i');
+
+    // Match against both category.name and parent fields
+    // If there's already a $or from search, combine them with $and
+    if (query.$or) {
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { 'category.name': categoryRegex },
+          { parent: categoryRegex }
+        ]
+      });
+    } else {
+      query.$or = [
+        { 'category.name': categoryRegex },
+        { parent: categoryRegex }
+      ];
+    }
   }
 
   // Subcategory filter
   if (subcategory) {
     // Convert slug back to readable format for better matching
-    const subcategoryPattern = subcategory
-      .replace(/-/g, ' ')
-      .replace(/\band\b/g, '&') // Convert 'and' back to '&' for matching
-      .replace(/\b\w/g, l => l.toUpperCase());
+    // Handle cases where special characters like "/" were removed during slugification
+    // e.g., "1-14-rod-end-parts" should match "1 1/4" Rod End Parts" in database
+    // Also handle "1-14" which might be "1 1/4" that got slugified incorrectly
+
+    // Build pattern parts array to handle number sequences separately
+    const parts = subcategory.split('-');
+    const patternParts = [];
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isNumber = /^\d+$/.test(part);
+
+      if (isNumber) {
+        // Check if next part is also a number
+        const nextIsNumber = i + 1 < parts.length && /^\d+$/.test(parts[i + 1]);
+
+        if (nextIsNumber) {
+          // We have consecutive numbers - collect them
+          let numberSequence = [part];
+          let j = i + 1;
+
+          // Collect consecutive numbers
+          while (j < parts.length && /^\d+$/.test(parts[j])) {
+            numberSequence.push(parts[j]);
+            j++;
+          }
+
+          if (numberSequence.length > 1) {
+            // Special case: if we have "1-14", it might be "1 1/4" that got slugified incorrectly
+            // Check if the second number is two digits and could be split
+            if (numberSequence.length === 2 && numberSequence[0].length === 1 && numberSequence[1].length === 2) {
+              const firstNum = numberSequence[0];
+              const secondNum = numberSequence[1];
+              // Split "14" into "1" and "4" to match "1 1/4"
+              patternParts.push(`__NUMSEQ_${firstNum}-${secondNum[0]}-${secondNum[1]}__`);
+            } else {
+              // Normal case: create flexible pattern for number sequence
+              patternParts.push(`__NUMSEQ_${numberSequence.join('-')}__`);
+            }
+            i = j - 1; // Skip processed parts
+          } else {
+            // Single number, just add it
+            patternParts.push(part);
+          }
+        } else {
+          // Single number, just add it
+          patternParts.push(part);
+        }
+      } else {
+        // Not a number, add as-is
+        patternParts.push(part);
+      }
+    }
+
+    // Build the final pattern by processing each part
+    const placeholder = '___FLEX_SEP___';
+    const finalPatternParts = [];
+
+    for (let i = 0; i < patternParts.length; i++) {
+      const part = patternParts[i];
+
+      // Check if this is a number sequence placeholder
+      if (part.startsWith('__NUMSEQ_') && part.endsWith('__')) {
+        // Extract numbers from placeholder
+        const numMatch = part.match(/__NUMSEQ_(\d+)-(\d+)-(\d+)__/);
+        if (numMatch) {
+          const [, n1, n2, n3] = numMatch;
+          // Match: "n1 n2/n3" (like "1 1/4") or "n1-n2-n3" or "n1 n2 n3"
+          const escapedN1 = n1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const escapedN2 = n2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const escapedN3 = n3.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          finalPatternParts.push(`${escapedN1}[\\s/\\-]+${escapedN2}[\\s/\\-]+${escapedN3}`);
+        } else {
+          const numMatch2 = part.match(/__NUMSEQ_(\d+)-(\d+)__/);
+          if (numMatch2) {
+            const [, n1, n2] = numMatch2;
+            const escapedN1 = n1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedN2 = n2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Special case: if n1 is single digit and n2 is two digits, it might be a fraction
+            // e.g., "1-14" should match "1 1/4" where 14 = 1/4
+            if (n1.length === 1 && n2.length === 2) {
+              const n2First = n2[0];
+              const n2Second = n2[1];
+              // Match: "n1 n2First/n2Second" (like "1 1/4") where / is part of fraction, not separator
+              // Also match: "n1 n2" (like "1 14") or "n1-n2" or "n1/n2"
+              // The pattern: n1 (space) (n2First/n2Second OR n2) where / in fraction is literal
+              finalPatternParts.push(`${escapedN1}[\\s\\-]+((${n2First}\\/${n2Second})|(${n2First}[\\s/\\-]+${n2Second})|(${n2}))`);
+            } else {
+              // Normal case: match "n1 n2" or "n1-n2" or "n1/n2"
+              finalPatternParts.push(`${escapedN1}[\\s/\\-]+${escapedN2}`);
+            }
+          }
+        }
+      } else {
+        // Regular text part - handle "and" specially before escaping
+        let processedPart = part;
+        // Handle "and" -> allow both & and 'and' (case insensitive)
+        if (processedPart.toLowerCase() === 'and') {
+          processedPart = '(&|and)';
+        } else {
+          // Escape special regex characters
+          processedPart = processedPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        finalPatternParts.push(processedPart);
+      }
+    }
+
+    // Join all parts with flexible separator pattern
+    // Include quotes in the separator pattern since they might appear in database values
+    // e.g., "1 1/4" Rod End Parts" has quotes around the fraction
+    let finalPattern = finalPatternParts.join('[\\s/\\-"\']+');
+
+    // Make quotes optional at the start and end
+    finalPattern = '["\']?' + finalPattern + '["\']?';
 
     // Direct filtering: Find products that have the subcategory in their children field
-    // This matches the database structure where products have a children field
-    query.children = new RegExp(subcategoryPattern, 'i');
-
+    query.children = new RegExp(finalPattern, 'i');
   }
 
   // Price range filter
@@ -291,8 +422,25 @@ export const updateProductService = async (id, currProduct) => {
     product.offerDate.endDate = currProduct.offerDate.endDate;
     product.videoId = currProduct.videoId;
     product.options = currProduct.options;
-    product.shipping.price = currProduct.shipping.price;
-    product.shipping.description = currProduct.shipping.description;
+    // Handle optional shipping
+    if (currProduct.shipping !== undefined) {
+      if (currProduct.shipping === null) {
+        // Clear shipping if explicitly set to null
+        product.shipping = undefined;
+      } else {
+        // Update shipping fields if provided
+        if (currProduct.shipping.price !== undefined && currProduct.shipping.price !== null) {
+          product.shipping.price = currProduct.shipping.price;
+        } else if (currProduct.shipping.price === null) {
+          product.shipping.price = undefined;
+        }
+        if (currProduct.shipping.description !== undefined && currProduct.shipping.description !== null) {
+          product.shipping.description = currProduct.shipping.description;
+        } else if (currProduct.shipping.description === null) {
+          product.shipping.description = undefined;
+        }
+      }
+    }
     product.seo.metaTitle = currProduct.seo.metaTitle;
     product.seo.metaDescription = currProduct.seo.metaDescription;
     product.seo.metaKeywords = currProduct.seo.metaKeywords;
