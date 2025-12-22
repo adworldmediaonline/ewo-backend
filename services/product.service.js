@@ -422,6 +422,16 @@ export const updateProductService = async (id, currProduct) => {
     product.offerDate.endDate = currProduct.offerDate.endDate;
     product.videoId = currProduct.videoId;
     product.options = currProduct.options;
+    // Handle optional productConfigurations
+    if (currProduct.productConfigurations !== undefined) {
+      if (currProduct.productConfigurations === null || currProduct.productConfigurations.length === 0) {
+        // Clear configurations if explicitly set to null or empty array
+        product.productConfigurations = [];
+      } else {
+        // Update configurations if provided
+        product.productConfigurations = currProduct.productConfigurations;
+      }
+    }
     // Handle optional shipping
     if (currProduct.shipping !== undefined) {
       if (currProduct.shipping === null) {

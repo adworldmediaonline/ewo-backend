@@ -181,6 +181,33 @@ const productsSchema = mongoose.Schema(
         },
       },
     ],
+    productConfigurations: [
+      {
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        options: [
+          {
+            name: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            price: {
+              type: Number,
+              default: 0,
+              min: [0, 'Option price cannot be negative'],
+            },
+            isSelected: {
+              type: Boolean,
+              default: false,
+            },
+          },
+        ],
+      },
+    ],
     // this twoo field is based on the client pricing instruction 20% increase and 15% discount
     updatedPrice: {
       type: Number,

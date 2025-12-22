@@ -30,9 +30,9 @@ const increasePricesBy15Percent = async () => {
         continue;
       }
 
-      // Calculate 15% increase
-      const newFinalPrice = currentFinalPrice * 1.15;
-      const newUpdatedPrice = currentUpdatedPrice * 1.15;
+      // Calculate 6.67% increase
+      const newFinalPrice = currentFinalPrice * 1.0667;
+      const newUpdatedPrice = currentUpdatedPrice * 1.0667;
 
       // Update the product
       await Products.updateOne(
