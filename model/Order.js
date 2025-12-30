@@ -1,5 +1,47 @@
 import mongoose from 'mongoose';
 
+// Define shipping details subdocument schema
+const shippingDetailsSchema = new mongoose.Schema({
+  // Support for multiple carriers (new structure)
+  carriers: [
+    {
+      carrier: {
+        type: String,
+        required: false,
+      },
+      trackingNumber: {
+        type: String,
+        required: false,
+      },
+      trackingUrl: {
+        type: String,
+        required: false,
+      },
+    },
+  ],
+  // Legacy single carrier support (for backward compatibility)
+  trackingNumber: {
+    type: String,
+    required: false,
+  },
+  carrier: {
+    type: String,
+    required: false,
+  },
+  trackingUrl: {
+    type: String,
+    required: false,
+  },
+  estimatedDelivery: {
+    type: Date,
+    required: false,
+  },
+  shippedDate: {
+    type: Date,
+    required: false,
+  },
+}, { _id: false }); // _id: false prevents Mongoose from adding _id to subdocuments
+
 const orderSchema = new mongoose.Schema(
   {
     user: {
@@ -352,26 +394,8 @@ const orderSchema = new mongoose.Schema(
       required: false,
     },
     shippingDetails: {
-      trackingNumber: {
-        type: String,
-        required: false,
-      },
-      carrier: {
-        type: String,
-        required: false,
-      },
-      trackingUrl: {
-        type: String,
-        required: false,
-      },
-      estimatedDelivery: {
-        type: Date,
-        required: false,
-      },
-      shippedDate: {
-        type: Date,
-        required: false,
-      },
+      type: shippingDetailsSchema,
+      required: false,
     },
     firstTimeShippingDiscount: {
       type: Boolean,

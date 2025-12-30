@@ -4,38 +4,97 @@ import ShippingService from '../services/shippingService.js';
 export const shipOrder = async (req, res, next) => {
   try {
     const orderId = req.params.id; // Order ID from URL parameter
-    const { trackingNumber, carrier, estimatedDelivery } = req.body; // Admin provides tracking info
+    const { carriers, trackingNumber, carrier, estimatedDelivery } = req.body; // Support both new (carriers array) and legacy (single carrier) formats
 
-    // Validate required data
-    if (!carrier) {
-      return res.status(400).json({
-        success: false,
-        message: 'Carrier is required',
-      });
-    }
+    // Check if new format (multiple carriers) is being used
+    console.log('📥 Received request body:', JSON.stringify(req.body, null, 2));
+    console.log('📦 Carriers array:', JSON.stringify(carriers, null, 2));
 
-    // Prepare shipping data
-    const shippingData = {
-      trackingNumber: trackingNumber || null, // Tracking number from carrier (separate from order ID)
-      carrier,
-      estimatedDelivery: estimatedDelivery || null,
-      sendEmailNotification: true,
-    };
+    if (carriers && Array.isArray(carriers) && carriers.length > 0) {
+      // Validate carriers array
+      for (const carrierItem of carriers) {
+        if (!carrierItem.carrier) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each carrier entry must have a carrier name',
+          });
+        }
+      }
 
-    // Auto-generate tracking URL if tracking number is provided
-    if (trackingNumber && carrier) {
-      shippingData.trackingUrl = ShippingService.generateTrackingUrl(
-        carrier,
-        trackingNumber
-      );
-    }
+      // Prepare shipping data with multiple carriers
+      // Clean and validate carrier data
+      const shippingData = {
+        carriers: carriers
+          .filter(carrierItem => carrierItem.carrier && carrierItem.carrier.trim() !== '') // Filter out invalid carriers
+          .map(carrierItem => {
+            const carrier = carrierItem.carrier.trim();
+            const trackingNumber = carrierItem.trackingNumber && carrierItem.trackingNumber.trim() !== ''
+              ? carrierItem.trackingNumber.trim()
+              : null;
 
-    const result = await ShippingService.processShipment(orderId, shippingData);
+            return {
+              carrier: carrier,
+              trackingNumber: trackingNumber,
+              trackingUrl: trackingNumber && carrier
+                ? ShippingService.generateTrackingUrl(carrier, trackingNumber)
+                : null,
+            };
+          }),
+        estimatedDelivery: estimatedDelivery && estimatedDelivery.trim() !== ''
+          ? estimatedDelivery.trim()
+          : null,
+        sendEmailNotification: true,
+      };
 
-    if (result.success) {
-      res.status(200).json(result);
+      // Validate we have at least one valid carrier after filtering
+      if (shippingData.carriers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one valid carrier is required',
+        });
+      }
+
+      console.log('🚀 Prepared shippingData:', JSON.stringify(shippingData, null, 2));
+
+      const result = await ShippingService.processShipment(orderId, shippingData);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(400).json(result);
+      }
     } else {
-      res.status(400).json(result);
+      // Legacy format: single carrier (for backward compatibility)
+      if (!carrier) {
+        return res.status(400).json({
+          success: false,
+          message: 'Carrier is required',
+        });
+      }
+
+      // Prepare shipping data
+      const shippingData = {
+        trackingNumber: trackingNumber || null,
+        carrier,
+        estimatedDelivery: estimatedDelivery || null,
+        sendEmailNotification: true,
+      };
+
+      // Auto-generate tracking URL if tracking number is provided
+      if (trackingNumber && carrier) {
+        shippingData.trackingUrl = ShippingService.generateTrackingUrl(
+          carrier,
+          trackingNumber
+        );
+      }
+
+      const result = await ShippingService.processShipment(orderId, shippingData);
+
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(400).json(result);
+      }
     }
   } catch (error) {
     console.error('Error in shipOrder controller:', error);
