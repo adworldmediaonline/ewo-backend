@@ -620,6 +620,14 @@ const shippingConfirmationTemplate = (order, config) => {
             ${shippingCarriers[0].trackingNumber || 'Will be provided when available'}
           </td>
         </tr>
+        ${shippingCarriers[0].trackingUrl ? `
+        <tr>
+          <td style="padding: 8px 0;"><strong>Tracking Link:</strong></td>
+          <td style="padding: 8px 0; text-align: right;">
+            <a href="${shippingCarriers[0].trackingUrl}" style="color: #4299e1; text-decoration: none; font-size: 13px;">Track Package →</a>
+          </td>
+        </tr>
+        ` : ''}
       `
       : `
         <tr>
@@ -769,11 +777,17 @@ const deliveryConfirmationTemplate = (order, config) => {
   }
 
   const {
+    carriers,
     trackingNumber,
     carrier = 'Standard Shipping',
     trackingUrl,
     deliveredDate = new Date(),
   } = shippingDetails;
+
+  // Support both new (multiple carriers) and legacy (single carrier) formats
+  const shippingCarriers = carriers && Array.isArray(carriers) && carriers.length > 0
+    ? carriers
+    : [{ carrier, trackingNumber, trackingUrl }];
 
   const {
     storeName = secret.store_name || 'EWO Store',
@@ -941,21 +955,53 @@ const deliveryConfirmationTemplate = (order, config) => {
           <td style="padding: 8px 0;"><strong>Delivered Date:</strong></td>
           <td style="padding: 8px 0; text-align: right; color: #48bb78; font-weight: bold;">${formatDeliveredDate()}</td>
         </tr>
+        ${shippingCarriers.length > 1
+      ? `
+        <!-- Multiple Carriers Display -->
+        ${shippingCarriers.map((carrierItem, idx) => `
+          <tr>
+            <td style="padding: 8px 0; width: 50%;"><strong>Carrier ${idx + 1}:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">${carrierItem.carrier || 'Standard Shipping'}</td>
+          </tr>
+          ${carrierItem.trackingNumber ? `
+          <tr>
+            <td style="padding: 8px 0;"><strong>Tracking Number ${idx + 1}:</strong></td>
+            <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
+              ${carrierItem.trackingNumber}
+            </td>
+          </tr>
+          ` : ''}
+          ${carrierItem.trackingUrl ? `
+          <tr>
+            <td style="padding: 8px 0;"><strong>Tracking Link ${idx + 1}:</strong></td>
+            <td style="padding: 8px 0; text-align: right;"><a href="${carrierItem.trackingUrl}" style="color: #4299e1; text-decoration: none;">Track Package ${idx + 1}</a></td>
+          </tr>
+          ` : ''}
+        `).join('')}
+      `
+      : `
+        <!-- Single Carrier Display (Legacy) -->
         <tr>
           <td style="padding: 8px 0;"><strong>Delivered By:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${carrier || 'Standard Shipping'
-    }</td>
+          <td style="padding: 8px 0; text-align: right;">${carrier || 'Standard Shipping'}</td>
         </tr>
         ${trackingNumber
-      ? `
-        <tr>
-          <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
-          <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
-            ${trackingNumber}
-          </td>
-        </tr>
+        ? `
+          <tr>
+            <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
+            <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
+              ${trackingNumber}
+            </td>
+          </tr>
+          ${trackingUrl ? `
+          <tr>
+            <td style="padding: 8px 0;"><strong>Tracking Link:</strong></td>
+            <td style="padding: 8px 0; text-align: right;"><a href="${trackingUrl}" style="color: #4299e1; text-decoration: none;">Track Package</a></td>
+          </tr>
+          ` : ''}
         `
-      : ''
+        : ''}
+      `
     }
       </table>
     </div>

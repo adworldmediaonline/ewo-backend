@@ -320,13 +320,18 @@ const sendDeliveryConfirmation = async (order, deliveryInfo = {}) => {
 
 
 
-    // Combine order and delivery info
+    // Combine order and delivery info - preserve carriers array from order
+    // The carriers array should already be in cleanOrderData.shippingDetails from the saved order
     const orderWithDelivery = {
       ...cleanOrderData,
       shippingDetails: {
-        ...cleanOrderData.shippingDetails,
+        ...cleanOrderData.shippingDetails, // This includes carriers array if it exists
         ...deliveryInfo,
         deliveredDate: deliveryInfo.deliveredDate || new Date(),
+        // Explicitly preserve carriers array from order (don't let deliveryInfo overwrite it)
+        carriers: cleanOrderData.shippingDetails?.carriers && Array.isArray(cleanOrderData.shippingDetails.carriers) && cleanOrderData.shippingDetails.carriers.length > 0
+          ? cleanOrderData.shippingDetails.carriers
+          : deliveryInfo.carriers || cleanOrderData.shippingDetails?.carriers,
       },
     };
 
@@ -374,8 +379,12 @@ const sendDeliveryNotificationWithTracking = async (
       throw new Error('Order has no email address');
     }
 
-    // Prepare delivery details
+    // Prepare delivery details - preserve carriers array from order
     const deliveryDetails = {
+      // Preserve carriers array if it exists
+      carriers: order.shippingDetails?.carriers && Array.isArray(order.shippingDetails.carriers) && order.shippingDetails.carriers.length > 0
+        ? order.shippingDetails.carriers
+        : null, // Will be filtered out if null
       deliveredDate: deliveryData.deliveredDate || new Date(),
       trackingNumber:
         order.shippingDetails?.trackingNumber || deliveryData.trackingNumber,
@@ -387,13 +396,21 @@ const sendDeliveryNotificationWithTracking = async (
         order.shippingDetails?.trackingUrl || deliveryData.trackingUrl,
     };
 
+    // Build shippingDetails object, preserving carriers array
+    const updatedShippingDetails = {
+      ...order.shippingDetails,
+      ...deliveryDetails,
+    };
+
+    // Remove null carriers to avoid overwriting with null
+    if (updatedShippingDetails.carriers === null) {
+      delete updatedShippingDetails.carriers;
+    }
+
     // Update order with delivery status
     const updateData = {
       status: 'delivered',
-      shippingDetails: {
-        ...order.shippingDetails,
-        ...deliveryDetails,
-      },
+      shippingDetails: updatedShippingDetails,
       deliveryNotificationSent: true,
     };
 
