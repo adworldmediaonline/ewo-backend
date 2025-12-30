@@ -416,12 +416,18 @@ const shippingConfirmationTemplate = (order, config) => {
   }
 
   const {
+    carriers,
     trackingNumber,
     carrier = 'Standard Shipping',
     trackingUrl,
     estimatedDelivery,
     shippedDate = new Date(),
   } = shippingDetails;
+
+  // Support both new (multiple carriers) and legacy (single carrier) formats
+  const shippingCarriers = carriers && Array.isArray(carriers) && carriers.length > 0
+    ? carriers
+    : [{ carrier, trackingNumber, trackingUrl }];
 
   const {
     storeName = secret.store_name || 'EWO Store',
@@ -602,17 +608,41 @@ const shippingConfirmationTemplate = (order, config) => {
           <td style="padding: 8px 0;"><strong>Shipped Date:</strong></td>
           <td style="padding: 8px 0; text-align: right;">${formatShippedDate()}</td>
         </tr>
+        ${shippingCarriers.length === 1
+      ? `
         <tr>
           <td style="padding: 8px 0;"><strong>Carrier:</strong></td>
-          <td style="padding: 8px 0; text-align: right;">${carrier || 'Standard Shipping'
-    }</td>
+          <td style="padding: 8px 0; text-align: right;">${shippingCarriers[0].carrier || 'Standard Shipping'}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0;"><strong>Tracking Number:</strong></td>
           <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace; font-weight: bold; color: #4299e1;">
-            ${trackingNumber || 'Will be provided when available'}
+            ${shippingCarriers[0].trackingNumber || 'Will be provided when available'}
           </td>
         </tr>
+      `
+      : `
+        <tr>
+          <td style="padding: 8px 0;" colspan="2">
+            <strong style="display: block; margin-bottom: 12px;">Shipping Carriers (${shippingCarriers.length}):</strong>
+            ${shippingCarriers.map((carrierItem, index) => `
+              <div style="background-color: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #4299e1;">
+                <div style="font-weight: bold; color: #2d3748; margin-bottom: 4px;">
+                  ${index + 1}. ${carrierItem.carrier || 'Standard Shipping'}
+                </div>
+                <div style="font-family: 'Courier New', monospace; font-size: 14px; color: #4299e1; font-weight: bold;">
+                  ${carrierItem.trackingNumber || 'Tracking number will be provided when available'}
+                </div>
+                ${carrierItem.trackingUrl ? `
+                  <div style="margin-top: 6px;">
+                    <a href="${carrierItem.trackingUrl}" style="color: #4299e1; text-decoration: none; font-size: 13px;">Track Package →</a>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </td>
+        </tr>
+      `}
         <tr>
           <td style="padding: 8px 0;"><strong>Estimated Delivery:</strong></td>
           <td style="padding: 8px 0; text-align: right; color: #48bb78; font-weight: bold;">${formatEstimatedDelivery()}</td>
@@ -681,8 +711,8 @@ const shippingConfirmationTemplate = (order, config) => {
         <li style="margin-bottom: 8px;">Your package will be delivered to the address provided above</li>
         <li style="margin-bottom: 8px;">Please ensure someone is available to receive the package</li>
         <li style="margin-bottom: 8px;">If you're not available, the carrier will leave a delivery notice</li>
-        ${trackingUrl || trackingNumber
-      ? '<li style="margin-bottom: 8px;">Track your package in real-time by clicking the Track Order link above</li>'
+        ${shippingCarriers.some(c => c.trackingNumber || c.trackingUrl)
+      ? '<li style="margin-bottom: 8px;">Track your package(s) in real-time by clicking the Track Order link above</li>'
       : ''
     }
       </ul>

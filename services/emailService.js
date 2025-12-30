@@ -139,12 +139,19 @@ const sendShippingConfirmation = async (order, shippingInfo = {}) => {
 
 
 
-    // Combine order and shipping info, with shippingInfo taking precedence
+    // Combine order and shipping info, preserving carriers array from order
+    // shippingInfo takes precedence for individual fields, but preserve carriers array
     const orderWithShipping = {
       ...cleanOrderData,
       shippingDetails: {
         ...cleanOrderData.shippingDetails,
         ...shippingInfo,
+        // Preserve carriers array - prefer from order, then from shippingInfo
+        carriers: cleanOrderData.shippingDetails?.carriers && Array.isArray(cleanOrderData.shippingDetails.carriers) && cleanOrderData.shippingDetails.carriers.length > 0
+          ? cleanOrderData.shippingDetails.carriers
+          : shippingInfo.carriers && Array.isArray(shippingInfo.carriers) && shippingInfo.carriers.length > 0
+            ? shippingInfo.carriers
+            : [],
       },
     };
 
@@ -189,35 +196,87 @@ const sendShippingNotificationWithTracking = async (orderId, shippingData) => {
       throw new Error('Order has no email address');
     }
 
-    // Prepare shipping details with validation
+    // IMPORTANT: Do NOT update shippingDetails here - it was already saved correctly by shippingService
+    // The shippingService.save() already saved the shippingDetails with carriers array
+    // We should only update the shippingNotificationSent flag
+
+    // Get fresh order data (which should already have correct shippingDetails with carriers)
+    const currentOrder = await Order.findById(orderId);
+    if (!currentOrder) {
+      throw new Error('Order not found');
+    }
+
+    // Prepare shipping details for email template from the already-saved order data
+    // This preserves the carriers array that was saved by shippingService
     const shippingDetails = {
-      trackingNumber: shippingData.trackingNumber || 'Processing',
-      carrier: shippingData.carrier || 'Standard Shipping',
-      trackingUrl: shippingData.trackingUrl || null,
-      estimatedDelivery: shippingData.estimatedDelivery
-        ? new Date(shippingData.estimatedDelivery)
-        : null,
-      shippedDate: shippingData.shippedDate
-        ? new Date(shippingData.shippedDate)
-        : new Date(),
+      // Use carriers from the order (already saved correctly)
+      carriers: currentOrder.shippingDetails?.carriers && Array.isArray(currentOrder.shippingDetails.carriers) && currentOrder.shippingDetails.carriers.length > 0
+        ? currentOrder.shippingDetails.carriers
+        : shippingData.carriers && Array.isArray(shippingData.carriers) && shippingData.carriers.length > 0
+          ? shippingData.carriers
+          : [],
+      // Legacy fields from order or shippingData
+      trackingNumber: currentOrder.shippingDetails?.trackingNumber || shippingData.trackingNumber || 'Processing',
+      carrier: currentOrder.shippingDetails?.carrier || shippingData.carrier || 'Standard Shipping',
+      trackingUrl: currentOrder.shippingDetails?.trackingUrl || shippingData.trackingUrl || null,
+      estimatedDelivery: currentOrder.shippingDetails?.estimatedDelivery
+        ? new Date(currentOrder.shippingDetails.estimatedDelivery)
+        : shippingData.estimatedDelivery
+          ? new Date(shippingData.estimatedDelivery)
+          : null,
+      shippedDate: currentOrder.shippingDetails?.shippedDate
+        ? new Date(currentOrder.shippingDetails.shippedDate)
+        : shippingData.shippedDate
+          ? new Date(shippingData.shippedDate)
+          : new Date(),
     };
 
-    // Update order with shipping details and set shipped status
-    const updateData = {
-      status: 'shipped',
-      shippingDetails: shippingDetails,
-      shippingNotificationSent: true,
-    };
+    // If carriers array is empty but we have legacy carrier data, convert to array format
+    if (shippingDetails.carriers.length === 0 && shippingDetails.carrier) {
+      shippingDetails.carriers = [{
+        carrier: shippingDetails.carrier,
+        trackingNumber: shippingDetails.trackingNumber,
+        trackingUrl: shippingDetails.trackingUrl,
+      }];
+    }
 
-    await Order.findByIdAndUpdate(orderId, updateData);
+    console.log('📧 Email service - using carriers from saved order:', JSON.stringify(shippingDetails.carriers, null, 2));
 
-    // Get the updated order with clean data for email
+    // ONLY update shippingNotificationSent flag - DO NOT touch shippingDetails
+    // The shippingDetails was already saved correctly by shippingService with carriers array
+    await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $set: {
+          shippingNotificationSent: true,
+        },
+      },
+      { runValidators: false }
+    );
+
+    // Get the updated order with clean data for email (should have carriers array)
     const updatedOrderForEmail = await Order.findById(orderId).populate('user');
 
     // Send the shipping confirmation email
+    // Pass shippingDetails with carriers array - the order's shippingDetails should already have it
+    // Use the order's shippingDetails as the source of truth (it was saved correctly by shippingService)
+    const orderShippingDetails = updatedOrderForEmail.shippingDetails || {};
+    const emailShippingDetails = {
+      carriers: orderShippingDetails.carriers && Array.isArray(orderShippingDetails.carriers) && orderShippingDetails.carriers.length > 0
+        ? orderShippingDetails.carriers
+        : shippingDetails.carriers,
+      trackingNumber: orderShippingDetails.trackingNumber || shippingDetails.trackingNumber,
+      carrier: orderShippingDetails.carrier || shippingDetails.carrier,
+      trackingUrl: orderShippingDetails.trackingUrl || shippingDetails.trackingUrl,
+      estimatedDelivery: orderShippingDetails.estimatedDelivery || shippingDetails.estimatedDelivery,
+      shippedDate: orderShippingDetails.shippedDate || shippingDetails.shippedDate,
+    };
+
+    console.log('📧 Email - final shippingDetails with carriers:', JSON.stringify(emailShippingDetails.carriers, null, 2));
+
     const emailSent = await sendShippingConfirmation(
       updatedOrderForEmail,
-      shippingDetails
+      emailShippingDetails
     );
 
     if (!emailSent) {

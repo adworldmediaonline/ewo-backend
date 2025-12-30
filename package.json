@@ -18,6 +18,7 @@
     "generate:reviews": "node scripts/generate-reviews.js",
     "seed:reviews": "node scripts/seed-reviews.js",
     "increase-prices-15": "node scripts/increase-prices-15-percent.js",
+    "export:products-csv": "node scripts/export-products-csv.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
