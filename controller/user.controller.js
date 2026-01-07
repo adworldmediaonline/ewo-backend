@@ -512,20 +512,55 @@ export const signUpWithProvider = async (req, res, next) => {
   }
 };
 
-// Get all users (for admin panel)
+// Get all users (for admin panel) - Optimized with pagination
 export const getAllUsers = async (req, res, next) => {
   try {
-    // Exclude password and sensitive fields, and filter out admin and super-admin users
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+    const role = req.query.role || '';
+
+    // Build query
+    const query = {
+      role: { $nin: ['admin', 'super-admin'] },
+    };
+
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Add role filter if provided
+    if (role) {
+      query.role = role;
+    }
+
+    // Get total count for pagination
+    const total = await User.countDocuments(query);
+
+    // Fetch users with pagination
     const users = await User.find(
-      {
-        role: { $nin: ['admin', 'super-admin'] },
-      },
+      query,
       '-password -confirmationToken -confirmationTokenExpires'
-    ).sort({ createdAt: -1 });
+    )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean() for better performance
 
     res.status(200).json({
       status: 'success',
       data: users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);
