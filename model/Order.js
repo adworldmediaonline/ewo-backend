@@ -425,6 +425,11 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+orderSchema.index({ createdAt: -1 }); // Index for date range queries
+orderSchema.index({ paymentMethod: 1, createdAt: -1 }); // Compound index for payment method queries
+orderSchema.index({ status: 1, createdAt: -1 }); // Index for status-based queries
+
 // Pre-save hook to handle negative totals and ensure data integrity
 orderSchema.pre('save', function (next) {
   // Ensure totalAmount doesn't go negative for free orders
