@@ -321,15 +321,54 @@ export const addOrder = async (req, res, next) => {
   }
 };
 
-// get Orders
+// get Orders - Optimized with pagination and search
 export const getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({})
-      .populate('user')
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    // Build query
+    const query = {};
+
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { orderId: { $regex: search, $options: 'i' } },
+        { invoice: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { contact: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+    }
+
+    // Get total count for pagination
+    const total = await Order.countDocuments(query);
+
+    // Fetch orders with pagination
+    const orderItems = await Order.find(query)
+      .populate('user', 'name email imageURL')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean() for better performance
+
     res.status(200).json({
       success: true,
       data: orderItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);

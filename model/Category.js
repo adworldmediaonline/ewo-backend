@@ -35,5 +35,10 @@ const CategorySchema = mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+CategorySchema.index({ createdAt: -1 }); // Index for sorting by creation date
+CategorySchema.index({ parent: 1 }); // Index for parent name searches
+CategorySchema.index({ status: 1, createdAt: -1 }); // Compound index for status filtering and sorting
+
 const Category = mongoose.model('Category', CategorySchema);
 export default Category;
