@@ -181,13 +181,25 @@ export const updateProduct = async (req, res, next) => {
   }
 };
 
-// update product
+// update product - Optimized with pagination
 export const reviewProducts = async (req, res, next) => {
   try {
-    const products = await getReviewsProducts();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const rating = req.query.rating || '';
+
+    const result = await getReviewsProducts({
+      page,
+      limit,
+      search,
+      rating,
+    });
+
     res.status(200).json({
       success: true,
-      data: products,
+      data: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);

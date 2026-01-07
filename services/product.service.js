@@ -525,18 +525,161 @@ export const updateProductService = async (id, currProduct) => {
   return product;
 };
 
-// get Reviews Products
-export const getReviewsProducts = async () => {
-  const result = await Product.find({
+// get Reviews Products - Optimized with pagination and search
+export const getReviewsProducts = async (params = {}) => {
+  const { page = 1, limit = 10, search = '', rating = '' } = params;
+  const skip = (page - 1) * limit;
+
+  // Build query - only products with reviews
+  const query = {
     reviews: { $exists: true, $ne: [] },
-  }).populate({
-    path: 'reviews',
-    populate: { path: 'userId', select: 'name email imageURL' },
+  };
+
+  // Add search filter if provided
+  if (search) {
+    query.title = { $regex: search, $options: 'i' };
+  }
+
+  // Use aggregation for rating filter and pagination
+  const pipeline = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'reviews',
+        localField: 'reviews',
+        foreignField: '_id',
+        as: 'reviewsData',
+      },
+    },
+    {
+      $addFields: {
+        averageRating: {
+          $cond: {
+            if: { $gt: [{ $size: '$reviewsData' }, 0] },
+            then: { $avg: '$reviewsData.rating' },
+            else: 0,
+          },
+        },
+      },
+    },
+  ];
+
+  // Add rating filter if provided
+  if (rating) {
+    const ratingNum = parseInt(rating);
+    pipeline.push({
+      $match: {
+        $expr: {
+          $eq: [{ $floor: '$averageRating' }, ratingNum],
+        },
+      },
+    });
+  }
+
+  // Add sorting and pagination
+  pipeline.push(
+    { $sort: { updatedAt: -1 } },
+    { $skip: skip },
+    { $limit: parseInt(limit) }
+  );
+
+  // Populate reviews with user data using $lookup
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'reviewsData.userId',
+      foreignField: '_id',
+      as: 'reviewUsers',
+    },
   });
 
-  const products = result.filter(p => p.reviews.length > 0);
+  // Map reviewUsers back to reviews structure
+  pipeline.push({
+    $addFields: {
+      reviews: {
+        $map: {
+          input: '$reviewsData',
+          as: 'review',
+          in: {
+            $mergeObjects: [
+              '$$review',
+              {
+                userId: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$reviewUsers',
+                        as: 'user',
+                        cond: { $eq: ['$$user._id', '$$review.userId'] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  });
 
-  return products;
+  // Remove temporary fields
+  pipeline.push({
+    $unset: ['reviewsData', 'reviewUsers', 'averageRating'],
+  });
+
+  // Execute aggregation for products
+  const products = await Product.aggregate(pipeline);
+
+  // Get total count (with rating filter if applied)
+  const countPipeline = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'reviews',
+        localField: 'reviews',
+        foreignField: '_id',
+        as: 'reviewsData',
+      },
+    },
+    {
+      $addFields: {
+        averageRating: {
+          $cond: {
+            if: { $gt: [{ $size: '$reviewsData' }, 0] },
+            then: { $avg: '$reviewsData.rating' },
+            else: 0,
+          },
+        },
+      },
+    },
+  ];
+
+  if (rating) {
+    countPipeline.push({
+      $match: {
+        $expr: {
+          $eq: [{ $floor: '$averageRating' }, parseInt(rating)],
+        },
+      },
+    });
+  }
+
+  countPipeline.push({ $count: 'count' });
+
+  const totalResult = await Product.aggregate(countPipeline);
+  const total = totalResult[0]?.count || 0;
+
+  return {
+    data: products,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
 };
 
 // get Reviews Products
