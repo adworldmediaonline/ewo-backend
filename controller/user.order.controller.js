@@ -294,6 +294,72 @@ export const getDashboardAmount = async (req, res, next) => {
     next(error);
   }
 };
+// getChartData - Optimized endpoint for chart data using aggregation
+export const getChartData = async (req, res, next) => {
+  try {
+    // Get optional days parameter (default 90 days)
+    const days = parseInt(req.query.days) || 90;
+    const startDate = dayjs().subtract(days, 'day').startOf('day').toDate();
+    const endDate = dayjs().endOf('day').toDate();
+
+    // Use aggregation pipeline to group orders by date and calculate metrics
+    const chartData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+          },
+          date: {
+            $first: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            },
+          },
+          orders: { $sum: 1 },
+          revenue: { $sum: '$totalAmount' },
+          items: {
+            $sum: {
+              $reduce: {
+                input: { $ifNull: ['$cart', []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    { $ifNull: ['$$this.orderQuantity', 1] },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          date: 1,
+          orders: 1,
+          revenue: { $round: ['$revenue', 2] },
+          items: 1,
+        },
+      },
+      {
+        $sort: { date: 1 },
+      },
+    ]);
+
+    res.status(200).send({
+      success: true,
+      data: chartData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // get sales report
 export const getSalesReport = async (req, res, next) => {
   try {
