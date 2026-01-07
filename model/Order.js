@@ -429,6 +429,13 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ createdAt: -1 }); // Index for date range queries
 orderSchema.index({ paymentMethod: 1, createdAt: -1 }); // Compound index for payment method queries
 orderSchema.index({ status: 1, createdAt: -1 }); // Index for status-based queries
+orderSchema.index({ orderId: 1 }); // Index for orderId searches
+orderSchema.index({ invoice: 1 }); // Index for invoice searches (already unique, but explicit for clarity)
+orderSchema.index({ name: 1 }); // Index for name searches
+orderSchema.index({ email: 1 }); // Index for email searches
+orderSchema.index({ contact: 1 }); // Index for contact searches
+// Text index for full-text search across multiple fields
+orderSchema.index({ orderId: 'text', invoice: 'text', name: 'text', email: 'text', contact: 'text' });
 
 // Pre-save hook to handle negative totals and ensure data integrity
 orderSchema.pre('save', function (next) {
