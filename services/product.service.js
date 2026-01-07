@@ -308,12 +308,47 @@ export const getPaginatedProductsService = async (filters = {}) => {
   return result;
 };
 
-// get all product data
-export const getAllProductsService = async () => {
+// get all product data - Optimized with pagination and search
+export const getAllProductsService = async (params = {}) => {
+  const { page = 1, limit = 10, search = '', status = '' } = params;
+  const skip = (page - 1) * limit;
+
+  // Build query
+  const query = {};
+
+  // Add search filter if provided
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { sku: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  // Add status filter if provided
+  if (status) {
+    query.status = status;
+  }
+
+  // Get total count for pagination
+  const total = await Product.countDocuments(query);
+
+  // Fetch products with pagination
   // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
-  const products = await Product.find({})
-    .sort({ skuArrangementOrderNo: 1 });
-  return products;
+  const products = await Product.find(query)
+    .sort({ skuArrangementOrderNo: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean(); // Use lean() for better performance
+
+  return {
+    data: products,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
 };
 
 // get offer product service
