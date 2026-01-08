@@ -76,6 +76,10 @@ const contactSchema = new mongoose.Schema(
 contactSchema.index({ status: 1, createdAt: -1 });
 contactSchema.index({ email: 1 });
 contactSchema.index({ isRead: 1 });
+contactSchema.index({ priority: 1, createdAt: -1 }); // Compound index for priority filtering and sorting
+contactSchema.index({ name: 1 }); // Index for name searches
+contactSchema.index({ subject: 1 }); // Index for subject searches
+contactSchema.index({ createdAt: -1 }); // Index for default sorting
 
 // Virtual for formatted date
 contactSchema.virtual('formattedDate').get(function () {

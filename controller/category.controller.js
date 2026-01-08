@@ -49,13 +49,25 @@ export const getShowCategory = async (req, res, next) => {
   }
 };
 
-// add all category
+// add all category - Optimized with pagination
 export const getAllCategory = async (req, res, next) => {
   try {
-    const result = await getAllCategoryServices();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    const result = await getAllCategoryServices({
+      page,
+      limit,
+      search,
+      status,
+    });
+
     res.status(200).json({
       success: true,
-      result,
+      result: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);

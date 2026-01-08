@@ -145,13 +145,17 @@ const getAllContacts = async (req, res, next) => {
     const skip = (page - 1) * limit;
     const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
-    const contacts = await Contact.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('respondedBy', 'name email');
+    // Use parallel queries for better performance
+    const [contacts, total] = await Promise.all([
+      Contact.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate('respondedBy', 'name email')
+        .lean(), // Use lean() for better performance
+      Contact.countDocuments(filter),
+    ]);
 
-    const total = await Contact.countDocuments(filter);
     const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({

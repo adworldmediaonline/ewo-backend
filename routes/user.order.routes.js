@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getChartData,
   getDashboardAmount,
   getDashboardRecentOrder,
   getOrderById,
@@ -12,6 +13,9 @@ const router = express.Router();
 
 // get dashboard amount
 router.get('/dashboard-amount', getDashboardAmount);
+
+// get chart data (optimized)
+router.get('/chart-data', getChartData);
 
 // get sales-report
 router.get('/sales-report', getSalesReport);

@@ -321,15 +321,94 @@ export const addOrder = async (req, res, next) => {
   }
 };
 
-// get Orders
+// get Orders - Optimized with pagination, search, and aggregation
 export const getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({})
-      .populate('user')
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    // Build match query for aggregation
+    const matchStage = {};
+
+    // Add search filter if provided
+    if (search) {
+      matchStage.$or = [
+        { orderId: { $regex: search, $options: 'i' } },
+        { invoice: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { contact: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Add status filter if provided
+    if (status) {
+      matchStage.status = status;
+    }
+
+    // Use aggregation pipeline for better performance
+    // Split into two parallel queries for better performance
+    const [orderItems, totalResult] = await Promise.all([
+      // Fetch orders with user data
+      Order.aggregate([
+        { $match: matchStage },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'user', // Collection name is 'user' (singular) as defined in User model
+            localField: 'user',
+            foreignField: '_id',
+            as: 'userData',
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  imageURL: '$image', // Map 'image' field to 'imageURL' for frontend compatibility
+                },
+              },
+            ],
+          },
+        },
+        {
+          $addFields: {
+            user: {
+              $cond: {
+                if: { $gt: [{ $size: '$userData' }, 0] },
+                then: { $arrayElemAt: ['$userData', 0] },
+                else: null,
+              },
+            },
+          },
+        },
+        {
+          $unset: 'userData', // Remove temporary field
+        },
+      ]),
+      // Get total count
+      Order.aggregate([
+        { $match: matchStage },
+        { $count: 'count' },
+      ]),
+    ]);
+
+    const orderItemsResult = orderItems || [];
+    const total = totalResult[0]?.count || 0;
+
     res.status(200).json({
       success: true,
-      data: orderItems,
+      data: orderItemsResult,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);

@@ -23,10 +23,43 @@ export const getShowCategoryServices = async () => {
   return category;
 };
 
-// get all category
-export const getAllCategoryServices = async () => {
-  const category = await Category.find({});
-  return category;
+// get all category - Optimized with pagination and search
+export const getAllCategoryServices = async (params = {}) => {
+  const { page = 1, limit = 10, search = '', status = '' } = params;
+  const skip = (page - 1) * limit;
+
+  // Build query
+  const query = {};
+
+  // Add search filter if provided
+  if (search) {
+    query.parent = { $regex: search, $options: 'i' };
+  }
+
+  // Add status filter if provided
+  if (status) {
+    query.status = status;
+  }
+
+  // Get total count for pagination
+  const total = await Category.countDocuments(query);
+
+  // Fetch categories with pagination
+  const category = await Category.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean(); // Use lean() for better performance
+
+  return {
+    data: category,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
 };
 
 // get type of category service

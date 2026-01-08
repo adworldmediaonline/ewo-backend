@@ -238,6 +238,16 @@ const productsSchema = mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+productsSchema.index({ createdAt: -1 }); // Index for sorting by creation date
+productsSchema.index({ skuArrangementOrderNo: 1 }); // Index for default sorting
+productsSchema.index({ title: 1 }); // Index for title searches
+productsSchema.index({ sku: 1 }); // Index for SKU searches
+productsSchema.index({ status: 1, createdAt: -1 }); // Compound index for status filtering and sorting
+productsSchema.index({ 'category.name': 1 }); // Index for category searches
+productsSchema.index({ reviews: 1 }); // Index for reviews queries
+productsSchema.index({ updatedAt: -1 }); // Index for last updated sorting
+
 const Products = mongoose.model('Products', productsSchema);
 
 export default Products;

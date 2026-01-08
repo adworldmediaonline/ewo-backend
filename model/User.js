@@ -32,6 +32,11 @@ const userSchema = mongoose.Schema(
   }
 );
 
+// Add indexes for better query performance
+userSchema.index({ createdAt: -1 }); // Index for sorting by creation date
+userSchema.index({ role: 1, createdAt: -1 }); // Compound index for role filtering and sorting
+userSchema.index({ email: 1 }); // Already has unique index, but explicit for clarity
+
 const User = mongoose.model('User', userSchema);
 
 export default User;
