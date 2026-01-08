@@ -16,8 +16,8 @@ export const createProductService = async data => {
   //   data.finalPriceDiscount = Math.round(data.updatedPrice * 0.85 * 100) / 100;
   // }
 
-  data.updatedPrice = data.price;
-  data.finalPriceDiscount = data.price;
+  // data.updatedPrice = data.price;
+  // data.finalPriceDiscount = data.price;
 
   const product = await Product.create(data);
   const { _id: productId, category } = product;
@@ -457,6 +457,8 @@ export const updateProductService = async (id, currProduct) => {
     product.offerDate.endDate = currProduct.offerDate.endDate;
     product.videoId = currProduct.videoId;
     product.options = currProduct.options;
+    product.finalPriceDiscount = currProduct.finalPriceDiscount;
+    product.updatedPrice = currProduct.updatedPrice;
     // Handle optional productConfigurations
     if (currProduct.productConfigurations !== undefined) {
       if (currProduct.productConfigurations === null || currProduct.productConfigurations.length === 0) {
