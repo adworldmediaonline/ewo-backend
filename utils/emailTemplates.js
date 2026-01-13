@@ -431,8 +431,8 @@ const shippingConfirmationTemplate = (order, config) => {
 
   const {
     storeName = secret.store_name || 'EWO Store',
-    supportEmail = secret.support_email || 'support@example.com',
-    clientUrl = secret.client_url || 'https://example.com',
+    supportEmail = secret.support_email || 'support@eastwestoffroad.com',
+    clientUrl = secret.client_url || 'https://eastwestoffroad.com',
   } = config;
 
   // Format dates
@@ -686,22 +686,22 @@ const shippingConfirmationTemplate = (order, config) => {
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;"><strong>Subtotal:</strong></td>
           <td style="padding: 12px; text-align: right; border-top: 1px solid #e2e8f0;">${formatPrice(
-      subTotal
-    )}</td>
+        subTotal
+      )}</td>
         </tr>
         <tr>
           <td colspan="2" style="padding: 12px; text-align: right;"><strong>Shipping:</strong></td>
           <td style="padding: 12px; text-align: right;">${formatPrice(
-      shippingCost
-    )}</td>
+        shippingCost
+      )}</td>
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
-      totalAmount
-    )}</td>
+        totalAmount
+      )}</td>
         </tr>
       </tfoot>
     </table>
@@ -791,8 +791,8 @@ const deliveryConfirmationTemplate = (order, config) => {
 
   const {
     storeName = secret.store_name || 'EWO Store',
-    supportEmail = secret.support_email || 'support@example.com',
-    clientUrl = secret.client_url || 'https://example.com',
+    supportEmail = secret.support_email || 'support@eastwestoffroad.com',
+    clientUrl = secret.client_url || 'https://eastwestoffroad.com',
   } = config;
 
   // Format delivery date
@@ -1259,8 +1259,8 @@ const feedbackEmailTemplate = (order, config, reviewToken) => {
 
   const {
     storeName = 'EWO Store',
-    supportEmail = 'support@example.com',
-    clientUrl = 'https://example.com',
+    supportEmail = 'support@eastwestoffroad.com',
+    clientUrl = 'https://eastwestoffroad.com',
   } = config;
 
   // Format delivery date

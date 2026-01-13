@@ -49,7 +49,7 @@ verifyEmailConfig();
 // Configuration for email templates
 const emailConfig = {
   storeName: secret.store_name || 'EWO Store',
-  supportEmail: secret.support_email || 'support@example.com',
+  supportEmail: secret.support_email || 'support@eastwestoffroad.com',
   clientUrl: secret.client_url || 'http://localhost:3000',
 };
 
