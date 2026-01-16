@@ -21,9 +21,18 @@ export const paymentIntent = async (req, res, next) => {
     // Get price from request
     const price = Number(product.price);
 
+    // Get tax information from request
+    const taxCalculationId = product.taxCalculationId || (product.orderData && product.orderData.tax?.calculationId);
+    const taxAmount = product.taxAmount || (product.orderData && product.orderData.tax?.taxAmount) || 0;
+    const amountTotal = product.amountTotal || (product.orderData && product.orderData.tax?.amountTotal);
+
     // Try to get totalAmount directly from orderData if available
+    // If tax calculation exists, use amountTotal from tax calculation
     let amount;
-    if (product.orderData && product.orderData.totalAmount) {
+    if (amountTotal) {
+      // Use amountTotal from tax calculation (includes tax)
+      amount = Math.round(Number(amountTotal) * 100);
+    } else if (product.orderData && product.orderData.totalAmount) {
       const totalAmount = Number(product.orderData.totalAmount);
       amount = Math.round(totalAmount * 100);
     } else {
@@ -66,6 +75,14 @@ export const paymentIntent = async (req, res, next) => {
       });
     }
 
+    // Add tax information to metadata
+    if (taxCalculationId) {
+      metadata.tax_calculation_id = taxCalculationId;
+    }
+    if (taxAmount > 0) {
+      metadata.tax_amount = String(taxAmount);
+    }
+
     // IMPORTANT: Check if cart is directly available
     const cart = product.cart || (product.orderData && product.orderData.cart);
 
@@ -100,16 +117,55 @@ export const paymentIntent = async (req, res, next) => {
     }
 
     // Create a PaymentIntent with the order amount and currency
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntentParams = {
       currency: 'usd',
       amount: amount,
       payment_method_types: ['card'],
       metadata: metadata,
-    });
+      automatic_payment_methods: { enabled: true },
+    };
+
+    // Link tax calculation to PaymentIntent if available
+    // Note: For custom flows, we store calculation ID in metadata
+    // Stripe will automatically create tax transaction when payment succeeds
+    if (taxCalculationId) {
+      // Try to link tax calculation using hooks parameter (if supported)
+      // This requires the calculation to be linked during creation or update
+      try {
+        paymentIntentParams.metadata = {
+          ...metadata,
+          tax_calculation_id: taxCalculationId,
+        };
+      } catch (error) {
+        console.error('Error linking tax calculation:', error);
+        // Continue without linking - we'll handle it in metadata
+      }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+
+    // If tax calculation exists, try to link it after creation
+    if (taxCalculationId) {
+      try {
+        // Update PaymentIntent to link tax calculation
+        // Note: Stripe Tax with PaymentIntents may require specific integration pattern
+        // For now, we store the calculation ID in metadata
+        await stripe.paymentIntents.update(paymentIntent.id, {
+          metadata: {
+            ...metadata,
+            tax_calculation_id: taxCalculationId,
+          },
+        });
+      } catch (error) {
+        console.error('Error updating PaymentIntent with tax calculation:', error);
+        // Continue - metadata already has the calculation ID
+      }
+    }
 
     res.send({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      taxCalculationId: taxCalculationId || null,
     });
   } catch (error) {
     next(error);
@@ -135,6 +191,28 @@ export const addOrder = async (req, res, next) => {
         // Keep both fields for compatibility
         discount: coupon.discount || coupon.discountAmount || 0,
       }));
+    }
+
+    // Handle tax information from Stripe Tax calculation
+    // Tax info should be passed from frontend in orderData.tax
+    if (orderData.tax) {
+      // Ensure tax object has proper structure
+      orderData.tax = {
+        calculationId: orderData.tax.calculationId || null,
+        taxAmount: Number(orderData.tax.taxAmount) || 0,
+        taxAmountExclusive: Number(orderData.tax.taxAmountExclusive) || 0,
+        amountTotal: Number(orderData.tax.amountTotal) || null,
+        taxBreakdown: Array.isArray(orderData.tax.taxBreakdown) ? orderData.tax.taxBreakdown : [],
+      };
+    } else {
+      // Initialize empty tax object if not provided
+      orderData.tax = {
+        calculationId: null,
+        taxAmount: 0,
+        taxAmountExclusive: 0,
+        amountTotal: null,
+        taxBreakdown: [],
+      };
     }
 
     // PRIMARY PAYMENT PROCESSING: Capture and process payment intent data

@@ -183,6 +183,51 @@ const orderSchema = new mongoose.Schema(
         default: Date.now,
       },
     },
+    // Tax information from Stripe Tax
+    tax: {
+      calculationId: {
+        type: String,
+        required: false,
+      },
+      taxAmount: {
+        type: Number,
+        required: false,
+        default: 0,
+      },
+      taxAmountExclusive: {
+        type: Number,
+        required: false,
+        default: 0,
+      },
+      amountTotal: {
+        type: Number,
+        required: false,
+      },
+      taxBreakdown: [
+        {
+          jurisdiction: {
+            type: String,
+            required: false,
+          },
+          rate: {
+            type: Number,
+            required: false,
+          },
+          amount: {
+            type: Number,
+            required: false,
+          },
+          country: {
+            type: String,
+            required: false,
+          },
+          state: {
+            type: String,
+            required: false,
+          },
+        },
+      ],
+    },
     totalAmount: {
       type: Number,
       required: true,

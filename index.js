@@ -30,6 +30,7 @@ import productsRoutes from './routes/products.routes.js';
 import protectedRoutes from './routes/protected.route.js';
 import reviewRoutes from './routes/review.routes.js';
 import shippingRoutes from './routes/shipping.routes.js';
+import taxRoutes from './routes/tax.routes.js';
 import userOrderRoutes from './routes/user.order.routes.js';
 
 dotenv.config();
@@ -166,6 +167,7 @@ app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/cart-tracking', cartTrackingRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/tax', taxRoutes);
 app.use('/api/meta-conversions', metaConversionsRoutes);
 app.use('/api/contact', contactRoutes);
 
