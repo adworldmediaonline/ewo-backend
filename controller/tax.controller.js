@@ -41,7 +41,7 @@ export const calculateTax = async (req, res, next) => {
     }
 
     // Return successful tax calculation
-    res.status(200).json({
+    const response = {
       success: true,
       calculationId: result.calculationId,
       taxAmount: result.taxAmount,
@@ -49,7 +49,13 @@ export const calculateTax = async (req, res, next) => {
       amountTotal: result.amountTotal,
       subtotal: result.subtotal,
       taxBreakdown: result.taxBreakdown,
-    });
+      isCollectingTax: result.isCollectingTax,
+      taxabilityReason: result.taxabilityReason,
+    };
+
+    console.log('📤 [TAX CONTROLLER] Sending response:', JSON.stringify(response, null, 2));
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Tax calculation controller error:', error);
     next(error);

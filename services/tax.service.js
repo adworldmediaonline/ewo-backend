@@ -98,29 +98,64 @@ export const calculateTaxService = async (cartItems, shippingCost, customerAddre
 
     // Extract tax information
     // Use tax_amount_exclusive directly from Stripe (this is the tax amount added on top)
+    // Note: All Stripe amounts are in cents
     const taxAmountExclusive = calculation.tax_amount_exclusive || 0;
     const amountTotal = calculation.amount_total || subtotal;
     // Use tax_amount_exclusive directly instead of calculating difference
     // This is more accurate as Stripe provides the exact tax amount
     const taxAmount = taxAmountExclusive; // Tax amount in cents (already from Stripe)
 
+    // Log for debugging
+    console.log('📊 [TAX SERVICE] Stripe calculation response:', {
+      tax_amount_exclusive_cents: taxAmountExclusive,
+      amount_total_cents: amountTotal,
+      subtotal_cents: subtotal,
+      tax_breakdown_count: calculation.tax_breakdown?.length || 0,
+      tax_breakdown_raw: calculation.tax_breakdown,
+    });
+
     // Check if tax is being collected
     const taxBreakdownArray = calculation.tax_breakdown || [];
-    const isCollectingTax = taxBreakdownArray.some(
-      breakdown => breakdown.taxability_reason !== 'not_collecting' && breakdown.tax_amount > 0
+
+    // Check if tax is being collected - use tax_amount_exclusive > 0 as primary indicator
+    // Breakdown items might have 0 amount if tax is calculated at a different level
+    const isCollectingTax = taxAmountExclusive > 0 && taxBreakdownArray.some(
+      breakdown => breakdown.taxability_reason !== 'not_collecting'
     );
     const taxabilityReason = taxBreakdownArray[0]?.taxability_reason || null;
 
     // Build tax breakdown
-    const taxBreakdown = taxBreakdownArray.map(breakdown => ({
-      jurisdiction: breakdown.jurisdiction?.level || breakdown.tax_rate_details?.state ? 'state' : 'unknown',
-      rate: breakdown.tax_rate_details?.percentage_decimal || 0,
-      amount: breakdown.tax_amount || 0,
-      country: breakdown.jurisdiction?.country || breakdown.tax_rate_details?.country || 'US',
-      state: breakdown.jurisdiction?.state || breakdown.tax_rate_details?.state || null,
-      taxability_reason: breakdown.taxability_reason || null,
-      tax_type: breakdown.tax_rate_details?.tax_type || null,
-    }));
+    // Note: breakdown.tax_amount is in cents from Stripe, convert to dollars
+    // If breakdown.tax_amount is 0 but we have total tax, distribute it proportionally
+    const totalTaxInCents = taxAmountExclusive;
+    const totalBreakdownTaxInCents = taxBreakdownArray.reduce((sum, b) => sum + (b.tax_amount || 0), 0);
+
+    const taxBreakdown = taxBreakdownArray.map((breakdown, index) => {
+      let taxAmountInCents = breakdown.tax_amount || 0;
+
+      // If breakdown amount is 0 but we have total tax, and this is the only breakdown item,
+      // assign the total tax to this breakdown
+      if (taxAmountInCents === 0 && totalTaxInCents > 0 && taxBreakdownArray.length === 1) {
+        taxAmountInCents = totalTaxInCents;
+      }
+      // If breakdown amounts don't sum to total, distribute proportionally
+      else if (totalBreakdownTaxInCents === 0 && totalTaxInCents > 0 && taxBreakdownArray.length > 0) {
+        // Distribute total tax equally among breakdown items
+        taxAmountInCents = Math.round(totalTaxInCents / taxBreakdownArray.length);
+      }
+
+      const taxAmountInDollars = taxAmountInCents / 100;
+
+      return {
+        jurisdiction: breakdown.jurisdiction?.level || breakdown.tax_rate_details?.state ? 'state' : 'unknown',
+        rate: breakdown.tax_rate_details?.percentage_decimal || 0,
+        amount: taxAmountInDollars, // Convert from cents to dollars
+        country: breakdown.jurisdiction?.country || breakdown.tax_rate_details?.country || 'US',
+        state: breakdown.jurisdiction?.state || breakdown.tax_rate_details?.state || null,
+        taxability_reason: breakdown.taxability_reason || null,
+        tax_type: breakdown.tax_rate_details?.tax_type || null,
+      };
+    });
 
     return {
       success: true,
