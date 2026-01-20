@@ -124,7 +124,6 @@ export const paymentIntent = async (req, res, next) => {
     const paymentIntentParams = {
       currency: 'usd',
       amount: amount,
-      payment_method_types: ['card'],
       metadata: metadata,
       automatic_payment_methods: { enabled: true },
     };
