@@ -11,6 +11,10 @@ import {
   sendShippingNotificationWithTracking,
   verifyEmailConfig,
 } from '../services/emailService.js';
+import {
+  createTaxTransactionService,
+  createTaxReversalService,
+} from '../services/tax.service.js';
 const stripe = new Stripe(secret.stripe_key);
 
 // create-payment-intent
@@ -373,6 +377,34 @@ export const addOrder = async (req, res, next) => {
 
     // Update product quantities
     await updateProductQuantities(order.cart);
+
+    // ============================================
+    // STRIPE TAX: Create tax transaction after successful payment
+    // Per Stripe docs: https://docs.stripe.com/tax/custom#tax-transaction
+    // This records the tax collected for Stripe Tax reporting
+    // ============================================
+    if (orderData.tax?.calculationId && orderData.paymentIntent?.id) {
+      try {
+        console.log('📊 [ORDER] Creating tax transaction for order:', order._id);
+        const taxTransactionResult = await createTaxTransactionService(
+          orderData.tax.calculationId,
+          orderData.paymentIntent.id // Use PaymentIntent ID as unique reference
+        );
+
+        if (taxTransactionResult.success && taxTransactionResult.transactionId) {
+          // Store the tax transaction ID in the order for future refund handling
+          await Order.findByIdAndUpdate(order._id, {
+            'tax.transactionId': taxTransactionResult.transactionId,
+          });
+          console.log('✅ [ORDER] Tax transaction created:', taxTransactionResult.transactionId);
+        } else {
+          console.log('⚠️ [ORDER] Tax transaction creation skipped or failed:', taxTransactionResult.message);
+        }
+      } catch (taxError) {
+        // Log but don't fail the order - tax transaction is for reporting only
+        console.error('❌ [ORDER] Error creating tax transaction (non-blocking):', taxError);
+      }
+    }
 
     // Send confirmation email using email service
     const emailSent = await sendOrderConfirmation(order);
@@ -1098,6 +1130,45 @@ export const processRefund = async (req, res, next) => {
       { new: true }
     );
 
+    // ============================================
+    // STRIPE TAX: Create tax reversal after successful refund
+    // Per Stripe docs: https://docs.stripe.com/tax/custom#record-refunds
+    // This records the tax reversal for Stripe Tax reporting
+    // ============================================
+    let taxReversalResult = null;
+    if (order.tax?.transactionId) {
+      try {
+        const isFullRefund = refundAmount === maxRefundAmount;
+        console.log('📊 [ORDER] Creating tax reversal for refund:', {
+          orderId: order._id,
+          transactionId: order.tax.transactionId,
+          mode: isFullRefund ? 'full' : 'partial',
+          refundAmount: refundAmount / 100,
+        });
+
+        taxReversalResult = await createTaxReversalService(
+          order.tax.transactionId,
+          `${order.paymentIntent.id}-refund-${Date.now()}`, // Unique reference
+          isFullRefund ? 'full' : 'partial',
+          null, // lineItems (not needed for flat amount)
+          isFullRefund ? null : -refundAmount // Negative amount for partial refund (in cents)
+        );
+
+        if (taxReversalResult.success && taxReversalResult.reversalId) {
+          // Store the reversal ID in the order
+          await Order.findByIdAndUpdate(orderId, {
+            $push: { 'tax.reversalIds': taxReversalResult.reversalId },
+          });
+          console.log('✅ [ORDER] Tax reversal created:', taxReversalResult.reversalId);
+        } else {
+          console.log('⚠️ [ORDER] Tax reversal creation skipped or failed:', taxReversalResult.message);
+        }
+      } catch (taxError) {
+        // Log but don't fail the refund - tax reversal is for reporting only
+        console.error('❌ [ORDER] Error creating tax reversal (non-blocking):', taxError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Refund processed successfully',
@@ -1106,6 +1177,7 @@ export const processRefund = async (req, res, next) => {
         amount: refund.amount / 100, // Convert back to dollars
         status: refund.status,
         receiptNumber: refund.receipt_number,
+        taxReversal: taxReversalResult?.reversalId || null,
       },
     });
   } catch (error) {
@@ -1238,6 +1310,39 @@ export const cancelOrder = async (req, res, next) => {
           { new: true }
         );
 
+        // ============================================
+        // STRIPE TAX: Create full tax reversal after order cancellation
+        // Per Stripe docs: Full reversal when entire order is cancelled
+        // ============================================
+        let taxReversalResult = null;
+        if (order.tax?.transactionId) {
+          try {
+            console.log('📊 [ORDER] Creating full tax reversal for cancelled order:', {
+              orderId: order._id,
+              transactionId: order.tax.transactionId,
+            });
+
+            taxReversalResult = await createTaxReversalService(
+              order.tax.transactionId,
+              `${order.paymentIntent.id}-cancel-${Date.now()}`, // Unique reference
+              'full', // Full reversal for cancellation
+              null,
+              null
+            );
+
+            if (taxReversalResult.success && taxReversalResult.reversalId) {
+              await Order.findByIdAndUpdate(orderId, {
+                $push: { 'tax.reversalIds': taxReversalResult.reversalId },
+              });
+              console.log('✅ [ORDER] Full tax reversal created:', taxReversalResult.reversalId);
+            } else {
+              console.log('⚠️ [ORDER] Tax reversal creation skipped or failed:', taxReversalResult.message);
+            }
+          } catch (taxError) {
+            console.error('❌ [ORDER] Error creating tax reversal (non-blocking):', taxError);
+          }
+        }
+
         // Send cancellation email
         const emailSent = await sendOrderCancellation(updatedOrder);
         if (emailSent) {
@@ -1253,6 +1358,7 @@ export const cancelOrder = async (req, res, next) => {
             status: refund.status,
             receiptNumber: refund.receipt_number,
             emailSent: emailSent,
+            taxReversal: taxReversalResult?.reversalId || null,
           },
         });
       } catch (stripeError) {
