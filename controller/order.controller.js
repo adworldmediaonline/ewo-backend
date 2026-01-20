@@ -26,9 +26,16 @@ export const paymentIntent = async (req, res, next) => {
     const price = Number(product.price);
 
     // Get tax information from request
+    // Get tax information from request
     const taxCalculationId = product.taxCalculationId || (product.orderData && product.orderData.tax?.calculationId);
     const taxAmount = product.taxAmount || (product.orderData && product.orderData.tax?.taxAmount) || 0;
-    const amountTotal = product.amountTotal || (product.orderData && product.orderData.tax?.amountTotal);
+
+    // Determine the amount to charge
+    // Priority: 
+    // 1. Explicit amountTotal passed in request (most specific)
+    // 2. totalAmount from orderData (final calculated total including discounts)
+    // 3. amountTotal from tax calculation (fallback, likely pre-discount)
+    const amountTotal = product.amountTotal || (product.orderData && product.orderData.totalAmount) || (product.orderData && product.orderData.tax?.amountTotal);
 
     // Try to get totalAmount directly from orderData if available
     // If tax calculation exists, use amountTotal from tax calculation
