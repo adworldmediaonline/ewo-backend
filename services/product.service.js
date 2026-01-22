@@ -117,8 +117,9 @@ export const getPaginatedProductsService = async (filters = {}) => {
     // This allows "rod-ends-heim-joints" to match "Rod Ends/ Heim Joints"
     const flexiblePattern = processedWords.join('[\\s/\\-]+');
 
-    // Create regex pattern (case insensitive)
-    const categoryRegex = new RegExp(flexiblePattern, 'i');
+    // Create regex pattern (case insensitive) with anchors for exact matching
+    // ^ and $ ensure the pattern matches the entire field value, not just a prefix
+    const categoryRegex = new RegExp(`^${flexiblePattern}$`, 'i');
 
     // Match against both category.name and parent fields
     // If there's already a $or from search, combine them with $and
@@ -222,13 +223,17 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
             // Special case: if n1 is single digit and n2 is two digits, it might be a fraction
             // e.g., "1-14" should match "1 1/4" where 14 = 1/4
+            // BUT: we need to be careful - "1-14" should NOT match "1-1/4" (different subcategory)
             if (n1.length === 1 && n2.length === 2) {
               const n2First = n2[0];
               const n2Second = n2[1];
-              // Match: "n1 n2First/n2Second" (like "1 1/4") where / is part of fraction, not separator
-              // Also match: "n1 n2" (like "1 14") or "n1-n2" or "n1/n2"
-              // The pattern: n1 (space) (n2First/n2Second OR n2) where / in fraction is literal
-              finalPatternParts.push(`${escapedN1}[\\s\\-]+((${n2First}\\/${n2Second})|(${n2First}[\\s/\\-]+${n2Second})|(${n2}))`);
+              // Match variations:
+              // - "n1 n2First/n2Second" (like "1 1/4") - space before fraction
+              // - "n1 n2" (like "1 14") - space between numbers
+              // - "n1-n2" (like "1-14") - hyphen between numbers
+              // BUT NOT: "n1-n2First/n2Second" (like "1-1/4") - hyphen before fraction is different subcategory
+              // The pattern ensures fraction only matches with space, not hyphen
+              finalPatternParts.push(`${escapedN1}([\\s]+${n2First}\\/${n2Second}|[\\s\\-]+${n2})`);
             } else {
               // Normal case: match "n1 n2" or "n1-n2" or "n1/n2"
               finalPatternParts.push(`${escapedN1}[\\s/\\-]+${escapedN2}`);
@@ -258,7 +263,8 @@ export const getPaginatedProductsService = async (filters = {}) => {
     finalPattern = '["\']?' + finalPattern + '["\']?';
 
     // Direct filtering: Find products that have the subcategory in their children field
-    query.children = new RegExp(finalPattern, 'i');
+    // Add anchors ^ and $ for exact matching to prevent partial matches
+    query.children = new RegExp(`^${finalPattern}$`, 'i');
   }
 
   // Price range filter
