@@ -202,9 +202,30 @@ const productsSchema = mongoose.Schema(
               default: 0,
               min: [0, 'Option price cannot be negative'],
             },
+            priceType: {
+              type: String,
+              enum: ['fixed', 'percentage'],
+              default: 'fixed',
+            },
+            percentage: {
+              type: Number,
+              required: false,
+              min: [0, 'Percentage cannot be negative'],
+              max: [100, 'Percentage cannot exceed 100'],
+            },
+            isPercentageIncrease: {
+              type: Boolean,
+              default: true,
+            },
             isSelected: {
               type: Boolean,
               default: false,
+            },
+            image: {
+              type: String,
+              required: false,
+              trim: true,
+              default: '',
             },
           },
         ],
