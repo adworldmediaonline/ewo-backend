@@ -192,11 +192,13 @@ const productsSchema = mongoose.Schema(
           {
             name: {
               type: String,
-              required: true,
+              required: false,
               trim: true,
+              default: '',
             },
             price: {
               type: Number,
+              required: false,
               default: 0,
               min: [0, 'Option price cannot be negative'],
             },
@@ -206,6 +208,15 @@ const productsSchema = mongoose.Schema(
             },
           },
         ],
+        enableCustomNote: {
+          type: Boolean,
+          default: false,
+        },
+        customNotePlaceholder: {
+          type: String,
+          default: 'Specify Rod Ends preference (All left, All right, mixed, or custom).',
+          trim: true,
+        },
       },
     ],
     // this twoo field is based on the client pricing instruction 20% increase and 15% discount
