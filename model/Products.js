@@ -206,6 +206,12 @@ const productsSchema = mongoose.Schema(
               type: Boolean,
               default: false,
             },
+            image: {
+              type: String,
+              required: false,
+              trim: true,
+              default: '',
+            },
           },
         ],
         enableCustomNote: {
