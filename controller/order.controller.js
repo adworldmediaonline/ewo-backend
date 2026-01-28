@@ -99,13 +99,30 @@ export const paymentIntent = async (req, res, next) => {
       } catch (error) { }
     }
 
-    // Create a PaymentIntent with the order amount and currency
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Get tax calculation info from request (if available)
+    const { calculationId, taxCollected } = product;
+
+    // Build PaymentIntent parameters
+    const paymentIntentParams = {
       currency: 'usd',
       amount: amount,
       payment_method_types: ['card'],
       metadata: metadata,
-    });
+    };
+
+    // Only include tax calculation if tax is being collected
+    if (taxCollected && calculationId) {
+      paymentIntentParams.hooks = {
+        inputs: {
+          tax: {
+            calculation: calculationId,
+          },
+        },
+      };
+    }
+
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
     res.send({
       clientSecret: paymentIntent.client_secret,
@@ -113,6 +130,93 @@ export const paymentIntent = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// Calculate tax preview before creating PaymentIntent
+export const calculateTaxPreview = async (req, res, next) => {
+  try {
+    const { items, customer_details } = req.body;
+
+    // Validate required fields
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items are required for tax calculation',
+      });
+    }
+
+    if (!customer_details || !customer_details.address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Customer address is required for tax calculation',
+      });
+    }
+
+    // Validate address has required fields
+    const { address } = customer_details;
+    if (!address.country || !address.postal_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Country and postal code are required for tax calculation',
+      });
+    }
+
+    // Calculate tax based on user's address
+    const calculation = await stripe.tax.calculations.create({
+      currency: 'usd',
+      line_items: items.map(item => ({
+        amount: Math.round(Number(item.amount) * 100), // Convert to cents
+        reference: item.id || item._id || 'item',
+        tax_code: item.tax_code || 'txcd_99999999', // Default general tax code
+        quantity: item.quantity || 1,
+      })),
+      customer_details: {
+        address: {
+          line1: address.line1 || '',
+          city: address.city || '',
+          state: address.state || '',
+          postal_code: address.postal_code,
+          country: address.country,
+        },
+        address_source: 'billing',
+      },
+    });
+
+    // Return tax preview to display in UI
+    res.json({
+      success: true,
+      subtotal: calculation.amount_total - calculation.tax_amount_exclusive,
+      tax: calculation.tax_amount_exclusive,
+      total: calculation.amount_total,
+      calculationId: calculation.id,
+      // Add this flag to indicate if tax will be collected
+      taxCollected: calculation.tax_amount_exclusive > 0,
+      // Include breakdown for transparency
+      breakdown: calculation.tax_breakdown || [],
+    });
+  } catch (error) {
+    console.error('Tax calculation error:', error);
+
+    // Handle specific Stripe Tax errors gracefully
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Invalid request for tax calculation',
+        taxCollected: false,
+      });
+    }
+
+    // For other errors, return a fallback response that allows checkout to continue
+    res.status(200).json({
+      success: false,
+      error: error.message || 'Unable to calculate tax',
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      calculationId: null,
+      taxCollected: false,
+    });
   }
 };
 

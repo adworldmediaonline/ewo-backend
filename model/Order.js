@@ -187,6 +187,20 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // Stripe Tax fields
+    taxAmount: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
+    taxCalculationId: {
+      type: String,
+      required: false,
+    },
+    taxBreakdown: {
+      type: Object,
+      required: false,
+    },
     shippingOption: {
       type: String,
       required: false,

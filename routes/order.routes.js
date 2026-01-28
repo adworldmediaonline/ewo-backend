@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   addOrder,
+  calculateTaxPreview,
   cancelOrder,
   diagnoseFeedbackEmail,
   getOrders,
@@ -23,6 +24,8 @@ router.get('/orders', getOrders);
 router.get('/:id', getSingleOrder);
 // add a create payment intent
 router.post('/create-payment-intent', paymentIntent);
+// calculate tax preview for checkout
+router.post('/calculate-tax', calculateTaxPreview);
 // save Order
 router.post('/saveOrder', addOrder);
 // update status
