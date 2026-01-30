@@ -5,6 +5,8 @@ import path from 'path';
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 export const secret = {
+  stripe_catalog_product_id: process.env.STRIPE_CATALOG_PRODUCT_ID,
+  stripe_catalog_price_id: process.env.STRIPE_CATALOG_PRICE_ID,
   port: process.env.PORT,
   env: process.env.NODE_ENV,
   db_url: process.env.MONGO_URI,

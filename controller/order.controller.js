@@ -133,6 +133,119 @@ export const paymentIntent = async (req, res, next) => {
   }
 };
 
+// Create Stripe Checkout Session with automatic tax
+export const createCheckoutSession = async (req, res, next) => {
+  try {
+    const { items, customer_details, success_url, cancel_url, metadata } = req.body;
+
+    // Validate required fields
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items are required for checkout',
+      });
+    }
+
+    if (!success_url || !cancel_url) {
+      return res.status(400).json({
+        success: false,
+        error: 'Success URL and cancel URL are required',
+      });
+    }
+
+    // Validate address for shipping (tax will use Washington address)
+    if (!customer_details || !customer_details.address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Customer address is required for shipping',
+      });
+    }
+
+    const { address } = customer_details;
+    if (!address.country || !address.postal_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Country and postal code are required for shipping',
+      });
+    }
+
+    // Build line items for checkout session
+    // Always use the catalog Stripe product ID for all items to ensure tax is calculated correctly
+    const catalogProductId = secret.stripe_catalog_product_id; // Catalog product with tax configured
+    const catalogPriceId = secret.stripe_catalog_price_id; // Catalog price ID
+
+    const lineItems = [];
+
+    for (const item of items) {
+      const quantity = item.quantity || 1;
+      const amount = Math.round(Number(item.amount) * 100); // Convert to cents
+
+      // Always use price_data with the catalog product ID
+      // This ensures all items use the catalog product's tax settings
+      // Each item can have a different price (unit_amount) but same product tax configuration
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          unit_amount: amount, // Use actual product price from database
+          product: catalogProductId, // Reference catalog Stripe product (tax already configured)
+          tax_behavior: 'exclusive', // Tax is added on top of the price
+        },
+        quantity: quantity,
+      });
+    }
+
+    // Create checkout session with automatic tax
+    // Tax is already configured on Stripe products, so we use automatic_tax
+    // Stripe will calculate tax based on the product's tax settings
+    const sessionParams = {
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: success_url,
+      cancel_url: cancel_url,
+      // Enable automatic tax - Stripe will calculate tax based on product tax settings
+      automatic_tax: {
+        enabled: true,
+      },
+      // Customer details
+      customer_email: customer_details.email || undefined,
+      // Collect shipping address (tax calculation uses this)
+      shipping_address_collection: {
+        allowed_countries: ['US'],
+      },
+      // Metadata
+      metadata: {
+        ...(metadata || {}),
+        customer_address_country: address.country,
+        customer_address_state: address.state,
+        customer_address_postal_code: address.postal_code,
+      },
+    };
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    res.json({
+      success: true,
+      sessionId: session.id,
+      url: session.url,
+    });
+  } catch (error) {
+    console.error('Checkout session creation error:', error);
+
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Invalid request for checkout session',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Unable to create checkout session',
+    });
+  }
+};
+
 // Calculate tax preview before creating PaymentIntent
 export const calculateTaxPreview = async (req, res, next) => {
   try {

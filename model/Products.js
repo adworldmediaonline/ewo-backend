@@ -249,6 +249,12 @@ const productsSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Stripe product ID for tax calculation
+    stripeProductId: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     // SEO metadata fields
     seo: {
       metaTitle: {

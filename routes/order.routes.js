@@ -3,6 +3,7 @@ import {
   addOrder,
   calculateTaxPreview,
   cancelOrder,
+  createCheckoutSession,
   diagnoseFeedbackEmail,
   getOrders,
   getPaymentDetails,
@@ -24,6 +25,8 @@ router.get('/orders', getOrders);
 router.get('/:id', getSingleOrder);
 // add a create payment intent
 router.post('/create-payment-intent', paymentIntent);
+// create checkout session with automatic tax
+router.post('/create-checkout-session', createCheckoutSession);
 // calculate tax preview for checkout
 router.post('/calculate-tax', calculateTaxPreview);
 // save Order
