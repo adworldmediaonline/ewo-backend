@@ -77,7 +77,7 @@ export const getFilteredProductsService = async (filters = {}) => {
     .skip(skip)
     .limit(Number(limit))
     .populate('category.id', 'parent children')
-    .select('title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations')
+    .select('title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId')
     .lean();
 
   // Get total count for pagination
