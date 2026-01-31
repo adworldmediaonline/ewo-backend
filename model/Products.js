@@ -146,6 +146,10 @@ const productsSchema = mongoose.Schema(
       },
     ],
     tags: [String],
+    badges: {
+      type: [String],
+      default: [],
+    },
     offerDate: {
       startDate: Date,
       endDate: Date,
