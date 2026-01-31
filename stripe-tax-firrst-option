@@ -1,0 +1,88 @@
+// Then, add tax calculation to your PaymentIntent.You may use the code below as a reference, please update this as needed:
+
+// Server-side code
+const calculateAndCharge = async (req, res) => {
+    // Get checkout information from your form
+    const { amount, items, customer_details } = req.body;
+
+    try {
+        // Create a Tax calculation
+        const calculation = await stripe.tax.calculations.create({
+            currency: 'usd',
+            line_items: items.map(item => ({
+                amount: item.amount,
+                reference: item.id,
+                tax_code: item.tax_code || 'txcd_99999999', // Default to general tax code if not specified
+            })),
+            customer_details: {
+                address: {
+                    line1: customer_details.address.line1,
+                    city: customer_details.address.city,
+                    state: customer_details.address.state,
+                    postal_code: customer_details.address.postal_code,
+                    country: customer_details.address.country,
+                },
+                address_source: 'billing',
+            },
+        });
+
+        // Create PaymentIntent with the tax calculation
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: calculation.amount_total, // Includes tax
+            currency: 'usd',
+            automatic_payment_methods: { enabled: true },
+            hooks: {
+                inputs: {
+                    tax: {
+                        calculation: calculation.id,
+                    },
+                },
+            },
+        });
+
+        res.json({
+            clientSecret: paymentIntent.client_secret,
+            tax: calculation.tax_amount_exclusive,
+            total: calculation.amount_total
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+// Afterwards, please display the tax breakdown to your customers by:
+
+// Client-side code
+const { clientSecret, tax, total } = await fetch('/create-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        amount: baseAmount,
+        items: cartItems,
+        customer_details: {
+            address: {
+                line1: document.getElementById('address-line1').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                postal_code: document.getElementById('postal-code').value,
+                country: document.getElementById('country').value,
+            }
+        }
+    })
+}).then(r => r.json());
+
+// Update your UI with tax information
+document.getElementById('tax-amount').innerText = $${ (tax / 100).toFixed(2) };
+document.getElementById('total-amount').innerText = $${ (total / 100).toFixed(2) };
+
+// Complete the payment
+const { error } = await stripe.confirmPayment({
+    elements,
+    clientSecret,
+    confirmParams: {
+        return_url: 'https://example.com/order-confirmation',
+    },
+});
+
+
+
+
