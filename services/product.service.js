@@ -289,7 +289,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId'
+        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges'
       ),
     // .select(
     //   'title slug img finalPriceDiscount updatedPrice shipping options'
@@ -451,6 +451,16 @@ export const updateProductService = async (id, currProduct) => {
       )
       : [];
     product.tags = currProduct.tags;
+    // Handle optional badges
+    if (currProduct.badges !== undefined) {
+      if (currProduct.badges === null || currProduct.badges.length === 0) {
+        // Clear badges if explicitly set to null or empty array
+        product.badges = [];
+      } else {
+        // Update badges if provided
+        product.badges = currProduct.badges;
+      }
+    }
     product.parent = currProduct.parent;
     product.children = currProduct.children;
     product.price = currProduct.price;
