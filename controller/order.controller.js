@@ -408,6 +408,8 @@ export const getOrders = async (req, res, next) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || '';
     const status = req.query.status || '';
+    const startDate = req.query.startDate || '';
+    const endDate = req.query.endDate || '';
 
     // Build match query for aggregation
     const matchStage = {};
@@ -426,6 +428,20 @@ export const getOrders = async (req, res, next) => {
     // Add status filter if provided
     if (status) {
       matchStage.status = status;
+    }
+
+    // Add date range filter if provided
+    if (startDate || endDate) {
+      matchStage.createdAt = {};
+      if (startDate) {
+        matchStage.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Set end date to end of day (23:59:59.999)
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        matchStage.createdAt.$lte = endDateTime;
+      }
     }
 
     // Use aggregation pipeline for better performance
