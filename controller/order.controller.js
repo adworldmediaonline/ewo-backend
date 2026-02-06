@@ -1709,3 +1709,151 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * Get email addresses from orders filtered by date range
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+export const getOrderEmails = async (req, res, next) => {
+  try {
+    const { startDate, endDate, selectAll } = req.query;
+
+    // Build match query
+    const matchStage = {
+      email: { $exists: true, $ne: null, $ne: '' }, // Must have email
+    };
+
+    // Add date range filter if not selecting all
+    if (!selectAll && (startDate || endDate)) {
+      matchStage.createdAt = {};
+      if (startDate) {
+        matchStage.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        matchStage.createdAt.$lte = endDateTime;
+      }
+    }
+
+    // Aggregate to get unique email addresses
+    const orders = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: '$email',
+          orderCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          email: '$_id',
+          orderCount: 1,
+        },
+      },
+      { $sort: { email: 1 } },
+    ]);
+
+    // Extract unique email addresses
+    const emails = orders.map(order => order.email).filter(Boolean);
+    const totalOrders = await Order.countDocuments(matchStage);
+
+    res.status(200).json({
+      success: true,
+      emails,
+      totalOrders,
+    });
+  } catch (error) {
+    console.error('Error in getOrderEmails:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'An unexpected error occurred while fetching email addresses.',
+      error: error?.message || 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Send promotional email to multiple recipients
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+export const sendPromotionalEmail = async (req, res, next) => {
+  try {
+    const { subject, recipients, emailBody, startDate, endDate, selectAll } = req.body;
+
+    // Validate required fields
+    if (!subject || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subject and recipients are required',
+      });
+    }
+
+    if (!emailBody || emailBody.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email body is required',
+      });
+    }
+
+    // Import email service
+    const emailService = await import('../services/emailService.js');
+    const { sendEmail } = emailService;
+    
+    if (!sendEmail || typeof sendEmail !== 'function') {
+      throw new Error('sendEmail function not found in emailService');
+    }
+
+    let emailsSent = 0;
+    let emailsFailed = 0;
+    const failedEmails = [];
+
+    // Send email to each recipient
+    for (const email of recipients) {
+      try {
+        const emailSent = await sendEmail({
+          to: email.trim(),
+          subject: subject,
+          html: emailBody,
+        });
+
+        if (emailSent) {
+          emailsSent++;
+        } else {
+          emailsFailed++;
+          failedEmails.push({
+            email: email.trim(),
+            error: 'Email service returned false',
+          });
+        }
+      } catch (emailError) {
+        console.error(`Error sending email to ${email}:`, emailError);
+        emailsFailed++;
+        failedEmails.push({
+          email: email.trim(),
+          error: emailError?.message || 'Failed to send email',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Promotional emails processed. ${emailsSent} sent, ${emailsFailed} failed`,
+      emailsSent,
+      emailsFailed,
+      failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
+    });
+  } catch (error) {
+    console.error('Error in sendPromotionalEmail:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'An unexpected error occurred while sending promotional emails.',
+      error: error?.message || 'Unknown error',
+    });
+  }
+};

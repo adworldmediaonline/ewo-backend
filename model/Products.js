@@ -27,6 +27,10 @@ const productsSchema = mongoose.Schema(
       minlength: [3, 'Title must be at least 3 characters long'],
       maxlength: [150, 'Title cannot be more than 150 characters'],
     },
+    faqs: {
+      type: String,
+      default: '',
+    },
     slug: {
       type: String,
       required: true,

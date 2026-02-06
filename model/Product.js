@@ -18,6 +18,10 @@ const productSchema = mongoose.Schema(
       type: String,
       required: [true, 'Please provide product description'],
     },
+    faqs: {
+      type: String,
+      default: '',
+    },
     price: {
       type: Number,
       required: true,

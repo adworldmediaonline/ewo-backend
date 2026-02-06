@@ -289,7 +289,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges'
+        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
       ),
     // .select(
     //   'title slug img finalPriceDiscount updatedPrice shipping options'
@@ -468,6 +468,7 @@ export const updateProductService = async (id, currProduct) => {
     product.quantity = currProduct.quantity;
     product.status = currProduct.status;
     product.description = currProduct.description;
+    product.faqs = currProduct.faqs || '';
     product.additionalInformation = currProduct.additionalInformation;
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
