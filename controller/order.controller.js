@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { secret } from '../config/secret.js';
 import Order from '../model/Order.js';
 import Products from '../model/Products.js';
+import Review from '../model/Review.js';
 import CartTrackingService from '../services/cartTracking.service.js';
 import {
   scheduleFeedbackEmail,
@@ -471,6 +472,14 @@ export const getOrders = async (req, res, next) => {
           },
         },
         {
+          $lookup: {
+            from: 'reviews', // Collection name for Review model
+            localField: '_id',
+            foreignField: 'orderId',
+            as: 'reviews',
+          },
+        },
+        {
           $addFields: {
             user: {
               $cond: {
@@ -479,6 +488,10 @@ export const getOrders = async (req, res, next) => {
                 else: null,
               },
             },
+            hasReview: {
+              $gt: [{ $size: '$reviews' }, 0],
+            },
+            reviewCount: { $size: '$reviews' },
           },
         },
         {
@@ -1380,6 +1393,7 @@ export const getPaymentDetails = async (req, res, next) => {
 
 /**
  * Trigger feedback email for delivered order (Admin only)
+ * Manual trigger - only checks if review exists, not if automated email was sent
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
@@ -1388,23 +1402,74 @@ export const triggerFeedbackEmail = async (req, res, next) => {
   const orderId = req.params.id; // Order ID from URL parameter
 
   try {
-    // Schedule feedback email with 3-minute delay
-    const result = await scheduleFeedbackEmail(orderId);
+    // Import models
+    const OrderModel = (await import('../model/Order.js')).default;
+    const ReviewModel = (await import('../model/Review.js')).default;
+    const { sendFeedbackEmail } = await import('../services/emailService.js');
 
-    if (result.success) {
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        scheduledAt: result.scheduledAt,
-      });
-    } else {
-      res.status(400).json({
+    // Find the order
+    const order = await OrderModel.findById(orderId).populate('user');
+
+    if (!order) {
+      return res.status(404).json({
         success: false,
-        message: result.message,
+        message: 'Order not found',
+      });
+    }
+
+    if (!order.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order has no email address',
+      });
+    }
+
+    if (order.status !== 'delivered') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order must be delivered before feedback can be requested',
+      });
+    }
+
+    // Check if customer has already submitted a review
+    const existingReview = await ReviewModel.findOne({ orderId: order._id });
+    if (existingReview) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer has already submitted a review for this order',
+      });
+    }
+
+    // Send the feedback email directly (no delay for manual trigger)
+    try {
+      const emailSent = await sendFeedbackEmail(order);
+
+      if (emailSent) {
+        // Optionally mark as sent (but don't prevent future manual sends)
+        // We don't update feedbackEmailSent here since manual sends are independent
+        res.status(200).json({
+          success: true,
+          message: 'Review request email sent successfully',
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to send review request email. Please check email configuration.',
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending feedback email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: emailError?.message || 'Failed to send review request email. Please try again later.',
       });
     }
   } catch (error) {
-    next(error);
+    console.error('Error in triggerFeedbackEmail:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'An unexpected error occurred while processing the request.',
+    });
   }
 };
 
@@ -1438,5 +1503,209 @@ export const verifyEmailConfiguration = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * Send review request emails to multiple orders
+ * Super Admin only - can send to all orders or filtered by date range
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+export const sendBulkReviewRequestEmails = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.body;
+
+    // Build match query for orders
+    const matchStage = {
+      status: 'delivered', // Only send to delivered orders
+      email: { $exists: true, $ne: null, $ne: '' }, // Must have email
+    };
+
+    // Add date range filter if provided
+    if (startDate || endDate) {
+      matchStage.createdAt = {};
+      if (startDate) {
+        matchStage.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        matchStage.createdAt.$lte = endDateTime;
+      }
+    }
+
+    // Find all matching orders and check for reviews
+    const orders = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userData',
+        },
+      },
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'orderId',
+          as: 'reviews',
+        },
+      },
+      {
+        $addFields: {
+          hasReview: {
+            $gt: [{ $size: '$reviews' }, 0],
+          },
+          user: {
+            $cond: {
+              if: { $gt: [{ $size: '$userData' }, 0] },
+              then: {
+                $let: {
+                  vars: { userObj: { $arrayElemAt: ['$userData', 0] } },
+                  in: {
+                    _id: '$$userObj._id',
+                    name: '$$userObj.name',
+                    email: '$$userObj.email',
+                    imageURL: '$$userObj.image',
+                  },
+                },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ]);
+
+    if (!orders || orders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No orders found matching the criteria',
+        totalOrders: 0,
+        emailsSent: 0,
+        emailsFailed: 0,
+        skipped: 0,
+      });
+    }
+
+    // Import email service functions
+    let sendFeedbackEmail;
+    try {
+      const emailService = await import('../services/emailService.js');
+      sendFeedbackEmail = emailService.sendFeedbackEmail;
+      
+      if (!sendFeedbackEmail || typeof sendFeedbackEmail !== 'function') {
+        throw new Error('sendFeedbackEmail function not found in emailService');
+      }
+    } catch (importError) {
+      console.error('Error importing email service:', importError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to load email service. Please check server configuration.',
+        error: importError?.message || 'Unknown import error',
+      });
+    }
+
+    let emailsSent = 0;
+    let emailsFailed = 0;
+    let skipped = 0;
+    const failedOrders = [];
+
+    // Send emails to each order
+    for (const order of orders) {
+      try {
+        // Skip if customer has already submitted a review
+        if (order.hasReview) {
+          skipped++;
+          continue;
+        }
+
+        // Get full order document for email sending
+        const OrderModel = (await import('../model/Order.js')).default;
+        const fullOrder = await OrderModel.findById(order._id).populate('user');
+        
+        if (!fullOrder) {
+          emailsFailed++;
+          failedOrders.push({
+            orderId: order.orderId || order._id,
+            email: order.email,
+            error: 'Order not found',
+          });
+          continue;
+        }
+
+        // Validate order has required fields
+        if (!fullOrder.email) {
+          emailsFailed++;
+          failedOrders.push({
+            orderId: order.orderId || order._id,
+            email: order.email || 'No email',
+            error: 'Order has no email address',
+          });
+          continue;
+        }
+
+        if (fullOrder.status !== 'delivered') {
+          skipped++;
+          continue;
+        }
+
+        // Send the feedback email
+        try {
+          const emailSent = await sendFeedbackEmail(fullOrder);
+
+          if (emailSent) {
+            emailsSent++;
+            // Note: We don't update feedbackEmailSent here since manual sends are independent
+            // The automated system will still mark it, but manual sends can happen regardless
+          } else {
+            emailsFailed++;
+            failedOrders.push({
+              orderId: order.orderId || order._id,
+              email: order.email,
+              error: 'Email service returned false',
+            });
+          }
+        } catch (emailError) {
+          console.error(`Error sending email to order ${order._id}:`, emailError);
+          emailsFailed++;
+          failedOrders.push({
+            orderId: order.orderId || order._id,
+            email: order.email,
+            error: emailError?.message || 'Failed to send email',
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing order ${order._id}:`, error);
+        emailsFailed++;
+        failedOrders.push({
+          orderId: order.orderId || order._id,
+          email: order.email,
+          error: error?.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Review request emails processed. ${emailsSent} sent, ${emailsFailed} failed, ${skipped} skipped`,
+      totalOrders: orders.length,
+      emailsSent,
+      emailsFailed,
+      skipped,
+      failedOrders: failedOrders.length > 0 ? failedOrders : undefined,
+    });
+  } catch (error) {
+    console.error('Error in sendBulkReviewRequestEmails:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'An unexpected error occurred while processing bulk review requests.',
+      error: error?.message || 'Unknown error',
+    });
   }
 };
