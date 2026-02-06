@@ -8,6 +8,7 @@ import {
   getSingleOrder,
   paymentIntent,
   processRefund,
+  sendBulkReviewRequestEmails,
   sendDeliveryNotification,
   sendShippingNotification,
   triggerFeedbackEmail,
@@ -44,6 +45,9 @@ router.get('/payment-details/:orderId', getPaymentDetails);
 
 // trigger feedback email for delivered order (Admin only)
 router.post('/trigger-feedback/:id', triggerFeedbackEmail);
+
+// Send bulk review request emails (Super Admin only)
+router.post('/send-bulk-review-requests', sendBulkReviewRequestEmails);
 
 // Diagnostic routes for troubleshooting
 router.get('/diagnose-feedback/:id', diagnoseFeedbackEmail);

@@ -598,17 +598,29 @@ const sendFeedbackEmail = async order => {
     const cleanOrderData = order.toObject ? order.toObject() : order;
 
     // Generate secure token for review submission
-    const reviewToken = generateFeedbackToken(
-      cleanOrderData._id,
-      cleanOrderData.email
-    );
+    let reviewToken;
+    try {
+      reviewToken = generateFeedbackToken(
+        cleanOrderData._id,
+        cleanOrderData.email
+      );
+    } catch (tokenError) {
+      console.error('Error generating feedback token:', tokenError);
+      return false;
+    }
 
     // Generate email HTML from template
-    const html = feedbackEmailTemplate(
-      cleanOrderData,
-      emailConfig,
-      reviewToken
-    );
+    let html;
+    try {
+      html = feedbackEmailTemplate(
+        cleanOrderData,
+        emailConfig,
+        reviewToken
+      );
+    } catch (templateError) {
+      console.error('Error generating email template:', templateError);
+      return false;
+    }
 
     // Create subject line with order ID for better tracking
     const orderNumber = cleanOrderData.orderId || cleanOrderData._id;
@@ -621,6 +633,7 @@ const sendFeedbackEmail = async order => {
       html,
     });
   } catch (error) {
+    console.error('Error in sendFeedbackEmail:', error);
     return false;
   }
 };
@@ -987,6 +1000,7 @@ export {
   sendContactNotification,
   sendDeliveryConfirmation,
   sendDeliveryNotificationWithTracking,
+  sendFeedbackEmail,
   sendFeedbackEmailAfterDelay,
   sendOrderCancellation,
   sendOrderConfirmation,
