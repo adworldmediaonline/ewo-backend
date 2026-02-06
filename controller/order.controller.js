@@ -1594,7 +1594,22 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
     }
 
     // Import email service functions
-    const { sendFeedbackEmail } = await import('../services/emailService.js');
+    let sendFeedbackEmail;
+    try {
+      const emailService = await import('../services/emailService.js');
+      sendFeedbackEmail = emailService.sendFeedbackEmail;
+      
+      if (!sendFeedbackEmail || typeof sendFeedbackEmail !== 'function') {
+        throw new Error('sendFeedbackEmail function not found in emailService');
+      }
+    } catch (importError) {
+      console.error('Error importing email service:', importError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to load email service. Please check server configuration.',
+        error: importError?.message || 'Unknown import error',
+      });
+    }
 
     let emailsSent = 0;
     let emailsFailed = 0;
@@ -1624,27 +1639,54 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
           continue;
         }
 
-        // Send the feedback email
-        const emailSent = await sendFeedbackEmail(fullOrder);
+        // Validate order has required fields
+        if (!fullOrder.email) {
+          emailsFailed++;
+          failedOrders.push({
+            orderId: order.orderId || order._id,
+            email: order.email || 'No email',
+            error: 'Order has no email address',
+          });
+          continue;
+        }
 
-        if (emailSent) {
-          emailsSent++;
-          // Note: We don't update feedbackEmailSent here since manual sends are independent
-          // The automated system will still mark it, but manual sends can happen regardless
-        } else {
+        if (fullOrder.status !== 'delivered') {
+          skipped++;
+          continue;
+        }
+
+        // Send the feedback email
+        try {
+          const emailSent = await sendFeedbackEmail(fullOrder);
+
+          if (emailSent) {
+            emailsSent++;
+            // Note: We don't update feedbackEmailSent here since manual sends are independent
+            // The automated system will still mark it, but manual sends can happen regardless
+          } else {
+            emailsFailed++;
+            failedOrders.push({
+              orderId: order.orderId || order._id,
+              email: order.email,
+              error: 'Email service returned false',
+            });
+          }
+        } catch (emailError) {
+          console.error(`Error sending email to order ${order._id}:`, emailError);
           emailsFailed++;
           failedOrders.push({
             orderId: order.orderId || order._id,
             email: order.email,
+            error: emailError?.message || 'Failed to send email',
           });
         }
       } catch (error) {
-        console.error(`Error sending email to order ${order._id}:`, error);
+        console.error(`Error processing order ${order._id}:`, error);
         emailsFailed++;
         failedOrders.push({
           orderId: order.orderId || order._id,
           email: order.email,
-          error: error.message,
+          error: error?.message || 'Unknown error',
         });
       }
     }
@@ -1659,6 +1701,11 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
       failedOrders: failedOrders.length > 0 ? failedOrders : undefined,
     });
   } catch (error) {
-    next(error);
+    console.error('Error in sendBulkReviewRequestEmails:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'An unexpected error occurred while processing bulk review requests.',
+      error: error?.message || 'Unknown error',
+    });
   }
 };
