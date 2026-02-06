@@ -1000,6 +1000,7 @@ export {
   sendContactNotification,
   sendDeliveryConfirmation,
   sendDeliveryNotificationWithTracking,
+  sendEmail,
   sendFeedbackEmail,
   sendFeedbackEmailAfterDelay,
   sendOrderCancellation,

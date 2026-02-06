@@ -3,6 +3,7 @@ import {
   addOrder,
   cancelOrder,
   diagnoseFeedbackEmail,
+  getOrderEmails,
   getOrders,
   getPaymentDetails,
   getSingleOrder,
@@ -10,6 +11,7 @@ import {
   processRefund,
   sendBulkReviewRequestEmails,
   sendDeliveryNotification,
+  sendPromotionalEmail,
   sendShippingNotification,
   triggerFeedbackEmail,
   updateOrderStatus,
@@ -18,10 +20,28 @@ import {
 } from '../controller/order.controller.js';
 const router = express.Router();
 
+// Specific routes must come before parameterized routes to avoid conflicts
+
 // get orders
 router.get('/orders', getOrders);
-// single order
-router.get('/:id', getSingleOrder);
+
+// Promotional emails routes (must be before /:id)
+router.get('/emails', getOrderEmails);
+router.post('/send-promotional-email', sendPromotionalEmail);
+
+// Diagnostic routes for troubleshooting (must be before /:id)
+router.get('/diagnose-feedback/:id', diagnoseFeedbackEmail);
+router.get('/verify-email-config', verifyEmailConfiguration);
+
+// Payment management routes (must be before /:id)
+router.get('/payment-details/:orderId', getPaymentDetails);
+
+// trigger feedback email for delivered order (Admin only)
+router.post('/trigger-feedback/:id', triggerFeedbackEmail);
+
+// Send bulk review request emails (Super Admin only)
+router.post('/send-bulk-review-requests', sendBulkReviewRequestEmails);
+
 // add a create payment intent
 router.post('/create-payment-intent', paymentIntent);
 // save Order
@@ -40,17 +60,8 @@ router.patch('/update-shipping/:id', updateShippingDetails);
 router.post('/refund/:orderId', processRefund);
 // cancel order (with automatic refund if applicable)
 router.post('/cancel/:orderId', cancelOrder);
-// get payment details for an order
-router.get('/payment-details/:orderId', getPaymentDetails);
 
-// trigger feedback email for delivered order (Admin only)
-router.post('/trigger-feedback/:id', triggerFeedbackEmail);
-
-// Send bulk review request emails (Super Admin only)
-router.post('/send-bulk-review-requests', sendBulkReviewRequestEmails);
-
-// Diagnostic routes for troubleshooting
-router.get('/diagnose-feedback/:id', diagnoseFeedbackEmail);
-router.get('/verify-email-config', verifyEmailConfiguration);
+// single order (must be last - parameterized route)
+router.get('/:id', getSingleOrder);
 
 export default router;
