@@ -42,8 +42,8 @@ const buildTaxLineItems = (cart, shippingCost) => {
   if (shippingCost > 0) {
     lineItems.push({
       amount: Math.round(shippingCost * 100),
-      reference: 'shipping',
-      tax_code: 'txcd_11061000',
+      reference: 'shipping_fee',
+      tax_code: 'txcd_99999999',
     });
   }
 
@@ -77,6 +77,7 @@ export const calculateTaxPreview = async (req, res, next) => {
         postal_code: orderData.zipCode,
         country: orderData.country,
       };
+      addressSource = 'shipping'; // Checkout collects delivery address per Stripe docs
     }
 
     if (!lineItems || lineItems.length === 0) {
@@ -253,7 +254,7 @@ export const paymentIntent = async (req, res, next) => {
                 postal_code: orderData.zipCode,
                 country: orderData.country,
               },
-              address_source: 'billing',
+              address_source: 'shipping',
             },
           });
         }
@@ -1703,7 +1704,7 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
     try {
       const emailService = await import('../services/emailService.js');
       sendFeedbackEmail = emailService.sendFeedbackEmail;
-      
+
       if (!sendFeedbackEmail || typeof sendFeedbackEmail !== 'function') {
         throw new Error('sendFeedbackEmail function not found in emailService');
       }
@@ -1733,7 +1734,7 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
         // Get full order document for email sending
         const OrderModel = (await import('../model/Order.js')).default;
         const fullOrder = await OrderModel.findById(order._id).populate('user');
-        
+
         if (!fullOrder) {
           emailsFailed++;
           failedOrders.push({
@@ -1909,7 +1910,7 @@ export const sendPromotionalEmail = async (req, res, next) => {
     // Import email service
     const emailService = await import('../services/emailService.js');
     const { sendEmail } = emailService;
-    
+
     if (!sendEmail || typeof sendEmail !== 'function') {
       throw new Error('sendEmail function not found in emailService');
     }
