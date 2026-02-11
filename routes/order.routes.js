@@ -2,6 +2,7 @@ import express from 'express';
 import {
   addOrder,
   cancelOrder,
+  calculateTaxPreview,
   diagnoseFeedbackEmail,
   getOrderEmails,
   getOrders,
@@ -42,6 +43,8 @@ router.post('/trigger-feedback/:id', triggerFeedbackEmail);
 // Send bulk review request emails (Super Admin only)
 router.post('/send-bulk-review-requests', sendBulkReviewRequestEmails);
 
+// calculate tax preview (for checkout UI)
+router.post('/calculate-tax', calculateTaxPreview);
 // add a create payment intent
 router.post('/create-payment-intent', paymentIntent);
 // save Order

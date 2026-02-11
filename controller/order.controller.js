@@ -14,6 +14,130 @@ import {
 } from '../services/emailService.js';
 const stripe = new Stripe(secret.stripe_key);
 
+/**
+ * Build line items for Stripe Tax calculation from cart and shipping cost
+ * @param {Array} cart - Cart items
+ * @param {number} shippingCost - Shipping cost in dollars
+ * @returns {Array} Stripe Tax line items
+ */
+const buildTaxLineItems = (cart, shippingCost) => {
+  const lineItems = [];
+
+  if (cart && Array.isArray(cart) && cart.length > 0) {
+    cart.forEach(item => {
+      const itemPrice = Number(item.finalPriceDiscount || item.price || 0);
+      const quantity = Number(item.orderQuantity || 1);
+      const itemAmount = Math.round(itemPrice * quantity * 100);
+
+      if (itemAmount > 0) {
+        lineItems.push({
+          amount: itemAmount,
+          reference: item._id?.toString() || item.productId?.toString() || `product_${item.title}`,
+          tax_code: 'txcd_99999999',
+        });
+      }
+    });
+  }
+
+  if (shippingCost > 0) {
+    lineItems.push({
+      amount: Math.round(shippingCost * 100),
+      reference: 'shipping_fee',
+      tax_code: 'txcd_99999999',
+    });
+  }
+
+  return lineItems;
+};
+
+/**
+ * Calculate tax preview for UI display before payment
+ * POST /api/order/calculate-tax
+ * Accepts either: { items, customer_details } (Stripe format) or { cart, orderData } (same as create-payment-intent)
+ */
+export const calculateTaxPreview = async (req, res, next) => {
+  try {
+    const { items: rawItems, customer_details, cart, orderData } = req.body;
+
+    let lineItems;
+    let address;
+    let addressSource = 'billing';
+
+    if (rawItems && Array.isArray(rawItems) && rawItems.length > 0 && customer_details?.address) {
+      lineItems = rawItems;
+      address = customer_details.address;
+      addressSource = customer_details.address_source || 'billing';
+    } else if (cart && orderData) {
+      const shippingCost = Number(orderData.shippingCost || 0);
+      lineItems = buildTaxLineItems(cart, shippingCost);
+      address = {
+        line1: orderData.address,
+        city: orderData.city,
+        state: orderData.state,
+        postal_code: orderData.zipCode,
+        country: orderData.country,
+      };
+      addressSource = 'shipping'; // Checkout collects delivery address per Stripe docs
+    }
+
+    if (!lineItems || lineItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Items or cart with orderData are required for tax calculation',
+      });
+    }
+
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer address is required for tax calculation',
+      });
+    }
+
+    const hasRequiredAddress = address.line1 && address.city && address.state && address.postal_code && address.country;
+
+    if (!hasRequiredAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'Complete address (line1, city, state, postal_code, country) is required',
+      });
+    }
+
+    const calculation = await stripe.tax.calculations.create({
+      currency: 'usd',
+      line_items: lineItems,
+      customer_details: {
+        address: {
+          line1: address.line1,
+          city: address.city,
+          state: address.state,
+          postal_code: address.postal_code,
+          country: address.country,
+        },
+        address_source: addressSource,
+      },
+    });
+
+    const taxAmount = calculation.tax_amount_exclusive ?? 0;
+    const taxCollected = taxAmount > 0;
+
+    res.status(200).json({
+      success: true,
+      subtotal: calculation.amount_subtotal,
+      tax: taxAmount,
+      total: calculation.amount_total,
+      calculationId: calculation.id,
+      taxCollected,
+    });
+  } catch (error) {
+    console.error('Stripe Tax calculateTaxPreview error:', error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Tax calculation failed',
+    });
+  }
+};
+
 // create-payment-intent
 export const paymentIntent = async (req, res, next) => {
   try {
@@ -25,15 +149,14 @@ export const paymentIntent = async (req, res, next) => {
     // Extract orderData
     const orderData = product.orderData || {};
 
-    // Extract cart, shipping cost, and tax
+    // Extract cart and shipping cost
     const cart = product.cart || orderData.cart || [];
     const shippingCost = Number(orderData.shippingCost || 0);
-    const tax = Number(orderData.tax || 0);
     const subTotal = Number(orderData.subTotal || price);
     const discount = Number(orderData.discount || 0);
 
-    // Calculate total amount including tax
-    const totalAmount = subTotal + shippingCost + tax - discount;
+    // Calculate total amount
+    const totalAmount = subTotal + shippingCost - discount;
 
     // Try to get totalAmount directly from orderData if available
     let amount;
@@ -79,30 +202,12 @@ export const paymentIntent = async (req, res, next) => {
     }
 
     // Prepare line items for Stripe Tax calculation
-    const lineItems = [];
+    const lineItems = buildTaxLineItems(cart, shippingCost);
 
-    // Add product line items
     if (cart && Array.isArray(cart) && cart.length > 0) {
-      cart.forEach(item => {
-        const itemPrice = Number(item.finalPriceDiscount || item.price || 0);
-        const quantity = Number(item.orderQuantity || 1);
-        const itemAmount = Math.round(itemPrice * quantity * 100); // Convert to cents
-
-        if (itemAmount > 0) {
-          lineItems.push({
-            amount: itemAmount,
-            reference: item._id?.toString() || item.productId?.toString() || `product_${item.title}`,
-            tax_code: 'txcd_99999999', // General merchandise tax code
-          });
-        }
-      });
-
-      // Store the first product title
       metadata.order_product = cart[0].title || 'Product Purchase';
-      // Store total number of items
       metadata.order_item_count = String(cart.length);
 
-      // Store a simplified version of the cart for inventory management
       const simplifiedCart = cart.map(item => {
         const id = item._id
           ? item._id.toString()
@@ -118,42 +223,20 @@ export const paymentIntent = async (req, res, next) => {
         };
       });
 
-      // Stringify and limit to Stripe metadata size constraints
       try {
         metadata.order_cart = JSON.stringify(simplifiedCart).substring(0, 500);
       } catch (error) { }
     }
 
-    // Add shipping as a line item if shipping cost > 0
-    if (shippingCost > 0) {
-      lineItems.push({
-        amount: Math.round(shippingCost * 100), // Convert to cents
-        reference: 'shipping',
-        tax_code: 'txcd_11061000', // Shipping tax code
-      });
-    }
+    let finalAmount = amount;
+    let taxAmount = 0;
+    let taxCollected = false;
+    let taxCalculationId = null;
 
-    // Add tax as a line item if tax > 0
-    if (tax > 0) {
-      lineItems.push({
-        amount: Math.round(tax * 100), // Convert to cents
-        reference: 'tax',
-        tax_code: 'txcd_99999999', // General tax code
-      });
-    }
+    const hasAddress = orderData.address && orderData.city && orderData.state && orderData.zipCode && orderData.country;
 
-    // Create payment intent parameters
-    const paymentIntentParams = {
-      currency: 'usd',
-      amount: amount,
-      payment_method_types: ['card'],
-      metadata: metadata,
-    };
-
-    // If we have customer address and line items, create Stripe Tax calculation
-    if (orderData.address && orderData.city && orderData.state && orderData.zipCode && orderData.country && lineItems.length > 0) {
+    if (hasAddress && lineItems.length > 0) {
       try {
-        // Create Stripe Tax calculation
         const taxCalculation = await stripe.tax.calculations.create({
           currency: 'usd',
           line_items: lineItems,
@@ -165,31 +248,53 @@ export const paymentIntent = async (req, res, next) => {
               postal_code: orderData.zipCode,
               country: orderData.country,
             },
-            address_source: 'billing',
+            address_source: 'shipping',
           },
         });
 
-        // Attach tax calculation to payment intent
-        paymentIntentParams.hooks = {
-          inputs: {
-            tax: {
-              calculation: taxCalculation.id,
-            },
-          },
-        };
+        taxAmount = taxCalculation.tax_amount_exclusive ?? 0;
+        taxCollected = taxAmount > 0;
+        taxCalculationId = taxCalculation.id;
+
+        if (taxCollected) {
+          finalAmount = taxCalculation.amount_total;
+        }
       } catch (taxError) {
-        // If tax calculation fails, log error but continue without tax calculation hook
         console.error('Stripe Tax calculation error:', taxError.message);
-        // Continue with regular payment intent creation
+        if (orderData.taxCollected) {
+          return res.status(400).json({
+            success: false,
+            message: 'Tax calculation failed. Please refresh and try again.',
+          });
+        }
       }
     }
 
-    // Create a PaymentIntent with the order amount and currency
+    const paymentIntentParams = {
+      currency: 'usd',
+      amount: finalAmount,
+      automatic_payment_methods: { enabled: true },
+      metadata: metadata,
+    };
+
+    if (taxCollected && taxCalculationId) {
+      paymentIntentParams.hooks = {
+        inputs: {
+          tax: {
+            calculation: taxCalculationId,
+          },
+        },
+      };
+    }
+
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
     res.send({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      totalAmount: finalAmount / 100,
+      taxAmount: taxAmount / 100,
+      taxCollected,
     });
   } catch (error) {
     next(error);
@@ -1598,7 +1703,7 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
     try {
       const emailService = await import('../services/emailService.js');
       sendFeedbackEmail = emailService.sendFeedbackEmail;
-      
+
       if (!sendFeedbackEmail || typeof sendFeedbackEmail !== 'function') {
         throw new Error('sendFeedbackEmail function not found in emailService');
       }
@@ -1628,7 +1733,7 @@ export const sendBulkReviewRequestEmails = async (req, res, next) => {
         // Get full order document for email sending
         const OrderModel = (await import('../model/Order.js')).default;
         const fullOrder = await OrderModel.findById(order._id).populate('user');
-        
+
         if (!fullOrder) {
           emailsFailed++;
           failedOrders.push({
@@ -1804,7 +1909,7 @@ export const sendPromotionalEmail = async (req, res, next) => {
     // Import email service
     const emailService = await import('../services/emailService.js');
     const { sendEmail } = emailService;
-    
+
     if (!sendEmail || typeof sendEmail !== 'function') {
       throw new Error('sendEmail function not found in emailService');
     }
