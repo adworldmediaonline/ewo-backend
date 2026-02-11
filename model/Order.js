@@ -187,6 +187,15 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    taxAmount: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
+    taxCalculationId: {
+      type: String,
+      required: false,
+    },
     shippingOption: {
       type: String,
       required: false,
