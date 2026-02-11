@@ -234,30 +234,23 @@ export const paymentIntent = async (req, res, next) => {
     let taxCalculationId = null;
 
     const hasAddress = orderData.address && orderData.city && orderData.state && orderData.zipCode && orderData.country;
-    const calculationIdFromFrontend = orderData.calculationId;
 
     if (hasAddress && lineItems.length > 0) {
       try {
-        let taxCalculation;
-
-        if (calculationIdFromFrontend && typeof calculationIdFromFrontend === 'string') {
-          taxCalculation = await stripe.tax.calculations.retrieve(calculationIdFromFrontend);
-        } else {
-          taxCalculation = await stripe.tax.calculations.create({
-            currency: 'usd',
-            line_items: lineItems,
-            customer_details: {
-              address: {
-                line1: orderData.address,
-                city: orderData.city,
-                state: orderData.state,
-                postal_code: orderData.zipCode,
-                country: orderData.country,
-              },
-              address_source: 'shipping',
+        const taxCalculation = await stripe.tax.calculations.create({
+          currency: 'usd',
+          line_items: lineItems,
+          customer_details: {
+            address: {
+              line1: orderData.address,
+              city: orderData.city,
+              state: orderData.state,
+              postal_code: orderData.zipCode,
+              country: orderData.country,
             },
-          });
-        }
+            address_source: 'shipping',
+          },
+        });
 
         taxAmount = taxCalculation.tax_amount_exclusive ?? 0;
         taxCollected = taxAmount > 0;
@@ -268,6 +261,12 @@ export const paymentIntent = async (req, res, next) => {
         }
       } catch (taxError) {
         console.error('Stripe Tax calculation error:', taxError.message);
+        if (orderData.taxCollected) {
+          return res.status(400).json({
+            success: false,
+            message: 'Tax calculation failed. Please refresh and try again.',
+          });
+        }
       }
     }
 

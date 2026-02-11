@@ -87,6 +87,7 @@ const orderConfirmationTemplate = (order, config) => {
     shippingCost,
     discount,
     totalAmount,
+    taxAmount = 0,
     paymentMethod,
     firstTimeDiscount,
     appliedCoupons = [], // Enhanced: Multiple coupons support
@@ -342,6 +343,12 @@ const orderConfirmationTemplate = (order, config) => {
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
+        ${taxAmount > 0 ? `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
+          <td style="padding: 12px; text-align: right;">${formatPrice(taxAmount)}</td>
+        </tr>
+        ` : ''}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
@@ -396,6 +403,7 @@ const shippingConfirmationTemplate = (order, config) => {
     country,
     cart = [],
     totalAmount = 0,
+    taxAmount = 0,
     subTotal = 0,
     shippingCost = 0,
     discount = 0,
@@ -697,6 +705,12 @@ const shippingConfirmationTemplate = (order, config) => {
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
+        ${taxAmount > 0 ? `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
+          <td style="padding: 12px; text-align: right;">${formatPrice(taxAmount)}</td>
+        </tr>
+        ` : ''}
         <tr>
           <td colspan="2" style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; border-top: 2px solid #4299e1; font-weight: bold; font-size: 18px; background: linear-gradient(135deg, #4299e1 0%, #667eea 100%); color: white;">${formatPrice(
@@ -755,6 +769,7 @@ const deliveryConfirmationTemplate = (order, config) => {
     country,
     cart = [],
     totalAmount = 0,
+    taxAmount = 0,
     subTotal = 0,
     shippingCost = 0,
     discount = 0,
@@ -1045,6 +1060,12 @@ const deliveryConfirmationTemplate = (order, config) => {
         </tr>
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
+        ${taxAmount > 0 ? `
+        <tr>
+          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
+          <td style="padding: 12px; text-align: right;">${formatPrice(taxAmount)}</td>
+        </tr>
+        ` : ''}
         <tr style="background-color: #f0fff4;">
           <td colspan="2" style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #2d3748;"><strong>Total Paid:</strong></td>
           <td style="padding: 15px 12px; text-align: right; font-size: 18px; font-weight: bold; color: #48bb78;">${formatPrice(
