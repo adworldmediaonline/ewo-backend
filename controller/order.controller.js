@@ -25,15 +25,14 @@ export const paymentIntent = async (req, res, next) => {
     // Extract orderData
     const orderData = product.orderData || {};
 
-    // Extract cart, shipping cost, and tax
+    // Extract cart and shipping cost
     const cart = product.cart || orderData.cart || [];
     const shippingCost = Number(orderData.shippingCost || 0);
-    const tax = Number(orderData.tax || 0);
     const subTotal = Number(orderData.subTotal || price);
     const discount = Number(orderData.discount || 0);
 
-    // Calculate total amount including tax
-    const totalAmount = subTotal + shippingCost + tax - discount;
+    // Calculate total amount
+    const totalAmount = subTotal + shippingCost - discount;
 
     // Try to get totalAmount directly from orderData if available
     let amount;
@@ -133,14 +132,6 @@ export const paymentIntent = async (req, res, next) => {
       });
     }
 
-    // Add tax as a line item if tax > 0
-    if (tax > 0) {
-      lineItems.push({
-        amount: Math.round(tax * 100), // Convert to cents
-        reference: 'tax',
-        tax_code: 'txcd_99999999', // General tax code
-      });
-    }
 
     // Create payment intent parameters
     const paymentIntentParams = {

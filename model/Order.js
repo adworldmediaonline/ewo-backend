@@ -95,11 +95,6 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    tax: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
     discount: {
       type: Number,
       required: true,
@@ -460,10 +455,6 @@ orderSchema.pre('save', function (next) {
     this.discount = 0;
   }
 
-  // Ensure tax is not negative
-  if (this.tax < 0) {
-    this.tax = 0;
-  }
 
   if (this.firstTimeDiscount && this.firstTimeDiscount.amount < 0) {
     this.firstTimeDiscount.amount = 0;

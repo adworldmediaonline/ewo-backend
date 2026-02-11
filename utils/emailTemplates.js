@@ -85,7 +85,6 @@ const orderConfirmationTemplate = (order, config) => {
     cart,
     subTotal,
     shippingCost,
-    tax = 0,
     discount,
     totalAmount,
     paymentMethod,
@@ -341,14 +340,6 @@ const orderConfirmationTemplate = (order, config) => {
     shippingCost
   )}</td>
         </tr>
-        ${tax > 0 ? `
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
-          <td style="padding: 12px; text-align: right;">${formatPrice(
-    tax
-  )}</td>
-        </tr>
-        ` : ''}
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr>
@@ -407,7 +398,6 @@ const shippingConfirmationTemplate = (order, config) => {
     totalAmount = 0,
     subTotal = 0,
     shippingCost = 0,
-    tax = 0,
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
@@ -705,14 +695,6 @@ const shippingConfirmationTemplate = (order, config) => {
         shippingCost
       )}</td>
         </tr>
-        ${tax > 0 ? `
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
-          <td style="padding: 12px; text-align: right;">${formatPrice(
-        tax
-      )}</td>
-        </tr>
-        ` : ''}
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr>
@@ -775,7 +757,6 @@ const deliveryConfirmationTemplate = (order, config) => {
     totalAmount = 0,
     subTotal = 0,
     shippingCost = 0,
-    tax = 0,
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
@@ -1062,14 +1043,6 @@ const deliveryConfirmationTemplate = (order, config) => {
       shippingCost
     )}</td>
         </tr>
-        ${tax > 0 ? `
-        <tr>
-          <td colspan="2" style="padding: 12px; text-align: right;"><strong>Tax:</strong></td>
-          <td style="padding: 12px; text-align: right;">${formatPrice(
-      tax
-    )}</td>
-        </tr>
-        ` : ''}
         ${firstTimeDiscountHtml}
         ${couponDiscountHtml}
         <tr style="background-color: #f0fff4;">
