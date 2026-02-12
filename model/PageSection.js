@@ -28,7 +28,7 @@ const pageSectionSchema = mongoose.Schema(
     sectionType: {
       type: String,
       required: true,
-      enum: ['hero', 'text_block', 'features', 'cta', 'gallery', 'custom'],
+      enum: ['hero', 'category_showcase', 'text_block', 'features', 'cta', 'gallery', 'custom'],
     },
     config: {
       type: mongoose.Schema.Types.Mixed,
