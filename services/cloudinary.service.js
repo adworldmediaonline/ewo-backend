@@ -22,10 +22,8 @@ const cloudinaryImageUpload = (imageBuffer, options = {}) => {
     upload_preset: secret.cloudinary_upload_preset,
     transformation: [
       {
-        quality: 'auto',
-        fetch_format: 'webp',
         format: 'webp',
-        flags: 'lossy',
+        quality: 'auto:best',
       },
     ],
   };
@@ -68,10 +66,8 @@ const cloudinaryMultipleImageUpload = async (files, metaArray = []) => {
         upload_preset: secret.cloudinary_upload_preset,
         transformation: [
           {
-            quality: 'auto',
-            fetch_format: 'webp',
             format: 'webp',
-            flags: 'lossy',
+            quality: 'auto:best',
           },
         ],
       };
