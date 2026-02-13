@@ -65,7 +65,7 @@ const CategorySchema = mongoose.Schema(
     bannerDescriptionClasses: { type: String, default: 'text-center' },
     /**
      * Per-scope Tailwind classes: parent and children can have different styling.
-     * Structure: { parent?: { titleClasses?, descriptionClasses? }, children?: { [childSlug]: { titleClasses?, descriptionClasses? } } }
+     * Structure: { parent?: { titleClasses?, descriptionClasses?, headingTag?, productCountClasses? }, children?: { [childSlug]: {...} } }
      */
     bannerContentClassesByScope: {
       type: mongoose.Schema.Types.Mixed,
