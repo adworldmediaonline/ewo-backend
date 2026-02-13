@@ -444,13 +444,18 @@ export const getProductService = async idOrSlug => {
   }
 };
 
-// get product data
+// get product data - related products (storefront: only published)
 export const getRelatedProductService = async productId => {
   const currentProduct = await Product.findById(productId);
+  if (!currentProduct) return [];
 
   const relatedProducts = await Product.find({
     'category.name': currentProduct.category.name,
     _id: { $ne: productId }, // Exclude the current product ID
+    $or: [
+      { publishStatus: 'published' },
+      { publishStatus: { $exists: false } },
+    ],
   });
   return relatedProducts;
 };
