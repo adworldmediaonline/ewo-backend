@@ -288,11 +288,21 @@ export const getProductSuggestions = async (req, res) => {
     const suggestions = await Product.aggregate([
       {
         $match: {
-          $or: [
-            { title: searchRegex },
-            { sku: searchRegex },
-            { 'category.name': searchRegex },
-            { description: searchRegex },
+          $and: [
+            {
+              $or: [
+                { publishStatus: 'published' },
+                { publishStatus: { $exists: false } },
+              ],
+            },
+            {
+              $or: [
+                { title: searchRegex },
+                { sku: searchRegex },
+                { 'category.name': searchRegex },
+                { description: searchRegex },
+              ],
+            },
           ],
         },
       },
@@ -350,15 +360,25 @@ export const searchProducts = async (req, res) => {
       limit = 10,
     } = req.query;
 
-    const query = {};
+    const query = {
+      $or: [
+        { publishStatus: 'published' },
+        { publishStatus: { $exists: false } },
+      ],
+    };
 
     if (search) {
       const searchRegex = new RegExp(search, 'i');
-      query.$or = [
-        { title: searchRegex },
-        { description: searchRegex },
-        { sku: searchRegex },
-        { 'category.name': searchRegex },
+      query.$and = [
+        ...(query.$and || []),
+        {
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { sku: searchRegex },
+            { 'category.name': searchRegex },
+          ],
+        },
       ];
     }
 
