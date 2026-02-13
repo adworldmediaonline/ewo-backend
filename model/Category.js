@@ -23,6 +23,25 @@ const CategorySchema = mongoose.Schema(
       type: imageWithMetaSchema,
       required: false,
     },
+    /** Category banner for shop page – same structure as image */
+    banner: {
+      type: imageWithMetaSchema,
+      required: false,
+    },
+    /**
+     * Banner display scope: 'all' (default) | 'parent_only' | 'children_only' | 'parent_and_children'
+     * - all: banner shows for parent and all children
+     * - parent_only: banner shows only when parent category is selected (no subcategory)
+     * - children_only: banner shows only for selected children (bannerDisplayChildren)
+     * - parent_and_children: banner shows for parent and selected children
+     */
+    bannerDisplayScope: {
+      type: String,
+      enum: ['all', 'parent_only', 'children_only', 'parent_and_children'],
+      default: 'all',
+    },
+    /** Child slugs where banner should display when scope is children_only or parent_and_children */
+    bannerDisplayChildren: [{ type: String }],
     parent: {
       type: String,
       required: true,
