@@ -1,10 +1,26 @@
 import mongoose from 'mongoose';
 const { ObjectId } = mongoose.Schema.Types;
 
+const imageWithMetaSchema = mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    fileName: { type: String, default: '' },
+    title: { type: String, default: '' },
+    altText: { type: String, default: '' },
+    link: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const CategorySchema = mongoose.Schema(
   {
     img: {
       type: String,
+      required: false,
+    },
+    /** Image with metadata (fileName, title, altText) – preferred over img */
+    image: {
+      type: imageWithMetaSchema,
       required: false,
     },
     parent: {

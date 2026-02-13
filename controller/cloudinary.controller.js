@@ -10,19 +10,22 @@ const saveImageCloudinary = async (req, res, next) => {
       });
     }
 
-    const customFileName = req.body?.fileName?.trim?.();
-    const title = req.body?.title?.trim?.() ?? '';
-    const altText = req.body?.altText?.trim?.() ?? '';
+    // Multer puts text fields in req.body; try both casing (some clients send lowercase)
+    const bodyFileName = req.body?.fileName ?? req.body?.filename ?? '';
+    const customFileName = (typeof bodyFileName === 'string' ? bodyFileName : '').trim();
+    const title = (req.body?.title ?? '').trim();
+    const altText = (req.body?.altText ?? '').trim();
+    const folder = (req.body?.folder ?? 'ewo-assets').trim() || 'ewo-assets';
 
     const result = await cloudinaryServices.cloudinaryImageUpload(
       req.file.buffer,
       {
-        customFileName: customFileName || req.file.originalname,
-        folder: req.body?.folder?.trim?.() || 'ewo-assets',
+        customFileName: customFileName || req.file.originalname || 'image',
+        folder,
       }
     );
 
-    const fileName = result.fileName || result.original_filename || '';
+    const fileName = result.fileName || customFileName || req.file.originalname || '';
 
     res.status(200).json({
       success: true,
