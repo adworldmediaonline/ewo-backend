@@ -289,7 +289,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
+        'title slug img image imageURLs imageURLsWithMeta price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
       ),
     // .select(
     //   'title slug img finalPriceDiscount updatedPrice shipping options'
@@ -444,12 +444,26 @@ export const updateProductService = async (id, currProduct) => {
     product.category.id = currProduct.category.id;
     product.sku = currProduct.sku;
     product.img = currProduct.img;
+    // Main product image with metadata (fileName, title, altText)
+    if (currProduct.image !== undefined) {
+      product.image = currProduct.image ?? null;
+    }
     product.slug = currProduct.slug;
-    product.imageURLs = Array.isArray(currProduct.imageURLs)
-      ? currProduct.imageURLs.map(url =>
-        typeof url === 'string' ? url : url.img || ''
-      )
-      : [];
+    // Handle imageURLs and imageURLsWithMeta (variant gallery)
+    if (Array.isArray(currProduct.imageURLsWithMeta) && currProduct.imageURLsWithMeta.length > 0) {
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta;
+      product.imageURLs = currProduct.imageURLsWithMeta.map((item) =>
+        typeof item === 'object' && item?.url ? item.url : String(item)
+      );
+    } else if (Array.isArray(currProduct.imageURLs)) {
+      product.imageURLs = currProduct.imageURLs.map((url) =>
+        typeof url === 'string' ? url : url?.url || url?.img || ''
+      );
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta || [];
+    } else {
+      product.imageURLs = [];
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta || [];
+    }
     product.tags = currProduct.tags;
     // Handle optional badges
     if (currProduct.badges !== undefined) {

@@ -3,6 +3,17 @@ const { ObjectId } = mongoose.Schema.Types;
 // schema design
 import validator from 'validator';
 
+const imageWithMetaSchema = mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    fileName: { type: String, default: '' },
+    title: { type: String, default: '' },
+    altText: { type: String, default: '' },
+    link: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const productsSchema = mongoose.Schema(
   {
     sku: {
@@ -19,6 +30,11 @@ const productsSchema = mongoose.Schema(
         },
         message: 'Invalid image URL',
       },
+    },
+    /** Main product image with metadata (fileName, title, altText) – preferred over img */
+    image: {
+      type: imageWithMetaSchema,
+      required: false,
     },
     title: {
       type: String,
@@ -41,6 +57,13 @@ const productsSchema = mongoose.Schema(
       {
         type: String,
         required: true,
+      },
+    ],
+    /** Variant gallery images with metadata (fileName, title, altText) – preferred over imageURLs for admin */
+    imageURLsWithMeta: [
+      {
+        type: imageWithMetaSchema,
+        required: false,
       },
     ],
     parent: {
@@ -234,6 +257,11 @@ const productsSchema = mongoose.Schema(
               required: false,
               trim: true,
               default: '',
+            },
+            /** Image with metadata (fileName, title, altText) for variant option */
+            imageWithMeta: {
+              type: imageWithMetaSchema,
+              required: false,
             },
           },
         ],

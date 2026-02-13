@@ -17,11 +17,15 @@ import {
 // add product
 export const addProduct = async (req, res, next) => {
   try {
+    const body = { ...req.body };
+    if (body.image?.url && !body.img) {
+      body.img = body.image.url;
+    }
     const result = await createProductService({
-      ...req.body,
-      imageURLs: Array.isArray(req.body.imageURLs)
-        ? req.body.imageURLs
-        : [req.body.img],
+      ...body,
+      imageURLs: Array.isArray(body.imageURLs)
+        ? body.imageURLs
+        : [body.img],
     });
 
     res.status(200).json({
@@ -174,7 +178,11 @@ export const getRelatedProducts = async (req, res, next) => {
 // update product
 export const updateProduct = async (req, res, next) => {
   try {
-    const product = await updateProductService(req.params.id, req.body);
+    const body = { ...req.body };
+    if (body.image?.url && !body.img) {
+      body.img = body.image.url;
+    }
+    const product = await updateProductService(req.params.id, body);
     res.send({ data: product, message: 'Product updated successfully!' });
   } catch (error) {
     next(error);
