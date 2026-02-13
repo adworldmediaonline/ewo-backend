@@ -42,6 +42,23 @@ const CategorySchema = mongoose.Schema(
     },
     /** Child slugs where banner should display when scope is children_only or parent_and_children */
     bannerDisplayChildren: [{ type: String }],
+    /** When true, show bannerTitle above and bannerDescription below the banner image */
+    bannerContentActive: { type: Boolean, default: false },
+    /**
+     * Banner content display scope: where title/description are visible
+     * Same options as bannerDisplayScope
+     */
+    bannerContentDisplayScope: {
+      type: String,
+      enum: ['all', 'parent_only', 'children_only', 'parent_and_children'],
+      default: 'all',
+    },
+    /** Child slugs where banner content shows when scope is children_only or parent_and_children */
+    bannerContentDisplayChildren: [{ type: String }],
+    /** Banner title (e.g. auto-filled: "Category Name (24 products)") */
+    bannerTitle: { type: String, default: '' },
+    /** Banner description (manual) */
+    bannerDescription: { type: String, default: '' },
     parent: {
       type: String,
       required: true,
