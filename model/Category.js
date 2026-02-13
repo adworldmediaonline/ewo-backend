@@ -59,10 +59,18 @@ const CategorySchema = mongoose.Schema(
     bannerTitle: { type: String, default: '' },
     /** Banner description (manual) */
     bannerDescription: { type: String, default: '' },
-    /** Custom Tailwind classes for banner title (default: text-center) */
+    /** Custom Tailwind classes for banner title (default fallback when no scope override) */
     bannerTitleClasses: { type: String, default: 'text-center' },
-    /** Custom Tailwind classes for banner description (default: text-center) */
+    /** Custom Tailwind classes for banner description (default fallback when no scope override) */
     bannerDescriptionClasses: { type: String, default: 'text-center' },
+    /**
+     * Per-scope Tailwind classes: parent and children can have different styling.
+     * Structure: { parent?: { titleClasses?, descriptionClasses? }, children?: { [childSlug]: { titleClasses?, descriptionClasses? } } }
+     */
+    bannerContentClassesByScope: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ parent: null, children: {} }),
+    },
     parent: {
       type: String,
       required: true,
