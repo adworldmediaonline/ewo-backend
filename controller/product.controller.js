@@ -12,16 +12,22 @@ import {
   getStockOutProducts,
   getTopRatedProductService,
   updateProductService,
+  updateProductPublishStatusService,
+  deleteProduct as deleteProductService,
 } from '../services/product.service.js';
 
 // add product
 export const addProduct = async (req, res, next) => {
   try {
+    const body = { ...req.body };
+    if (body.image?.url && !body.img) {
+      body.img = body.image.url;
+    }
     const result = await createProductService({
-      ...req.body,
-      imageURLs: Array.isArray(req.body.imageURLs)
-        ? req.body.imageURLs
-        : [req.body.img],
+      ...body,
+      imageURLs: Array.isArray(body.imageURLs)
+        ? body.imageURLs
+        : [body.img],
     });
 
     res.status(200).json({
@@ -82,12 +88,14 @@ export const getAllProducts = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const status = req.query.status || '';
+    const publishStatus = req.query.publishStatus || '';
 
     const result = await getAllProductsService({
       page,
       limit,
       search,
       status,
+      publishStatus,
     });
 
     res.status(200).json({
@@ -174,7 +182,11 @@ export const getRelatedProducts = async (req, res, next) => {
 // update product
 export const updateProduct = async (req, res, next) => {
   try {
-    const product = await updateProductService(req.params.id, req.body);
+    const body = { ...req.body };
+    if (body.image?.url && !body.img) {
+      body.img = body.image.url;
+    }
+    const product = await updateProductService(req.params.id, body);
     res.send({ data: product, message: 'Product updated successfully!' });
   } catch (error) {
     next(error);
@@ -222,9 +234,36 @@ export const stockOutProducts = async (req, res, next) => {
 // update product
 export const deleteProduct = async (req, res, next) => {
   try {
-    await productServices.deleteProduct(req.params.id);
+    await deleteProductService(req.params.id);
     res.status(200).json({
       message: 'Product delete successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// update product publish status only (for quick toggle from admin table)
+export const updateProductPublishStatus = async (req, res, next) => {
+  try {
+    const { publishStatus } = req.body;
+    if (!publishStatus || !['draft', 'published'].includes(publishStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid publishStatus. Must be "draft" or "published".',
+      });
+    }
+    const product = await updateProductPublishStatusService(req.params.id, publishStatus);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: `Product ${publishStatus === 'published' ? 'published' : 'unpublished'} successfully`,
+      data: product,
     });
   } catch (error) {
     next(error);
@@ -249,11 +288,21 @@ export const getProductSuggestions = async (req, res) => {
     const suggestions = await Product.aggregate([
       {
         $match: {
-          $or: [
-            { title: searchRegex },
-            { sku: searchRegex },
-            { 'category.name': searchRegex },
-            { description: searchRegex },
+          $and: [
+            {
+              $or: [
+                { publishStatus: 'published' },
+                { publishStatus: { $exists: false } },
+              ],
+            },
+            {
+              $or: [
+                { title: searchRegex },
+                { sku: searchRegex },
+                { 'category.name': searchRegex },
+                { description: searchRegex },
+              ],
+            },
           ],
         },
       },
@@ -311,15 +360,25 @@ export const searchProducts = async (req, res) => {
       limit = 10,
     } = req.query;
 
-    const query = {};
+    const query = {
+      $or: [
+        { publishStatus: 'published' },
+        { publishStatus: { $exists: false } },
+      ],
+    };
 
     if (search) {
       const searchRegex = new RegExp(search, 'i');
-      query.$or = [
-        { title: searchRegex },
-        { description: searchRegex },
-        { sku: searchRegex },
-        { 'category.name': searchRegex },
+      query.$and = [
+        ...(query.$and || []),
+        {
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { sku: searchRegex },
+            { 'category.name': searchRegex },
+          ],
+        },
       ];
     }
 

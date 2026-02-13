@@ -19,7 +19,9 @@ export const createProductService = async data => {
   // data.updatedPrice = data.price;
   // data.finalPriceDiscount = data.price;
 
-  const product = await Product.create(data);
+  // Default publishStatus to draft for new products; allow explicit override
+  const productData = { ...data, publishStatus: data.publishStatus ?? 'draft' };
+  const product = await Product.create(productData);
   const { _id: productId, category } = product;
 
   // update category with product
@@ -80,8 +82,17 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
   console.log('Cache MISS - Fetching from database');
 
-  // Build query
-  const query = {};
+  // Build query - storefront only shows published products (exclude draft)
+  const query = {
+    $and: [
+      {
+        $or: [
+          { publishStatus: 'published' },
+          { publishStatus: { $exists: false } },
+        ],
+      },
+    ],
+  };
 
   // Search functionality
   if (search) {
@@ -274,6 +285,15 @@ export const getPaginatedProductsService = async (filters = {}) => {
     if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
 
+  // Storefront: only show published products (exclude draft; treat missing field as published)
+  query.$and = query.$and || [];
+  query.$and.push({
+    $or: [
+      { publishStatus: 'published' },
+      { publishStatus: { $exists: false } },
+    ],
+  });
+
   // Build sort object
   const sortQuery = {};
   sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
@@ -289,7 +309,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(
-        'title slug img imageURLs price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
+        'title slug img image imageURLs imageURLsWithMeta price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
       ),
     // .select(
     //   'title slug img finalPriceDiscount updatedPrice shipping options'
@@ -316,7 +336,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
 // get all product data - Optimized with pagination and search
 export const getAllProductsService = async (params = {}) => {
-  const { page = 1, limit = 10, search = '', status = '' } = params;
+  const { page = 1, limit = 10, search = '', status = '', publishStatus = '' } = params;
   const skip = (page - 1) * limit;
 
   // Build query
@@ -330,9 +350,14 @@ export const getAllProductsService = async (params = {}) => {
     ];
   }
 
-  // Add status filter if provided
+  // Add inventory status filter if provided
   if (status) {
     query.status = status;
+  }
+
+  // Add publish status filter if provided (draft | published)
+  if (publishStatus) {
+    query.publishStatus = publishStatus;
   }
 
   // Get total count for pagination
@@ -419,13 +444,18 @@ export const getProductService = async idOrSlug => {
   }
 };
 
-// get product data
+// get product data - related products (storefront: only published)
 export const getRelatedProductService = async productId => {
   const currentProduct = await Product.findById(productId);
+  if (!currentProduct) return [];
 
   const relatedProducts = await Product.find({
     'category.name': currentProduct.category.name,
     _id: { $ne: productId }, // Exclude the current product ID
+    $or: [
+      { publishStatus: 'published' },
+      { publishStatus: { $exists: false } },
+    ],
   });
   return relatedProducts;
 };
@@ -444,12 +474,26 @@ export const updateProductService = async (id, currProduct) => {
     product.category.id = currProduct.category.id;
     product.sku = currProduct.sku;
     product.img = currProduct.img;
+    // Main product image with metadata (fileName, title, altText)
+    if (currProduct.image !== undefined) {
+      product.image = currProduct.image ?? null;
+    }
     product.slug = currProduct.slug;
-    product.imageURLs = Array.isArray(currProduct.imageURLs)
-      ? currProduct.imageURLs.map(url =>
-        typeof url === 'string' ? url : url.img || ''
-      )
-      : [];
+    // Handle imageURLs and imageURLsWithMeta (variant gallery)
+    if (Array.isArray(currProduct.imageURLsWithMeta) && currProduct.imageURLsWithMeta.length > 0) {
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta;
+      product.imageURLs = currProduct.imageURLsWithMeta.map((item) =>
+        typeof item === 'object' && item?.url ? item.url : String(item)
+      );
+    } else if (Array.isArray(currProduct.imageURLs)) {
+      product.imageURLs = currProduct.imageURLs.map((url) =>
+        typeof url === 'string' ? url : url?.url || url?.img || ''
+      );
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta || [];
+    } else {
+      product.imageURLs = [];
+      product.imageURLsWithMeta = currProduct.imageURLsWithMeta || [];
+    }
     product.tags = currProduct.tags;
     // Handle optional badges
     if (currProduct.badges !== undefined) {
@@ -467,6 +511,9 @@ export const updateProductService = async (id, currProduct) => {
     product.discount = currProduct.discount;
     product.quantity = currProduct.quantity;
     product.status = currProduct.status;
+    if (currProduct.publishStatus !== undefined) {
+      product.publishStatus = currProduct.publishStatus;
+    }
     product.description = currProduct.description;
     product.faqs = currProduct.faqs || '';
     product.additionalInformation = currProduct.additionalInformation;
@@ -713,4 +760,14 @@ export const getStockOutProducts = async () => {
 export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
   return result;
+};
+
+// update product publish status only (for quick toggle from admin table)
+export const updateProductPublishStatusService = async (id, publishStatus) => {
+  const product = await Product.findByIdAndUpdate(
+    id,
+    { publishStatus },
+    { new: true }
+  );
+  return product;
 };

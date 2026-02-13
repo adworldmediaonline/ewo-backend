@@ -14,6 +14,7 @@ import {
   searchProducts,
   stockOutProducts,
   updateProduct,
+  updateProductPublishStatus,
 } from '../controller/product.controller.js';
 const router = express.Router();
 
@@ -43,6 +44,8 @@ router.get('/single-product/:id', getSingleProduct);
 router.get('/stock-out', stockOutProducts);
 // get Single Product
 router.patch('/edit-product/:id', updateProduct);
+// update product publish status only
+router.patch('/:id/publish-status', updateProductPublishStatus);
 // delete product
 router.delete('/:id', deleteProduct);
 

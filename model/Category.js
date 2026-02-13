@@ -1,11 +1,75 @@
 import mongoose from 'mongoose';
 const { ObjectId } = mongoose.Schema.Types;
 
+const imageWithMetaSchema = mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    fileName: { type: String, default: '' },
+    title: { type: String, default: '' },
+    altText: { type: String, default: '' },
+    link: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const CategorySchema = mongoose.Schema(
   {
     img: {
       type: String,
       required: false,
+    },
+    /** Image with metadata (fileName, title, altText) – preferred over img */
+    image: {
+      type: imageWithMetaSchema,
+      required: false,
+    },
+    /** Category banner for shop page – same structure as image */
+    banner: {
+      type: imageWithMetaSchema,
+      required: false,
+    },
+    /**
+     * Banner display scope: 'all' (default) | 'parent_only' | 'children_only' | 'parent_and_children'
+     * - all: banner shows for parent and all children
+     * - parent_only: banner shows only when parent category is selected (no subcategory)
+     * - children_only: banner shows only for selected children (bannerDisplayChildren)
+     * - parent_and_children: banner shows for parent and selected children
+     */
+    bannerDisplayScope: {
+      type: String,
+      enum: ['all', 'parent_only', 'children_only', 'parent_and_children'],
+      default: 'all',
+    },
+    /** Child slugs where banner should display when scope is children_only or parent_and_children */
+    bannerDisplayChildren: [{ type: String }],
+    /** When true, show bannerTitle above and bannerDescription below the banner image */
+    bannerContentActive: { type: Boolean, default: false },
+    /**
+     * Banner content display scope: where title/description are visible
+     * Same options as bannerDisplayScope
+     */
+    bannerContentDisplayScope: {
+      type: String,
+      enum: ['all', 'parent_only', 'children_only', 'parent_and_children'],
+      default: 'all',
+    },
+    /** Child slugs where banner content shows when scope is children_only or parent_and_children */
+    bannerContentDisplayChildren: [{ type: String }],
+    /** Banner title (e.g. auto-filled: "Category Name (24 products)") */
+    bannerTitle: { type: String, default: '' },
+    /** Banner description (manual) */
+    bannerDescription: { type: String, default: '' },
+    /** Custom Tailwind classes for banner title (default fallback when no scope override) */
+    bannerTitleClasses: { type: String, default: 'text-center' },
+    /** Custom Tailwind classes for banner description (default fallback when no scope override) */
+    bannerDescriptionClasses: { type: String, default: 'text-center' },
+    /**
+     * Per-scope Tailwind classes: parent and children can have different styling.
+     * Structure: { parent?: { titleClasses?, descriptionClasses?, headingTag?, productCountClasses? }, children?: { [childSlug]: {...} } }
+     */
+    bannerContentClassesByScope: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ parent: null, children: {} }),
     },
     parent: {
       type: String,

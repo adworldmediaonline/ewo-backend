@@ -2,35 +2,47 @@ import { secret } from '../config/secret.js';
 import cloudinary from '../utils/cloudinary.js';
 import { Readable } from 'stream';
 
-// cloudinary Image Upload
-// const cloudinaryImageUpload = async (image) => {
-//   console.log('image service',image)
-//   const uploadRes = await cloudinary.uploader.upload(image, {
-//     upload_preset: secret.cloudinary_upload_preset,
-//   });
-//   return uploadRes;
-// };
+/**
+ * Sanitize filename for Cloudinary public_id (alphanumeric, underscore, hyphen only)
+ */
+const sanitizePublicId = (fileName) => {
+  const withoutExt = fileName.replace(/\.[^/.]+$/, '');
+  const sanitized = withoutExt
+    .replace(/[^a-zA-Z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+  return sanitized || `img-${Date.now()}`;
+};
 
-const cloudinaryImageUpload = imageBuffer => {
+const cloudinaryImageUpload = (imageBuffer, options = {}) => {
+  const { customFileName, folder = 'ewo-assets' } = options;
+
+  const uploadOptions = {
+    upload_preset: secret.cloudinary_upload_preset,
+    transformation: [
+      {
+        format: 'webp',
+        quality: 'auto:best',
+      },
+    ],
+  };
+
+  if (customFileName) {
+    const baseId = sanitizePublicId(customFileName);
+    uploadOptions.public_id = `${folder}/${baseId}-${Date.now()}`;
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        upload_preset: secret.cloudinary_upload_preset,
-        transformation: [
-          {
-            quality: 'auto',
-            fetch_format: 'webp',
-            format: 'webp',
-            flags: 'lossy',
-          },
-        ],
-      },
+      uploadOptions,
       (error, result) => {
         if (error) {
           console.error('Error uploading to Cloudinary:', error);
           reject(error);
         } else {
-          resolve(result);
+          const fileName = customFileName || result?.original_filename || '';
+          resolve({ ...result, fileName });
         }
       }
     );
@@ -43,28 +55,37 @@ const cloudinaryImageUpload = imageBuffer => {
   });
 };
 
-// Handle multiple image uploads
-const cloudinaryMultipleImageUpload = async files => {
+// Handle multiple image uploads with optional per-file meta
+const cloudinaryMultipleImageUpload = async (files, metaArray = []) => {
   try {
-    const uploadPromises = files.map(file => {
+    const uploadPromises = files.map((file, i) => {
+      const meta = metaArray[i] || {};
+      const { customFileName, folder = 'ewo-assets' } = meta;
+
+      const uploadOptions = {
+        upload_preset: secret.cloudinary_upload_preset,
+        transformation: [
+          {
+            format: 'webp',
+            quality: 'auto:best',
+          },
+        ],
+      };
+
+      if (customFileName) {
+        const baseId = sanitizePublicId(customFileName);
+        uploadOptions.public_id = `${folder}/${baseId}-${Date.now()}-${i}`;
+      }
+
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            upload_preset: secret.cloudinary_upload_preset,
-            transformation: [
-              {
-                quality: 'auto',
-                fetch_format: 'webp',
-                format: 'webp',
-                flags: 'lossy',
-              },
-            ],
-          },
+          uploadOptions,
           (error, result) => {
             if (error) {
               reject(error);
             } else {
-              resolve(result);
+              const fileName = customFileName || result?.original_filename || '';
+              resolve({ ...result, fileName });
             }
           }
         );

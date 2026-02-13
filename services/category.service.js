@@ -15,11 +15,12 @@ export const addAllCategoryService = async data => {
   return category;
 };
 
-// get all show category service
+// get all show category service – returns full documents including image metadata (fileName, title, altText)
 export const getShowCategoryServices = async () => {
   const category = await Category.find({ status: 'Show' })
     .populate('products')
-    .sort({ description: 1 });
+    .sort({ description: 1 })
+    .lean();
   return category;
 };
 
