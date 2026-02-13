@@ -59,6 +59,10 @@ const CategorySchema = mongoose.Schema(
     bannerTitle: { type: String, default: '' },
     /** Banner description (manual) */
     bannerDescription: { type: String, default: '' },
+    /** Custom Tailwind classes for banner title (default: text-center) */
+    bannerTitleClasses: { type: String, default: 'text-center' },
+    /** Custom Tailwind classes for banner description (default: text-center) */
+    bannerDescriptionClasses: { type: String, default: 'text-center' },
     parent: {
       type: String,
       required: true,
