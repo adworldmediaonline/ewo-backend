@@ -3,6 +3,7 @@ import ApiError from '../errors/api-error.js';
 import Category from '../model/Category.js';
 import Product from '../model/Products.js';
 import {
+  deleteCachePattern,
   generateCacheKey,
   getFromCache,
   setInCache,
@@ -511,6 +512,9 @@ export const updateProductService = async (id, currProduct) => {
     product.discount = currProduct.discount;
     product.quantity = currProduct.quantity;
     product.status = currProduct.status;
+    const publishStatusChanged =
+      currProduct.publishStatus !== undefined &&
+      product.publishStatus !== currProduct.publishStatus;
     if (currProduct.publishStatus !== undefined) {
       product.publishStatus = currProduct.publishStatus;
     }
@@ -565,6 +569,11 @@ export const updateProductService = async (id, currProduct) => {
 
     // Save the updated product
     await product.save();
+
+    // Invalidate product caches when publish status changes so frontend reflects immediately
+    if (publishStatusChanged) {
+      await deleteCachePattern('products:*');
+    }
 
     // If category has changed, update both old and new categories
     if (oldCategoryId.toString() !== newCategoryId.toString()) {
@@ -769,5 +778,7 @@ export const updateProductPublishStatusService = async (id, publishStatus) => {
     { publishStatus },
     { new: true }
   );
+  // Invalidate product caches so frontend reflects publish status change immediately
+  await deleteCachePattern('products:*');
   return product;
 };
