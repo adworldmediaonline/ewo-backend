@@ -155,6 +155,12 @@ const productsSchema = mongoose.Schema(
       enum: ['in-stock', 'out-of-stock', 'discontinued'],
       default: 'in-stock',
     },
+    /** Draft = not visible on storefront; Published = visible */
+    publishStatus: {
+      type: String,
+      enum: ['draft', 'published'],
+      default: 'published',
+    },
     reviews: [
       {
         type: ObjectId,

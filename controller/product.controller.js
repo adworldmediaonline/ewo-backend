@@ -12,6 +12,8 @@ import {
   getStockOutProducts,
   getTopRatedProductService,
   updateProductService,
+  updateProductPublishStatusService,
+  deleteProduct as deleteProductService,
 } from '../services/product.service.js';
 
 // add product
@@ -86,12 +88,14 @@ export const getAllProducts = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const status = req.query.status || '';
+    const publishStatus = req.query.publishStatus || '';
 
     const result = await getAllProductsService({
       page,
       limit,
       search,
       status,
+      publishStatus,
     });
 
     res.status(200).json({
@@ -230,9 +234,36 @@ export const stockOutProducts = async (req, res, next) => {
 // update product
 export const deleteProduct = async (req, res, next) => {
   try {
-    await productServices.deleteProduct(req.params.id);
+    await deleteProductService(req.params.id);
     res.status(200).json({
       message: 'Product delete successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// update product publish status only (for quick toggle from admin table)
+export const updateProductPublishStatus = async (req, res, next) => {
+  try {
+    const { publishStatus } = req.body;
+    if (!publishStatus || !['draft', 'published'].includes(publishStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid publishStatus. Must be "draft" or "published".',
+      });
+    }
+    const product = await updateProductPublishStatusService(req.params.id, publishStatus);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: `Product ${publishStatus === 'published' ? 'published' : 'unpublished'} successfully`,
+      data: product,
     });
   } catch (error) {
     next(error);

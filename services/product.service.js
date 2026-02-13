@@ -19,7 +19,9 @@ export const createProductService = async data => {
   // data.updatedPrice = data.price;
   // data.finalPriceDiscount = data.price;
 
-  const product = await Product.create(data);
+  // Default publishStatus to draft for new products; allow explicit override
+  const productData = { ...data, publishStatus: data.publishStatus ?? 'draft' };
+  const product = await Product.create(productData);
   const { _id: productId, category } = product;
 
   // update category with product
@@ -80,8 +82,17 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
   console.log('Cache MISS - Fetching from database');
 
-  // Build query
-  const query = {};
+  // Build query - storefront only shows published products (exclude draft)
+  const query = {
+    $and: [
+      {
+        $or: [
+          { publishStatus: 'published' },
+          { publishStatus: { $exists: false } },
+        ],
+      },
+    ],
+  };
 
   // Search functionality
   if (search) {
@@ -274,6 +285,15 @@ export const getPaginatedProductsService = async (filters = {}) => {
     if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
 
+  // Storefront: only show published products (exclude draft; treat missing field as published)
+  query.$and = query.$and || [];
+  query.$and.push({
+    $or: [
+      { publishStatus: 'published' },
+      { publishStatus: { $exists: false } },
+    ],
+  });
+
   // Build sort object
   const sortQuery = {};
   sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
@@ -316,7 +336,7 @@ export const getPaginatedProductsService = async (filters = {}) => {
 
 // get all product data - Optimized with pagination and search
 export const getAllProductsService = async (params = {}) => {
-  const { page = 1, limit = 10, search = '', status = '' } = params;
+  const { page = 1, limit = 10, search = '', status = '', publishStatus = '' } = params;
   const skip = (page - 1) * limit;
 
   // Build query
@@ -330,9 +350,14 @@ export const getAllProductsService = async (params = {}) => {
     ];
   }
 
-  // Add status filter if provided
+  // Add inventory status filter if provided
   if (status) {
     query.status = status;
+  }
+
+  // Add publish status filter if provided (draft | published)
+  if (publishStatus) {
+    query.publishStatus = publishStatus;
   }
 
   // Get total count for pagination
@@ -481,6 +506,9 @@ export const updateProductService = async (id, currProduct) => {
     product.discount = currProduct.discount;
     product.quantity = currProduct.quantity;
     product.status = currProduct.status;
+    if (currProduct.publishStatus !== undefined) {
+      product.publishStatus = currProduct.publishStatus;
+    }
     product.description = currProduct.description;
     product.faqs = currProduct.faqs || '';
     product.additionalInformation = currProduct.additionalInformation;
@@ -727,4 +755,14 @@ export const getStockOutProducts = async () => {
 export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
   return result;
+};
+
+// update product publish status only (for quick toggle from admin table)
+export const updateProductPublishStatusService = async (id, publishStatus) => {
+  const product = await Product.findByIdAndUpdate(
+    id,
+    { publishStatus },
+    { new: true }
+  );
+  return product;
 };
