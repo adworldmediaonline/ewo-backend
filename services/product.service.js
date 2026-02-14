@@ -660,7 +660,21 @@ export const getStockOutProducts = async () => {
 
 // delete product service
 export const deleteProduct = async id => {
+  const product = await Product.findById(id);
+  if (!product) return null;
+
+  const categoryId = product.category?.id;
   const result = await Product.findByIdAndDelete(id);
+
+  // Remove product from category's products array so it no longer appears under that category
+  if (categoryId) {
+    await Category.findByIdAndUpdate(
+      categoryId,
+      { $pull: { products: id } },
+      { new: true }
+    );
+  }
+
   // Invalidate product caches so frontend reflects deletion immediately
   await deleteCachePattern('products:*');
   return result;
