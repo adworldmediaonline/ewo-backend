@@ -413,6 +413,7 @@ export const updateProductService = async (id, currProduct) => {
     }
     product.description = currProduct.description;
     product.faqs = currProduct.faqs || '';
+    product.moreDetails = currProduct.moreDetails || '';
     product.additionalInformation = currProduct.additionalInformation;
     product.offerDate.startDate = currProduct.offerDate.startDate;
     product.offerDate.endDate = currProduct.offerDate.endDate;
