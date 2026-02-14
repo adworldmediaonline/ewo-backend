@@ -35,6 +35,11 @@ export const createProductService = async data => {
     { new: true }
   );
 
+  // Invalidate product caches so shop page banner count updates when new product is added
+  if (product.publishStatus === 'published') {
+    await deleteCachePattern('products:*');
+  }
+
   return product;
 };
 
@@ -458,8 +463,8 @@ export const updateProductService = async (id, currProduct) => {
     // Save the updated product
     await product.save();
 
-    // Invalidate product caches when publish status changes so frontend reflects immediately
-    if (publishStatusChanged) {
+    // Invalidate product caches when publish status or category changes so shop banner count stays current
+    if (publishStatusChanged || oldCategoryId.toString() !== newCategoryId.toString()) {
       await deleteCachePattern('products:*');
     }
 
