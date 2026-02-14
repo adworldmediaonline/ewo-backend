@@ -768,6 +768,8 @@ export const getStockOutProducts = async () => {
 // delete product service
 export const deleteProduct = async id => {
   const result = await Product.findByIdAndDelete(id);
+  // Invalidate product caches so frontend reflects deletion immediately
+  await deleteCachePattern('products:*');
   return result;
 };
 
