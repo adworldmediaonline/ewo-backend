@@ -93,6 +93,18 @@ const CategorySchema = mongoose.Schema(
       enum: ['Show', 'Hide'],
       default: 'Show',
     },
+    /**
+     * Category Showcase display config: how child categories appear on the homepage.
+     * Each group becomes one card. Groups with 1 child + image = separate card with custom image.
+     * Groups with 2+ children = grouped card (uses parent image if group has no image).
+     * When empty/undefined: all children in one card (default behavior).
+     */
+    showcaseGroups: [
+      {
+        children: [{ type: String }],
+        image: imageWithMetaSchema,
+      },
+    ],
   },
   {
     timestamps: true,
