@@ -21,6 +21,8 @@ const productsSchema = mongoose.Schema(
       required: true,
     },
     skuArrangementOrderNo: String,
+    /** Fractional index for drag-and-drop reordering; no shifting on insert/swap */
+    sortKey: { type: String, default: null },
     img: {
       type: String,
       required: true,
@@ -321,6 +323,7 @@ const productsSchema = mongoose.Schema(
 // Add indexes for better query performance
 productsSchema.index({ createdAt: -1 }); // Index for sorting by creation date
 productsSchema.index({ skuArrangementOrderNo: 1 }); // Index for default sorting
+productsSchema.index({ sortKey: 1 }); // Index for fractional-index sort
 productsSchema.index({ title: 1 }); // Index for title searches
 productsSchema.index({ sku: 1 }); // Index for SKU searches
 productsSchema.index({ status: 1, createdAt: -1 }); // Compound index for status filtering and sorting

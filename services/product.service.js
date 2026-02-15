@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { generateKeyBetween } from 'fractional-indexing';
 import ApiError from '../errors/api-error.js';
 import Category from '../model/Category.js';
 import Product from '../model/Products.js';
@@ -23,6 +24,14 @@ export const createProductService = async data => {
 
   // Default publishStatus to draft for new products; allow explicit override
   const productData = { ...data, publishStatus: data.publishStatus ?? 'draft' };
+  // Assign sortKey at end so new products appear last in default order
+  if (productData.sortKey == null) {
+    const lastProduct = await Product.findOne()
+      .sort({ sortKey: -1 })
+      .select('sortKey')
+      .lean();
+    productData.sortKey = generateKeyBetween(lastProduct?.sortKey ?? null, null);
+  }
   const product = await Product.create(productData);
   const { _id: productId, category } = product;
 
@@ -188,9 +197,14 @@ export const getPaginatedProductsService = async (filters = {}) => {
     ],
   });
 
-  // Build sort object
+  // Build sort object - default uses sortKey (fractional index) for custom order
   const sortQuery = {};
-  sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  if (sortBy === 'skuArrangementOrderNo') {
+    sortQuery.sortKey = sortOrder === 'desc' ? -1 : 1;
+    sortQuery.skuArrangementOrderNo = sortOrder === 'desc' ? -1 : 1;
+  } else {
+    sortQuery[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
 
   // Calculate skip value
   const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -257,10 +271,10 @@ export const getAllProductsService = async (params = {}) => {
   // Get total count for pagination
   const total = await Product.countDocuments(query);
 
-  // Fetch products with pagination
+  // Fetch products with pagination - sort by sortKey (fractional index) for custom order
   // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
   const products = await Product.find(query)
-    .sort({ skuArrangementOrderNo: 1 })
+    .sort({ sortKey: 1, skuArrangementOrderNo: 1 })
     .skip(skip)
     .limit(limit)
     .lean(); // Use lean() for better performance
@@ -274,6 +288,76 @@ export const getAllProductsService = async (params = {}) => {
       pages: Math.ceil(total / limit),
     },
   };
+};
+
+/**
+ * Get products for reorder UI - full list sorted by sortKey, optional category filter
+ */
+export const getProductsForReorderService = async (params = {}) => {
+  const { category = '' } = params;
+
+  const query = {};
+
+  if (category) {
+    const words = category.split('-');
+    const processedWords = words.map(word => {
+      if (word.toLowerCase() === 'and') return '(&|and)';
+      return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    });
+    const flexiblePattern = processedWords.join('[\\s/\\-]+');
+    const categoryRegex = new RegExp(`^${flexiblePattern}$`, 'i');
+    query.$or = [
+      { 'category.name': categoryRegex },
+      { parent: categoryRegex },
+    ];
+  }
+
+  const products = await Product.find(query)
+    .sort({ sortKey: 1, skuArrangementOrderNo: 1 })
+    .select('_id title sku sortKey category img')
+    .lean();
+
+  return { data: products };
+};
+
+/**
+ * Reorder a single product using fractional indexing - updates only the moved product
+ */
+export const reorderProductService = async (payload) => {
+  const { productId, prevProductId, nextProductId } = payload;
+
+  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+    throw new ApiError(400, 'Valid productId is required');
+  }
+
+  let prevSortKey = null;
+  let nextSortKey = null;
+
+  if (prevProductId && mongoose.Types.ObjectId.isValid(prevProductId)) {
+    const prevProduct = await Product.findById(prevProductId).select('sortKey').lean();
+    if (prevProduct) prevSortKey = prevProduct.sortKey ?? null;
+  }
+
+  if (nextProductId && mongoose.Types.ObjectId.isValid(nextProductId)) {
+    const nextProduct = await Product.findById(nextProductId).select('sortKey').lean();
+    if (nextProduct) nextSortKey = nextProduct.sortKey ?? null;
+  }
+
+  const newSortKey = generateKeyBetween(prevSortKey, nextSortKey);
+
+  const updated = await Product.findByIdAndUpdate(
+    productId,
+    { $set: { sortKey: newSortKey } },
+    { new: true }
+  );
+
+  if (!updated) {
+    throw new ApiError(404, 'Product not found');
+  }
+
+  await deleteCachePattern('products:*');
+
+  return updated;
 };
 
 // get offer product service

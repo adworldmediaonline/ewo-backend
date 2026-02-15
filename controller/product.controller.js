@@ -7,10 +7,12 @@ import {
   getAllProductsService,
   getOfferTimerProductService,
   getPaginatedProductsService,
+  getProductsForReorderService,
   getRelatedProductService,
   getReviewsProducts,
   getStockOutProducts,
   getTopRatedProductService,
+  reorderProductService,
   updateProductService,
   updateProductPublishStatusService,
   deleteProduct as deleteProductService,
@@ -75,6 +77,39 @@ export const getPaginatedProducts = async (req, res, next) => {
       success: true,
       data: result.products,
       pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// get products for reorder UI (admin)
+export const getProductsForReorder = async (req, res, next) => {
+  try {
+    const category = req.query.category || '';
+    const result = await getProductsForReorderService({ category });
+    res.status(200).json({
+      success: true,
+      data: result.data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// reorder a single product (fractional indexing - updates only moved product)
+export const reorderProduct = async (req, res, next) => {
+  try {
+    const { productId, prevProductId, nextProductId } = req.body;
+    const result = await reorderProductService({
+      productId,
+      prevProductId: prevProductId || null,
+      nextProductId: nextProductId || null,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Product reordered successfully',
+      data: result,
     });
   } catch (error) {
     next(error);

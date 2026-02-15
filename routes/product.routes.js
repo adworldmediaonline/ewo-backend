@@ -6,10 +6,12 @@ import {
   getAllProducts,
   getOfferTimerProducts,
   getPaginatedProducts,
+  getProductsForReorder,
   getProductSuggestions,
   getRelatedProducts,
   getSingleProduct,
   getTopRatedProducts,
+  reorderProduct,
   reviewProducts,
   searchProducts,
   stockOutProducts,
@@ -30,6 +32,8 @@ router.post('/add-all', addAllProducts);
 router.get('/all', getAllProducts);
 // get paginated products with filters
 router.get('/paginated', getPaginatedProducts);
+// get products for reorder UI (admin)
+router.get('/for-reorder', getProductsForReorder);
 // get offer timer product
 router.get('/offer', getOfferTimerProducts);
 // top rated products
@@ -44,6 +48,8 @@ router.get('/single-product/:id', getSingleProduct);
 router.get('/stock-out', stockOutProducts);
 // get Single Product
 router.patch('/edit-product/:id', updateProduct);
+// reorder product (fractional indexing)
+router.patch('/reorder', reorderProduct);
 // update product publish status only
 router.patch('/:id/publish-status', updateProductPublishStatus);
 // delete product
