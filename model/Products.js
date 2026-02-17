@@ -331,6 +331,12 @@ productsSchema.index({ 'category.name': 1 }); // Index for category searches
 productsSchema.index({ reviews: 1 }); // Index for reviews queries
 productsSchema.index({ updatedAt: -1 }); // Index for last updated sorting
 
+// Compound indexes for shop/storefront queries
+productsSchema.index({ publishStatus: 1, sortKey: 1 }); // Storefront default: published + sort
+productsSchema.index({ parent: 1, publishStatus: 1, sortKey: 1 }); // Category filter
+productsSchema.index({ 'category.name': 1, publishStatus: 1, sortKey: 1 }); // Category filter
+productsSchema.index({ children: 1, publishStatus: 1, sortKey: 1 }); // Subcategory filter
+
 const Products = mongoose.model('Products', productsSchema);
 
 export default Products;

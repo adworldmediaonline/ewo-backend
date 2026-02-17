@@ -188,15 +188,6 @@ export const getPaginatedProductsService = async (filters = {}) => {
     if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
 
-  // Storefront: only show published products (exclude draft; treat missing field as published)
-  query.$and = query.$and || [];
-  query.$and.push({
-    $or: [
-      { publishStatus: 'published' },
-      { publishStatus: { $exists: false } },
-    ],
-  });
-
   // Build sort object - default uses sortKey (fractional index) for custom order
   const sortQuery = {};
   if (sortBy === 'skuArrangementOrderNo') {
@@ -209,19 +200,18 @@ export const getPaginatedProductsService = async (filters = {}) => {
   // Calculate skip value
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Execute query with pagination
-  // NOTE: Removed .populate('reviews') for performance - reviews not needed for product listing
+  // Slim select for list view: exclude heavy fields (description, faqs, moreDetails)
+  const listSelect =
+    'title slug img image imageURLs imageURLsWithMeta price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges';
+
+  // Execute query with pagination - use lean() for faster reads
   const [products, total] = await Promise.all([
     Product.find(query)
       .sort(sortQuery)
       .skip(skip)
       .limit(parseInt(limit))
-      .select(
-        'title slug img image imageURLs imageURLsWithMeta price finalPriceDiscount updatedPrice category status quantity shipping sku options productConfigurations videoId badges description faqs'
-      ),
-    // .select(
-    //   'title slug img finalPriceDiscount updatedPrice shipping options'
-    // ),
+      .select(listSelect)
+      .lean(),
     Product.countDocuments(query),
   ]);
 
