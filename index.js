@@ -16,6 +16,8 @@ import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 
 import { auth } from './lib/auth.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminSettingsRoutes from './routes/admin-settings.routes.js';
+import storeSettingsRoutes from './routes/store-settings.routes.js';
 import announcementRoutes from './routes/announcement.routes.js';
 import bannerRoutes from './routes/banner.routes.js';
 import brandRoutes from './routes/brand.routes.js';
@@ -153,6 +155,8 @@ app.use('/api/protected', protectedRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/category', categoryRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
+app.use('/api/store/settings', storeSettingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/announcement', announcementRoutes);
 app.use('/api/banner', bannerRoutes);

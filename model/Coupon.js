@@ -169,6 +169,16 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true, // Apply to full total by default. Set to false for subtotal only
     },
+    allowAutoApply: {
+      type: Boolean,
+      default: true,
+    },
+    referralCode: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+      default: null,
+    },
 
     // Status and Metadata
     status: {

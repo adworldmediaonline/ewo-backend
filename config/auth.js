@@ -34,7 +34,10 @@ export const tokenForVerify = user => {
 };
 
 export const isAuth = async (req, res, next) => {
-  const { authorization } = req.headers;
+  const authorization = req.headers?.authorization;
+  if (!authorization || typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+    return res.status(401).send({ message: 'Unauthorized' });
+  }
   try {
     const token = authorization.split(' ')[1];
     const decoded = jwt.verify(token, secret.token_secret);

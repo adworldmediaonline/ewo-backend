@@ -186,6 +186,8 @@ const updateCoupon = async (req, res, next) => {
       // Advanced Settings
       stackable: req.body.stackable,
       priority: req.body.priority,
+      allowAutoApply: req.body.allowAutoApply,
+      referralCode: req.body.referralCode,
 
       // Status
       status: req.body.status,
