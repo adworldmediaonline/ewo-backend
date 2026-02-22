@@ -324,13 +324,10 @@ export const addOrder = async (req, res, next) => {
       orderData.isGuestOrder = true;
     }
 
-    // Fix appliedCoupons field mapping: convert 'discount' to 'discountAmount'
     if (orderData.appliedCoupons && Array.isArray(orderData.appliedCoupons)) {
       orderData.appliedCoupons = orderData.appliedCoupons.map(coupon => ({
         ...coupon,
-        discountAmount: coupon.discount || coupon.discountAmount || 0,
-        // Keep both fields for compatibility
-        discount: coupon.discount || coupon.discountAmount || 0,
+        discountAmount: coupon.discount ?? coupon.discountAmount ?? 0,
       }));
     }
 
@@ -999,100 +996,6 @@ async function updateProductQuantities(cartItems) {
 }
 
 /**
- * Build comprehensive payment intent data from Stripe payment intent
- * @param {Object} paymentIntent - Stripe payment intent object
- * @returns {Object} - Structured payment intent data
- */
-async function buildPaymentIntentData(paymentIntent) {
-  try {
-    // Extract charge information (needed for refunds)
-    let chargeData = {};
-    if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
-      const charge = paymentIntent.charges.data[0];
-      chargeData = {
-        chargeId: charge.id,
-        receiptUrl: charge.receipt_url,
-        receiptNumber: charge.receipt_number,
-        paidAt: charge.created ? new Date(charge.created * 1000) : null,
-        stripeFee: charge.balance_transaction
-          ? charge.balance_transaction.fee
-          : null,
-        netAmount: charge.balance_transaction
-          ? charge.balance_transaction.net
-          : null,
-      };
-
-      // Extract payment method details (safe, non-sensitive info)
-      if (charge.payment_method_details) {
-        const pmDetails = charge.payment_method_details;
-        chargeData.paymentMethodDetails = {
-          type: pmDetails.type,
-        };
-
-        // Add card-specific details if available
-        if (pmDetails.card) {
-          chargeData.paymentMethodDetails.cardBrand = pmDetails.card.brand;
-          chargeData.paymentMethodDetails.cardLast4 = pmDetails.card.last4;
-          chargeData.paymentMethodDetails.cardExpMonth =
-            pmDetails.card.exp_month;
-          chargeData.paymentMethodDetails.cardExpYear = pmDetails.card.exp_year;
-          chargeData.paymentMethodDetails.cardCountry = pmDetails.card.country;
-          chargeData.paymentMethodDetails.cardFunding = pmDetails.card.funding;
-        }
-      }
-    }
-
-    // Structure the payment intent data for storage
-    return {
-      id: paymentIntent.id,
-      clientSecret: paymentIntent.client_secret,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      status: paymentIntent.status,
-      paymentMethodId: paymentIntent.payment_method,
-      customerId: paymentIntent.customer,
-      createdAt: paymentIntent.created
-        ? new Date(paymentIntent.created * 1000)
-        : null,
-      refunds: [],
-      // Include charge data if available
-      ...chargeData,
-      // Store original payment intent data for reference
-      legacyData: {
-        originalAmount: paymentIntent.amount,
-        originalCurrency: paymentIntent.currency,
-        metadata: paymentIntent.metadata,
-        webhookProcessed: true,
-      },
-    };
-  } catch (error) {
-    // Return minimal data if processing fails
-    return {
-      id: paymentIntent.id,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      status: paymentIntent.status,
-      legacyData: {
-        error: error.message,
-        fallbackMode: true,
-      },
-    };
-  }
-}
-
-// Add helper function for extracting client information
-const extractClientInfo = req => {
-  return {
-    clientIpAddress:
-      req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
-    clientUserAgent: req.headers['user-agent'],
-    eventSourceUrl: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
-    fbp: req.headers['fbp'] || req.body.fbp,
-    fbc: req.headers['fbc'] || req.body.fbc,
-  };
-};
-
-/**
  * Process refund for an order
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -1594,8 +1497,8 @@ export const triggerFeedbackEmail = async (req, res, next) => {
 export const diagnoseFeedbackEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    const diagnostic = await diagnoseFeedbackEmail(id);
+    const { diagnoseFeedbackEmail: runDiagnostic } = await import('../services/emailService.js');
+    const diagnostic = await runDiagnostic(id);
 
     res.status(200).json({
       success: true,

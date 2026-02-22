@@ -90,8 +90,8 @@ const orderConfirmationTemplate = (order, config) => {
     taxAmount = 0,
     paymentMethod,
     firstTimeDiscount,
-    appliedCoupons = [], // Enhanced: Multiple coupons support
-    appliedCoupon, // Legacy: Single coupon support for backward compatibility
+    appliedCoupons = [],
+    appliedCoupon,
   } = order;
 
   // Handle first-time discount display
@@ -409,8 +409,8 @@ const shippingConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
-    appliedCoupons = [], // Enhanced: Multiple coupons support
-    appliedCoupon, // Legacy: Single coupon support for backward compatibility
+    appliedCoupons = [],
+    appliedCoupon,
   } = order || {};
 
   // Safety check for required fields
@@ -775,8 +775,8 @@ const deliveryConfirmationTemplate = (order, config) => {
     discount = 0,
     shippingDetails = {},
     firstTimeDiscount,
-    appliedCoupons = [], // Enhanced: Multiple coupons support
-    appliedCoupon, // Legacy: Single coupon support for backward compatibility
+    appliedCoupons = [],
+    appliedCoupon,
   } = order || {};
 
   // Safety check for required fields

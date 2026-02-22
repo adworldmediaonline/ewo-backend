@@ -19,7 +19,6 @@ const shippingDetailsSchema = new mongoose.Schema({
       },
     },
   ],
-  // Legacy single carrier support (for backward compatibility)
   trackingNumber: {
     type: String,
     required: false,
