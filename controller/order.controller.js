@@ -15,12 +15,14 @@ import {
 const stripe = new Stripe(secret.stripe_key);
 
 /**
- * Build line items for Stripe Tax calculation from cart and shipping cost
+ * Build line items for Stripe Tax calculation from cart, shipping cost, and discount
+ * Taxable amount = cart subtotal + shipping - discount (matches checkout displayTotal + tax)
  * @param {Array} cart - Cart items
  * @param {number} shippingCost - Shipping cost in dollars
+ * @param {number} discountAmount - Cart-level discount in dollars (e.g. coupon)
  * @returns {Array} Stripe Tax line items
  */
-const buildTaxLineItems = (cart, shippingCost) => {
+const buildTaxLineItems = (cart, shippingCost, discountAmount = 0) => {
   const lineItems = [];
 
   if (cart && Array.isArray(cart) && cart.length > 0) {
@@ -47,6 +49,14 @@ const buildTaxLineItems = (cart, shippingCost) => {
     });
   }
 
+  if (discountAmount > 0) {
+    lineItems.push({
+      amount: -Math.round(discountAmount * 100),
+      reference: 'coupon_discount',
+      tax_code: 'txcd_99999999',
+    });
+  }
+
   return lineItems;
 };
 
@@ -69,7 +79,8 @@ export const calculateTaxPreview = async (req, res, next) => {
       addressSource = customer_details.address_source || 'billing';
     } else if (cart && orderData) {
       const shippingCost = Number(orderData.shippingCost || 0);
-      lineItems = buildTaxLineItems(cart, shippingCost);
+      const discountAmount = Number(orderData.discountAmount || 0);
+      lineItems = buildTaxLineItems(cart, shippingCost, discountAmount);
       address = {
         line1: orderData.address,
         city: orderData.city,
@@ -149,9 +160,10 @@ export const paymentIntent = async (req, res, next) => {
     // Extract orderData
     const orderData = product.orderData || {};
 
-    // Extract cart and shipping cost
+    // Extract cart, shipping cost, and discount
     const cart = product.cart || orderData.cart || [];
     const shippingCost = Number(orderData.shippingCost || 0);
+    const discountAmount = Number(orderData.discountAmount || orderData.discount || 0);
     const subTotal = Number(orderData.subTotal || price);
     const discount = Number(orderData.discount || 0);
 
@@ -201,8 +213,8 @@ export const paymentIntent = async (req, res, next) => {
       });
     }
 
-    // Prepare line items for Stripe Tax calculation
-    const lineItems = buildTaxLineItems(cart, shippingCost);
+    // Prepare line items for Stripe Tax calculation (includes shipping, excludes discount)
+    const lineItems = buildTaxLineItems(cart, shippingCost, discountAmount);
 
     if (cart && Array.isArray(cart) && cart.length > 0) {
       metadata.order_product = cart[0].title || 'Product Purchase';
